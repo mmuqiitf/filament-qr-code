@@ -1,0 +1,15 @@
+{
+    "name": "filament-qr-code",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "node bin/build.js",
+        "dev": "node bin/build.js --dev"
+    },
+    "devDependencies": {
+        "esbuild": "^0.27.2"
+    },
+    "dependencies": {
+        "html5-qrcode": "^2.3.8"
+    }
+}

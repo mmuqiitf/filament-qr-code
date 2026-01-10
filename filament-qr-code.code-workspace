@@ -1,0 +1,30 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../personal-portfolio"
+		}
+	],
+	"settings": {
+		"[php]": {
+			"editor.defaultFormatter": "open-southeners.laravel-pint",
+		},
+		"laravel-pint.enable": true,
+		"laravel-pint.preset": "laravel",
+		"php.format.codeStyle": "Laravel",
+		"editor.formatOnSave": true,
+	},
+	"extensions": {
+		"recommendations": [
+			"DEVSENSE.phptools-vscode",
+			"laravel.vscode-laravel",
+			"shufo.vscode-blade-formatter",
+			"open-southeners.laravel-pint",
+			"vscode-icons-team.vscode-icons",
+			"mechatroner.rainbow-csv",
+			"bradlc.vscode-tailwindcss",
+		],
+	},
+}

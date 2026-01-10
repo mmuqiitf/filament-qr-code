@@ -1,0 +1,81 @@
+/* QR Code Scanner Styles */
+
+.qr-scanner-container {
+    width: 100%;
+}
+
+.qr-scanner-embedded {
+    width: 100%;
+}
+
+/* Scanner video container */
+.qr-scanner-container #qr-reader,
+.qr-scanner-embedded #qr-reader,
+[id^="qr-reader-"] {
+    width: 100% !important;
+    border: none !important;
+}
+
+[id^="qr-reader-"] video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    border-radius: 0.5rem;
+}
+
+/* Override html5-qrcode default styles */
+[id^="qr-reader-"] #qr-shaded-region {
+    border-width: 2px !important;
+}
+
+[id^="qr-reader-"] img[alt="Info icon"],
+[id^="qr-reader-"] img[alt="Camera based scan"] {
+    display: none !important;
+}
+
+/* Hide default UI elements we don't need */
+[id^="qr-reader-"] > div:first-child {
+    display: none !important;
+}
+
+/* Aspect ratio for scanner container */
+.aspect-video {
+    aspect-ratio: 16 / 9;
+}
+
+/* Animation for scanning indicator */
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Dark mode support */
+.dark .qr-scanner-container,
+.dark .qr-scanner-embedded {
+    color-scheme: dark;
+}
+
+/* Focus styles */
+.qr-scanner-container input:focus,
+.qr-scanner-embedded input:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: var(--primary-500, #3b82f6);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .qr-scanner-container .aspect-video,
+    .qr-scanner-embedded .aspect-video {
+        aspect-ratio: 4 / 3;
+    }
+}
