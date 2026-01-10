@@ -1,17 +1,27 @@
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
-export default function qrScanner(Alpine) {
-  Alpine.data("qrScanner", (config) => ({
+export default function qrScannerComponent({
+  statePath = null,
+  cameraFacing = "environment",
+  scanMode = "single",
+  scanDelay = 1500,
+  fps = 30,
+  qrboxSize = 250,
+  showPreview = true,
+  beepOnScan = true,
+  vibrateOnScan = true,
+}) {
+  return {
     // Configuration
-    statePath: config.statePath ?? null,
-    cameraFacing: config.cameraFacing ?? "environment",
-    scanMode: config.scanMode ?? "single",
-    scanDelay: config.scanDelay ?? 1500,
-    fps: config.fps ?? 30,
-    qrboxSize: config.qrboxSize ?? 250,
-    showPreview: config.showPreview !== false,
-    beepOnScan: config.beepOnScan !== false,
-    vibrateOnScan: config.vibrateOnScan !== false,
+    statePath,
+    cameraFacing,
+    scanMode,
+    scanDelay,
+    fps,
+    qrboxSize,
+    showPreview,
+    beepOnScan,
+    vibrateOnScan,
 
     // State
     devices: [],
@@ -269,5 +279,5 @@ export default function qrScanner(Alpine) {
         this.html5Qrcode = null;
       }
     },
-  }));
+  };
 }

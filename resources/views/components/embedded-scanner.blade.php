@@ -11,17 +11,19 @@
     'statePath' => null,
 ])
 
-<div x-data="qrScanner({
-    statePath: @js($statePath),
-    cameraFacing: @js(is_string($cameraFacing) ? $cameraFacing : $cameraFacing->value),
-    scanMode: @js(is_string($scanMode) ? $scanMode : $scanMode->value),
-    scanDelay: @js($scanDelay),
-    fps: @js($fps),
-    qrboxSize: @js($qrboxSize),
-    showPreview: @js($showPreview),
-    beepOnScan: @js($beepOnScan),
-    vibrateOnScan: @js($vibrateOnScan),
-})" x-init="init()" {{ $attributes->class(['qr-scanner-embedded']) }}>
+<div x-load
+    x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('qr-scanner', 'mmuqiitf/filament-qr-code') }}"
+    x-load-css="[@js(\Filament\Support\Facades\FilamentAsset::getStyleHref('qr-code-styles', package: 'mmuqiitf/filament-qr-code'))]" x-data="qrScannerComponent({
+        statePath: @js($statePath),
+        cameraFacing: @js(is_string($cameraFacing) ? $cameraFacing : $cameraFacing->value),
+        scanMode: @js(is_string($scanMode) ? $scanMode : $scanMode->value),
+        scanDelay: @js($scanDelay),
+        fps: @js($fps),
+        qrboxSize: @js($qrboxSize),
+        showPreview: @js($showPreview),
+        beepOnScan: @js($beepOnScan),
+        vibrateOnScan: @js($vibrateOnScan),
+    })" {{ $attributes->class(['qr-scanner-embedded']) }}>
     {{-- Scanner Container --}}
     <div class="relative rounded-lg overflow-hidden bg-black aspect-video">
         <div :id="readerId" class="w-full h-full"></div>

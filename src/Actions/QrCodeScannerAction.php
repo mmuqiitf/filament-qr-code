@@ -6,7 +6,7 @@ namespace Mmuqiitf\FilamentQrCode\Actions;
 
 use Closure;
 use Filament\Actions\Action;
-use Filament\Support\Enums\MaxWidth;
+use Filament\Support\Enums\Width;
 use Mmuqiitf\FilamentQrCode\Enums\CameraFacing;
 use Mmuqiitf\FilamentQrCode\Enums\ScanMode;
 
@@ -157,7 +157,7 @@ class QrCodeScannerAction extends Action
         return $this;
     }
 
-    public function modalWidth(MaxWidth|string|callable|null $width = null): static
+    public function modalWidth(Width|string|callable|null $width = null): static
     {
         $this->scannerModalWidth = $width;
 

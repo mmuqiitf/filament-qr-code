@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Pages;
 
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Mmuqiitf\FilamentQrCode\Concerns\HasQrScanner;
@@ -15,9 +16,9 @@ class QrCodeScannerPage extends Page
     use HasQrScanner;
     use InteractsWithScanner;
 
-    protected static ?string $navigationIcon = 'heroicon-o-qr-code';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-qr-code';
 
-    protected static string $view = 'filament-qr-code::pages.qr-code-scanner-page';
+    protected string $view = 'filament-qr-code::pages.qr-code-scanner-page';
 
     protected static ?string $slug = 'qr-scanner';
 

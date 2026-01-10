@@ -1,15 +1,18 @@
 {{-- resources/views/components/qr-scanner-modal.blade.php --}}
-<div x-data="qrScanner({
-    statePath: @js($statePath),
-    cameraFacing: @js($cameraFacing->value),
-    scanMode: @js($scanMode->value),
-    scanDelay: @js($scanDelay),
-    fps: @js($fps ?? 30),
-    qrboxSize: @js($qrboxSize ?? 250),
-    showPreview: @js($showPreview ?? true),
-    beepOnScan: @js($beepOnScan ?? true),
-    vibrateOnScan: @js($vibrateOnScan ?? true),
-})" x-init="init()" x-on:destroy.window="destroy()" class="qr-scanner-container">
+<div x-load
+    x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('qr-scanner', 'mmuqiitf/filament-qr-code') }}"
+    x-load-css="[@js(\Filament\Support\Facades\FilamentAsset::getStyleHref('qr-code-styles', package: 'mmuqiitf/filament-qr-code'))]" x-data="qrScannerComponent({
+        statePath: @js($statePath),
+        cameraFacing: @js($cameraFacing->value),
+        scanMode: @js($scanMode->value),
+        scanDelay: @js($scanDelay),
+        fps: @js($fps ?? 30),
+        qrboxSize: @js($qrboxSize ?? 250),
+        showPreview: @js($showPreview ?? true),
+        beepOnScan: @js($beepOnScan ?? true),
+        vibrateOnScan: @js($vibrateOnScan ?? true),
+    })" x-on:destroy.window="destroy()"
+    class="qr-scanner-container">
     {{-- Camera Selection --}}
     <div class="mb-4" x-show="devices.length > 1" x-cloak>
         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">

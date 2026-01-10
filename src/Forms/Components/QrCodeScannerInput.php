@@ -55,12 +55,10 @@ class QrCodeScannerInput extends TextInput
         $this->beepOnScan = config('qr-code.beep_on_scan', true);
         $this->vibrateOnScan = config('qr-code.vibrate_on_scan', true);
 
-        // Defer suffix action setup to avoid accessing statePath before container is initialized
-        $this->afterStateHydrated(function (QrCodeScannerInput $component) {
-            if (! $component->hasSuffixActions()) {
-                $component->suffixAction($component->getScannerAction());
-            }
-        });
+        // Defer suffix action setup until component is configured
+        $this->suffixAction(
+            fn (): Action => $this->getScannerAction()
+        );
     }
 
     protected function getScannerAction(): Action
