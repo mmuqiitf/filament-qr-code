@@ -7,13 +7,14 @@ namespace Mmuqiitf\FilamentQrCode\Forms\Components;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
-use Filament\Support\Enums\MaxWidth;
+use Filament\Support\Enums\Width;
 use Illuminate\Support\HtmlString;
 use Mmuqiitf\FilamentQrCode\Enums\CameraFacing;
 use Mmuqiitf\FilamentQrCode\Enums\ScanMode;
 
 class QrCodeScannerInput extends TextInput
 {
+    /** @phpstan-ignore-next-line */
     protected string $view = 'filament-qr-code::forms.components.qr-code-scanner-input';
 
     protected CameraFacing|Closure $cameraFacing = CameraFacing::Auto;
@@ -70,17 +71,22 @@ class QrCodeScannerInput extends TextInput
             ->modalHeading(__('filament-qr-code::messages.scan_qr_code'))
             ->modalWidth(fn () => $this->evaluate($this->scannerModalWidth))
             ->slideOver(fn () => $this->evaluate($this->slideOver))
-            ->modalContent(fn () => view('filament-qr-code::components.qr-scanner-modal', [
-                'statePath' => $this->getStatePath(),
-                'cameraFacing' => $this->evaluate($this->cameraFacing),
-                'scanMode' => $this->evaluate($this->scanMode),
-                'scanDelay' => $this->evaluate($this->scanDelay),
-                'fps' => $this->evaluate($this->fps),
-                'qrboxSize' => $this->evaluate($this->qrboxSize),
-                'showPreview' => $this->evaluate($this->showPreview),
-                'beepOnScan' => $this->evaluate($this->beepOnScan),
-                'vibrateOnScan' => $this->evaluate($this->vibrateOnScan),
-            ]))
+            ->modalContent(function () {
+                /** @var view-string $view */
+                $view = 'filament-qr-code::components.qr-scanner-modal';
+
+                return view($view, [
+                    'statePath' => $this->getStatePath(),
+                    'cameraFacing' => $this->evaluate($this->cameraFacing),
+                    'scanMode' => $this->evaluate($this->scanMode),
+                    'scanDelay' => $this->evaluate($this->scanDelay),
+                    'fps' => $this->evaluate($this->fps),
+                    'qrboxSize' => $this->evaluate($this->qrboxSize),
+                    'showPreview' => $this->evaluate($this->showPreview),
+                    'beepOnScan' => $this->evaluate($this->beepOnScan),
+                    'vibrateOnScan' => $this->evaluate($this->vibrateOnScan),
+                ]);
+            })
             ->modalSubmitAction(false)
             ->modalCancelActionLabel(__('filament-qr-code::messages.close'))
             ->extraModalWindowAttributes([
@@ -160,7 +166,7 @@ class QrCodeScannerInput extends TextInput
         return $this->showPreview(false);
     }
 
-    public function modalWidth(MaxWidth|string|callable|null $width = null): static
+    public function modalWidth(Width|string|callable|null $width = null): static
     {
         $this->scannerModalWidth = $width;
 

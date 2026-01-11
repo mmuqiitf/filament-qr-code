@@ -59,17 +59,22 @@ class QrCodeScannerAction extends Action
             ->modalHeading(__('filament-qr-code::messages.scan_qr_code'))
             ->modalWidth(fn () => $this->evaluate($this->scannerModalWidth))
             ->slideOver(fn () => $this->evaluate($this->slideOver))
-            ->modalContent(fn () => view('filament-qr-code::components.qr-scanner-modal', [
-                'statePath' => $this->targetStatePath,
-                'cameraFacing' => $this->evaluate($this->cameraFacing),
-                'scanMode' => $this->evaluate($this->scanMode),
-                'scanDelay' => $this->evaluate($this->scanDelay),
-                'fps' => $this->evaluate($this->fps),
-                'qrboxSize' => $this->evaluate($this->qrboxSize),
-                'showPreview' => $this->evaluate($this->showPreview),
-                'beepOnScan' => $this->evaluate($this->beepOnScan),
-                'vibrateOnScan' => $this->evaluate($this->vibrateOnScan),
-            ]))
+            ->modalContent(function () {
+                /** @var view-string $view */
+                $view = 'filament-qr-code::components.qr-scanner-modal';
+
+                return view($view, [
+                    'statePath' => $this->targetStatePath,
+                    'cameraFacing' => $this->evaluate($this->cameraFacing),
+                    'scanMode' => $this->evaluate($this->scanMode),
+                    'scanDelay' => $this->evaluate($this->scanDelay),
+                    'fps' => $this->evaluate($this->fps),
+                    'qrboxSize' => $this->evaluate($this->qrboxSize),
+                    'showPreview' => $this->evaluate($this->showPreview),
+                    'beepOnScan' => $this->evaluate($this->beepOnScan),
+                    'vibrateOnScan' => $this->evaluate($this->vibrateOnScan),
+                ]);
+            })
             ->modalSubmitAction(false)
             ->modalCancelActionLabel(__('filament-qr-code::messages.close'));
     }
