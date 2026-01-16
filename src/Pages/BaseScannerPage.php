@@ -6,6 +6,7 @@ namespace Mmuqiitf\FilamentQrCode\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use Livewire\Attributes\On;
 use Mmuqiitf\FilamentQrCode\Concerns\HasQrScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScanner;
 use Mmuqiitf\FilamentQrCode\Enums\ScanMode;
@@ -36,7 +37,7 @@ abstract class BaseScannerPage extends Page
     {
         $this->mountHasQrScanner();
         $this->scanMode = ScanMode::Single;
-
+        
         // Initialize camera management
         $this->fps = $this->getDefaultFps();
         $this->showCameraSelector = $this->shouldShowCameraSelector();
@@ -84,5 +85,118 @@ abstract class BaseScannerPage extends Page
                 ->color('danger')
                 ->action('resetScanSequence'),
         ];
+    }
+
+    /**
+     * Handle camera selection change from UI.
+     */
+    public function selectCamera(string $cameraId): void
+    {
+        $this->selectedCameraId = $cameraId;
+        
+        // Dispatch event to JavaScript to switch camera
+        $this->dispatch('camera-changed', cameraId: $cameraId);
+    }
+
+    /**
+     * Handle FPS update from UI with validation.
+     */
+    public function updateFps(int $fps): void
+    {
+        // Validate FPS is within acceptable range
+        if ($fps < 5 || $fps > 60) {
+            // Revert to previous valid value
+            $this->fps = $this->fps;
+            return;
+        }
+
+        $this->fps = $fps;
+        
+        // Dispatch event to JavaScript to update FPS
+        $this->dispatch('fps-changed', fps: $fps);
+    }
+
+    /**
+     * Handle cameras detected event from JavaScript.
+     */
+    #[On('cameras-detected')]
+    public function handleCamerasDetected(array $cameras): void
+    {
+        $this->availableCameras = $cameras;
+        
+        // Set initial selected camera if not already set
+        if (empty($this->selectedCameraId) && ! empty($cameras)) {
+            $defaultFacing = $this->getDefaultCameraFacing();
+            
+            // Try to find a camera matching the default facing
+            foreach ($cameras as $camera) {
+                $label = strtolower($camera['label'] ?? '');
+                
+                if ($defaultFacing === 'environment' && 
+                    (str_contains($label, 'back') || str_contains($label, 'rear') || str_contains($label, 'environment'))) {
+                    $this->selectedCameraId = $camera['id'];
+                    break;
+                } elseif ($defaultFacing === 'user' && 
+                    (str_contains($label, 'front') || str_contains($label, 'user') || str_contains($label, 'face'))) {
+                    $this->selectedCameraId = $camera['id'];
+                    break;
+                }
+            }
+            
+            // Fallback to first camera if no match found
+            if (empty($this->selectedCameraId)) {
+                $this->selectedCameraId = $cameras[0]['id'] ?? null;
+            }
+        }
+    }
+
+    /**
+     * Get camera options for UI dropdown.
+     */
+    public function getCameraOptions(): array
+    {
+        $options = [];
+        
+        foreach ($this->availableCameras as $camera) {
+            $options[$camera['id']] = $camera['label'];
+        }
+        
+        return $options;
+    }
+
+    /**
+     * Get the default FPS from configuration.
+     * Users can override this method to provide custom default FPS.
+     */
+    protected function getDefaultFps(): int
+    {
+        return config('qr-code.default_fps', 30);
+    }
+
+    /**
+     * Get the default camera facing from configuration.
+     * Users can override this method to provide custom default camera facing.
+     */
+    protected function getDefaultCameraFacing(): string
+    {
+        return config('qr-code.default_camera_facing', 'environment');
+    }
+
+    /**
+     * Determine if the camera selector should be shown.
+     * Users can override this method to customize visibility.
+     */
+    protected function shouldShowCameraSelector(): bool
+    {
+        return config('qr-code.show_camera_selector', true);
+    }
+
+    /**
+     * Determine if the FPS control should be shown.
+     * Users can override this method to customize visibility.
+     */
+    protected function shouldShowFpsControl(): bool
+    {
+        return config('qr-code.show_fps_control', true);
     }
 }
