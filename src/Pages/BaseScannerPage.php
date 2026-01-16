@@ -37,7 +37,7 @@ abstract class BaseScannerPage extends Page
     {
         $this->mountHasQrScanner();
         $this->scanMode = ScanMode::Single;
-        
+
         // Initialize camera management
         $this->fps = $this->getDefaultFps();
         $this->showCameraSelector = $this->shouldShowCameraSelector();
@@ -93,7 +93,7 @@ abstract class BaseScannerPage extends Page
     public function selectCamera(string $cameraId): void
     {
         $this->selectedCameraId = $cameraId;
-        
+
         // Dispatch event to JavaScript to switch camera
         $this->dispatch('camera-changed', cameraId: $cameraId);
     }
@@ -107,11 +107,12 @@ abstract class BaseScannerPage extends Page
         if ($fps < 5 || $fps > 60) {
             // Revert to previous valid value
             $this->fps = $this->fps;
+
             return;
         }
 
         $this->fps = $fps;
-        
+
         // Dispatch event to JavaScript to update FPS
         $this->dispatch('fps-changed', fps: $fps);
     }
@@ -123,26 +124,26 @@ abstract class BaseScannerPage extends Page
     public function handleCamerasDetected(array $cameras): void
     {
         $this->availableCameras = $cameras;
-        
+
         // Set initial selected camera if not already set
         if (empty($this->selectedCameraId) && ! empty($cameras)) {
             $defaultFacing = $this->getDefaultCameraFacing();
-            
+
             // Try to find a camera matching the default facing
             foreach ($cameras as $camera) {
                 $label = strtolower($camera['label'] ?? '');
-                
-                if ($defaultFacing === 'environment' && 
+
+                if ($defaultFacing === 'environment' &&
                     (str_contains($label, 'back') || str_contains($label, 'rear') || str_contains($label, 'environment'))) {
                     $this->selectedCameraId = $camera['id'];
                     break;
-                } elseif ($defaultFacing === 'user' && 
+                } elseif ($defaultFacing === 'user' &&
                     (str_contains($label, 'front') || str_contains($label, 'user') || str_contains($label, 'face'))) {
                     $this->selectedCameraId = $camera['id'];
                     break;
                 }
             }
-            
+
             // Fallback to first camera if no match found
             if (empty($this->selectedCameraId)) {
                 $this->selectedCameraId = $cameras[0]['id'] ?? null;
@@ -156,11 +157,11 @@ abstract class BaseScannerPage extends Page
     public function getCameraOptions(): array
     {
         $options = [];
-        
+
         foreach ($this->availableCameras as $camera) {
             $options[$camera['id']] = $camera['label'];
         }
-        
+
         return $options;
     }
 
