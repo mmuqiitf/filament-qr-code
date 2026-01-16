@@ -17,6 +17,8 @@ class QrCodePlugin implements Plugin
 
     protected array $pages = [];
 
+    protected array $scannerPages = [];
+
     /**
      * Fluent instantiation - uses container for potential swapping
      */
@@ -57,7 +59,27 @@ class QrCodePlugin implements Plugin
     }
 
     /**
-     * Register additional custom pages
+     * Register multiple scanner pages at once
+     */
+    public function scannerPages(array $pages): static
+    {
+        $this->scannerPages = array_merge($this->scannerPages, $pages);
+
+        return $this;
+    }
+
+    /**
+     * Add a single scanner page
+     */
+    public function addScannerPage(string $pageClass): static
+    {
+        $this->scannerPages[] = $pageClass;
+
+        return $this;
+    }
+
+    /**
+     * Register additional custom pages (legacy method)
      */
     public function pages(array $pages): static
     {
@@ -71,6 +93,11 @@ class QrCodePlugin implements Plugin
         return $this->pages;
     }
 
+    public function getScannerPages(): array
+    {
+        return $this->scannerPages;
+    }
+
     /**
      * Called when plugin is registered to a panel
      */
@@ -78,9 +105,13 @@ class QrCodePlugin implements Plugin
     {
         $pagesToRegister = $this->pages;
 
+        // Add the built-in scanner page if enabled
         if ($this->hasQrCodeScannerPage) {
             $pagesToRegister[] = QrCodeScannerPage::class;
         }
+
+        // Add all custom scanner pages
+        $pagesToRegister = array_merge($pagesToRegister, $this->scannerPages);
 
         if (filled($pagesToRegister)) {
             $panel->pages($pagesToRegister);

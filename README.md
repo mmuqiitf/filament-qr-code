@@ -20,9 +20,9 @@ A comprehensive Filament package for QR code and barcode scanning. This package 
 
 ## Requirements
 
-- PHP 8.1+
-- Laravel 10, 11, or 12
-- Filament 3.2+ or 4.0+
+- PHP 8.4, 8.5
+- Laravel 11.x, or 12.x
+- Filament 4.x
 
 ## Installation
 
