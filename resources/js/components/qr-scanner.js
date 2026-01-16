@@ -39,7 +39,7 @@ export default function qrScannerComponent({
 
     init() {
       this.$nextTick(() => {
-        this.loadCameras();
+        this.enumerateCameras();
       });
 
       // Listen for reset events from Livewire
@@ -52,10 +52,20 @@ export default function qrScannerComponent({
           this.cameraFacing = facing;
           this.switchCameraFacing();
         });
+
+        // Listen for camera change from Livewire
+        this.$wire.$on("camera-changed", ({ cameraId }) => {
+          this.selectCamera(cameraId);
+        });
+
+        // Listen for FPS change from Livewire
+        this.$wire.$on("fps-changed", ({ fps }) => {
+          this.changeFps(fps);
+        });
       }
     },
 
-    async loadCameras() {
+    async enumerateCameras() {
       this.isLoading = true;
       this.hasError = false;
 
@@ -63,20 +73,34 @@ export default function qrScannerComponent({
         const devices = await Html5Qrcode.getCameras();
         this.devices = devices;
 
+        // Prepare camera list for Livewire
+        const cameraList = devices.map((camera) => ({
+          id: camera.id,
+          label: camera.label,
+        }));
+
+        // Dispatch to Livewire
+        if (this.$wire) {
+          this.$wire.dispatch("cameras-detected", { cameras: cameraList });
+        }
+
         if (devices.length > 0) {
           this.selectedDeviceId = this.selectBestCamera(devices);
           await this.startScanning();
         } else {
           this.hasError = true;
-          this.errorMessage = "No camera found on this device.";
+          this.errorMessage = "No camera found on this device. Please connect a camera and try again.";
         }
       } catch (error) {
-        this.hasError = true;
-        this.errorMessage = "Camera permission denied. Please grant access.";
-        console.error("[FilamentQrCode] Camera error:", error);
+        this.handleCameraError(error);
       } finally {
         this.isLoading = false;
       }
+    },
+
+    async loadCameras() {
+      // Alias for enumerateCameras for backward compatibility
+      await this.enumerateCameras();
     },
 
     selectBestCamera(devices) {
@@ -123,6 +147,29 @@ export default function qrScannerComponent({
       }
     },
 
+    async changeFps(newFps) {
+      // Validate FPS range
+      if (newFps < 5 || newFps > 60) {
+        console.warn("[FilamentQrCode] Invalid FPS value:", newFps);
+        return;
+      }
+
+      const wasScanning = this.isScanning;
+
+      // Stop scanner if running
+      if (wasScanning) {
+        await this.stopScanning();
+      }
+
+      // Update FPS
+      this.fps = newFps;
+
+      // Restart scanner with new FPS if it was running
+      if (wasScanning) {
+        await this.startScanning();
+      }
+    },
+
     async startScanning() {
       if (!this.selectedDeviceId) return;
 
@@ -159,9 +206,7 @@ export default function qrScannerComponent({
         );
         this.isScanning = true;
       } catch (error) {
-        this.hasError = true;
-        this.errorMessage = "Scanner error. Please try again.";
-        console.error("[FilamentQrCode] Scanner error:", error);
+        this.handleCameraError(error);
       }
     },
 
@@ -249,6 +294,30 @@ export default function qrScannerComponent({
 
     retryCamera() {
       this.loadCameras();
+    },
+
+    handleCameraError(error) {
+      this.hasError = true;
+
+      // Handle specific error types
+      if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+        this.errorMessage =
+          "Camera permission denied. Please allow camera access in your browser settings and try again.";
+      } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+        this.errorMessage =
+          "No camera found on this device. Please connect a camera and try again.";
+      } else if (error.name === "NotReadableError" || error.name === "TrackStartError") {
+        this.errorMessage =
+          "Camera is already in use by another application. Please close other apps using the camera and try again.";
+      } else if (error.name === "OverconstrainedError" || error.name === "ConstraintNotSatisfiedError") {
+        this.errorMessage =
+          "Camera does not support the requested settings. Please try a different camera or adjust settings.";
+      } else {
+        this.errorMessage =
+          "Camera error occurred. Please refresh the page and try again.";
+      }
+
+      console.error("[FilamentQrCode] Camera error:", error);
     },
 
     toggleManualInput() {

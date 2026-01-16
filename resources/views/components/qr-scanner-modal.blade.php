@@ -13,73 +13,110 @@
         vibrateOnScan: @js($vibrateOnScan ?? true),
     })" x-on:destroy.window="destroy()"
     class="qr-scanner-container">
-    {{-- Camera Selection --}}
-    <div class="mb-4" x-show="devices.length > 1" x-cloak>
-        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+    {{-- Camera Selection with smooth fade --}}
+    <div x-show="devices.length > 1" x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+        class="mb-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             {{ __('filament-qr-code::messages.select_camera') }}
         </label>
         <select x-model="selectedDeviceId" x-on:change="selectCamera($event.target.value)"
-            class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm
-                   focus:border-primary-500 focus:ring-primary-500
-                   dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            class="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm
+                   focus:border-primary-500 focus:ring-primary-500 transition duration-75
+                   dark:bg-gray-700 dark:text-white">
             <template x-for="device in devices" :key="device.id">
                 <option :value="device.id" x-text="device.label || 'Camera ' + device.id"></option>
             </template>
         </select>
     </div>
 
-    {{-- Scanner Container --}}
-    <div class="relative rounded-lg overflow-hidden bg-black aspect-video">
+    {{-- Scanner Container with smooth transitions --}}
+    <div class="relative rounded-xl overflow-hidden bg-gray-900 aspect-video shadow-xl transition-all duration-300 ease-in-out"
+        :class="{ 'ring-2 ring-primary-500': isScanning && !hasError && !isLoading }">
         <div :id="readerId" class="w-full h-full"></div>
 
-        {{-- Loading State --}}
-        <div x-show="isLoading" x-cloak class="absolute inset-0 flex items-center justify-center bg-gray-900/80">
-            <svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
-                viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
-                </circle>
-                <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                </path>
-            </svg>
+        {{-- Loading State with smooth fade and backdrop blur --}}
+        <div x-show="isLoading" x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/90 backdrop-blur-sm">
+            <div class="text-center">
+                <svg class="animate-spin h-12 w-12 text-primary-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg"
+                    fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                        stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+                <p class="text-white text-sm font-medium">
+                    {{ __('filament-qr-code::messages.initializing_camera') }}
+                </p>
+            </div>
         </div>
 
-        {{-- Error State --}}
-        <div x-show="hasError" x-cloak
-            class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/80 text-white p-4">
-            <svg class="h-12 w-12 text-danger-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none"
-                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-            </svg>
-            <p x-text="errorMessage" class="text-center text-sm"></p>
-            <button x-on:click="retryCamera()" type="button"
-                class="mt-4 inline-flex items-center gap-1 justify-center rounded-lg border border-transparent bg-gray-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                {{ __('filament-qr-code::messages.retry') }}
-            </button>
+        {{-- Error State with smooth fade and scale --}}
+        <div x-show="hasError" x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/90 backdrop-blur-sm text-white p-6">
+            <div class="text-center max-w-sm">
+                <div class="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-danger-500/20">
+                    <svg class="h-8 w-8 text-danger-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                    </svg>
+                </div>
+                <p x-text="errorMessage" class="text-center text-sm leading-relaxed mb-4"></p>
+                <button x-on:click="retryCamera()" type="button"
+                    class="inline-flex items-center gap-2 justify-center rounded-lg bg-white/10 hover:bg-white/20 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors duration-200 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-gray-900">
+                    <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                    {{ __('filament-qr-code::messages.retry') }}
+                </button>
+            </div>
         </div>
 
-        {{-- Scanning Indicator --}}
-        <div x-show="isScanning && !hasError && !isLoading" x-cloak
-            class="absolute bottom-4 left-0 right-0 flex justify-center">
-            <span class="bg-green-500 text-white text-sm px-3 py-1 rounded-full animate-pulse">
+        {{-- Scanning Indicator with pulse animation --}}
+        <div x-show="isScanning && !hasError && !isLoading" x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 translate-y-2"
+            class="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none">
+            <span
+                class="bg-green-500 text-white text-sm font-medium px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                    <span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                </span>
                 {{ __('filament-qr-code::messages.scanning') }}
             </span>
         </div>
     </div>
 
-    {{-- Scanned Result Preview --}}
-    <div x-show="showPreview && lastScannedValue" x-cloak class="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+    {{-- Scanned Result Preview with smooth fade --}}
+    <div x-show="showPreview && lastScannedValue" x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 translate-y-1"
+        class="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+        <label class="text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">
             {{ __('filament-qr-code::messages.scanned_value') }}
         </label>
-        <p x-text="lastScannedValue" class="mt-1 text-gray-900 dark:text-white font-mono text-sm break-all"></p>
+        <p x-text="lastScannedValue" class="mt-2 text-gray-900 dark:text-white font-mono text-sm break-all"></p>
     </div>
 
-    {{-- Manual Input Fallback --}}
+    {{-- Manual Input Fallback with smooth transitions --}}
     <div class="mt-4">
         <button x-on:click="toggleManualInput()" type="button"
-            class="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+            class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200">
             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                 stroke-width="1.5" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -88,15 +125,18 @@
             {{ __('filament-qr-code::messages.enter_manually') }}
         </button>
 
-        <div x-show="showManualInput" x-cloak class="mt-2 space-y-2">
+        <div x-show="showManualInput" x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-1" class="mt-3 space-y-3">
             <input type="text" x-model="manualValue" x-ref="manualInput"
                 x-on:keydown.enter.prevent="submitManualValue()"
-                class="block w-full rounded-lg border-gray-300 shadow-sm
-                       focus:border-primary-500 focus:ring-primary-500
-                       dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                class="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm
+                       focus:border-primary-500 focus:ring-primary-500 transition duration-75
+                       dark:bg-gray-700 dark:text-white text-sm"
                 placeholder="{{ __('filament-qr-code::messages.enter_code') }}">
             <button x-on:click="submitManualValue()" type="button"
-                class="inline-flex items-center justify-center rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                class="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors duration-200">
                 {{ __('filament-qr-code::messages.submit') }}
             </button>
         </div>

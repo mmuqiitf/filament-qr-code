@@ -6,6 +6,7 @@ namespace Mmuqiitf\FilamentQrCode\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use Livewire\Attributes\On;
 use Mmuqiitf\FilamentQrCode\Concerns\HasQrScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScanner;
 use Mmuqiitf\FilamentQrCode\Enums\ScanMode;
@@ -19,10 +20,28 @@ abstract class BaseScannerPage extends Page
 
     protected string $view = 'filament-qr-code::pages.qr-code-scanner-page';
 
+    /**
+     * Camera management properties
+     */
+    public array $availableCameras = [];
+
+    public ?string $selectedCameraId = null;
+
+    public int $fps = 30;
+
+    public bool $showCameraSelector = true;
+
+    public bool $showFpsControl = true;
+
     public function mount(): void
     {
         $this->mountHasQrScanner();
         $this->scanMode = ScanMode::Single;
+
+        // Initialize camera management
+        $this->fps = $this->getDefaultFps();
+        $this->showCameraSelector = $this->shouldShowCameraSelector();
+        $this->showFpsControl = $this->shouldShowFpsControl();
     }
 
     /**
