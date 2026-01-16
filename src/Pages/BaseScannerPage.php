@@ -6,7 +6,6 @@ namespace Mmuqiitf\FilamentQrCode\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
-use Livewire\Attributes\On;
 use Mmuqiitf\FilamentQrCode\Concerns\HasQrScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScanner;
 use Mmuqiitf\FilamentQrCode\Enums\ScanMode;
