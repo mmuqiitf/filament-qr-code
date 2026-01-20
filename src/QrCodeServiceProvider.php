@@ -55,11 +55,11 @@ class QrCodeServiceProvider extends PackageServiceProvider
             assets: [
                 AlpineComponent::make(
                     'qr-scanner',
-                    __DIR__ . '/../resources/dist/js/components/qr-scanner.js'
+                    __DIR__.'/../resources/dist/js/components/qr-scanner.js'
                 ),
                 Css::make(
                     'qr-code-styles',
-                    __DIR__ . '/../resources/dist/css/qr-code.css'
+                    __DIR__.'/../resources/dist/css/qr-code.css'
                 )->loadedOnRequest(),
             ],
             package: 'mmuqiitf/filament-qr-code'
