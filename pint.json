@@ -1,8 +1,6 @@
 {
   "preset": "laravel",
   "rules": {
-    "concat_space": {
-      "spacing": "one"
-    }
+    "no_unused_imports": true
   }
 }

@@ -14,7 +14,9 @@ use Mmuqiitf\FilamentQrCode\Enums\ScanMode;
 
 class QrCodeScannerInput extends TextInput
 {
-    /** @phpstan-ignore-next-line */
+    /**
+     * @var view-string
+     */
     protected string $view = 'filament-qr-code::forms.components.qr-code-scanner-input';
 
     protected CameraFacing|Closure $cameraFacing = CameraFacing::Auto;
@@ -91,8 +93,8 @@ class QrCodeScannerInput extends TextInput
             ->modalCancelActionLabel(__('filament-qr-code::messages.close'))
             ->extraModalWindowAttributes([
                 'x-on:qr-scanned.window' => new HtmlString(
-                    "if (\$event.detail.statePath === '{$this->getStatePath()}') { " .
-                    "\$wire.set('{$this->getStatePath()}', \$event.detail.value); " .
+                    "if (\$event.detail.statePath === '{$this->getStatePath()}') { ".
+                    "\$wire.set('{$this->getStatePath()}', \$event.detail.value); ".
                     'close(); }'
                 ),
             ]);

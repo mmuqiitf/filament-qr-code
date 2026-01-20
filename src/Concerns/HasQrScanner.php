@@ -57,10 +57,11 @@ trait HasQrScanner
         }
 
         $this->scanResults[$targetField] = $value;
+        $this->scanResults = collect($this->scanResults)->toArray(); // Forces reactivity in some cases
 
         // Update form data if using Filament forms
         if (property_exists($this, 'data') && is_array($this->data)) {
-            data_set($this->data, $targetField, $value);
+            $this->data[$targetField] = $value;
         }
 
         // Fire event for child classes to hook into

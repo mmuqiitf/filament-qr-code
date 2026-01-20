@@ -31,8 +31,8 @@
     </div>
 
     {{-- Scanner Container with smooth transitions --}}
-    <div class="relative rounded-xl overflow-hidden bg-gray-900 aspect-video shadow-xl transition-all duration-300 ease-in-out"
-        :class="{ 'ring-2 ring-primary-500': isScanning && !hasError && !isLoading }">
+    <div class="relative rounded-xl overflow-hidden bg-gray-900 shadow-lg transition-all duration-300 ease-in-out aspect-video"
+        :class="{ 'ring-2 ring-primary-600 dark:ring-primary-500': isScanning && !hasError && !isLoading }">
         <div :id="readerId" class="w-full h-full"></div>
 
         {{-- Loading State with smooth fade and backdrop blur --}}
@@ -115,30 +115,25 @@
 
     {{-- Manual Input Fallback with smooth transitions --}}
     <div class="mt-4">
-        <button x-on:click="toggleManualInput()" type="button"
-            class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200">
-            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-            </svg>
+        <x-filament::button x-on:click="toggleManualInput()" color="gray" icon="heroicon-o-pencil" size="sm"
+            tag="button">
             {{ __('filament-qr-code::messages.enter_manually') }}
-        </button>
+        </x-filament::button>
 
         <div x-show="showManualInput" x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 -translate-y-1" class="mt-3 space-y-3">
-            <input type="text" x-model="manualValue" x-ref="manualInput"
-                x-on:keydown.enter.prevent="submitManualValue()"
-                class="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm
-                       focus:border-primary-500 focus:ring-primary-500 transition duration-75
-                       dark:bg-gray-700 dark:text-white text-sm"
-                placeholder="{{ __('filament-qr-code::messages.enter_code') }}">
-            <button x-on:click="submitManualValue()" type="button"
-                class="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors duration-200">
+
+            <x-filament::input.wrapper>
+                <x-filament::input type="text" x-model="manualValue" x-ref="manualInput"
+                    x-on:keydown.enter.prevent="submitManualValue()"
+                    placeholder="{{ __('filament-qr-code::messages.enter_code') }}" />
+            </x-filament::input.wrapper>
+
+            <x-filament::button x-on:click="submitManualValue()" size="sm">
                 {{ __('filament-qr-code::messages.submit') }}
-            </button>
+            </x-filament::button>
         </div>
     </div>
 </div>

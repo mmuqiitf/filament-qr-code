@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Pages;
 
-use BackedEnum;
 use Filament\Pages\Page;
 use Livewire\Attributes\On;
 use Mmuqiitf\FilamentQrCode\Concerns\HasQrScanner;
@@ -16,7 +15,7 @@ abstract class BaseScannerPage extends Page
     use HasQrScanner;
     use InteractsWithScanner;
 
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-qr-code';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-qr-code';
 
     protected string $view = 'filament-qr-code::pages.qr-code-scanner-page';
 
@@ -105,8 +104,7 @@ abstract class BaseScannerPage extends Page
     {
         // Validate FPS is within acceptable range
         if ($fps < 5 || $fps > 60) {
-            // Revert to previous valid value
-            $this->fps = $this->fps;
+            $this->fps = 30; // Default to 30 if invalid
 
             return;
         }

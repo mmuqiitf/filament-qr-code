@@ -89,7 +89,8 @@ export default function qrScannerComponent({
           await this.startScanning();
         } else {
           this.hasError = true;
-          this.errorMessage = "No camera found on this device. Please connect a camera and try again.";
+          this.errorMessage =
+            "No camera found on this device. Please connect a camera and try again.";
         }
       } catch (error) {
         this.handleCameraError(error);
@@ -222,6 +223,7 @@ export default function qrScannerComponent({
     },
 
     onScanSuccess(decodedText) {
+      console.log("[FilamentQrCode] Scanned successfully:", decodedText);
       const now = Date.now();
       if (now - this.lastScanTime < this.scanDelay) {
         return; // Debounce rapid scans
@@ -240,7 +242,7 @@ export default function qrScannerComponent({
         navigator.vibrate(100);
       }
 
-      // Dispatch Alpine event
+      // Dispatch Alpine event for local listeners
       this.$dispatch("qr-scanned", {
         value: decodedText,
         statePath: this.statePath,
@@ -248,13 +250,19 @@ export default function qrScannerComponent({
 
       // Dispatch to Livewire if available
       if (this.$wire) {
+        console.log("[FilamentQrCode] Dispatching to Livewire:", {
+          value: decodedText,
+          field: this.statePath,
+        });
+
+        // Use a more direct method call if possible, or broad dispatch
         this.$wire.dispatch("qr-code-scanned", {
           value: decodedText,
           field: this.statePath,
         });
       }
 
-      // Window event for modal handling
+      // Window event for modal handling and general hooks
       window.dispatchEvent(
         new CustomEvent("qr-scanned", {
           detail: { value: decodedText, statePath: this.statePath },
@@ -262,6 +270,7 @@ export default function qrScannerComponent({
       );
 
       if (this.scanMode === "single") {
+        console.log("[FilamentQrCode] Single scan mode, stopping scanner");
         this.stopScanning();
       }
     },
@@ -300,16 +309,28 @@ export default function qrScannerComponent({
       this.hasError = true;
 
       // Handle specific error types
-      if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+      if (
+        error.name === "NotAllowedError" ||
+        error.name === "PermissionDeniedError"
+      ) {
         this.errorMessage =
           "Camera permission denied. Please allow camera access in your browser settings and try again.";
-      } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+      } else if (
+        error.name === "NotFoundError" ||
+        error.name === "DevicesNotFoundError"
+      ) {
         this.errorMessage =
           "No camera found on this device. Please connect a camera and try again.";
-      } else if (error.name === "NotReadableError" || error.name === "TrackStartError") {
+      } else if (
+        error.name === "NotReadableError" ||
+        error.name === "TrackStartError"
+      ) {
         this.errorMessage =
           "Camera is already in use by another application. Please close other apps using the camera and try again.";
-      } else if (error.name === "OverconstrainedError" || error.name === "ConstraintNotSatisfiedError") {
+      } else if (
+        error.name === "OverconstrainedError" ||
+        error.name === "ConstraintNotSatisfiedError"
+      ) {
         this.errorMessage =
           "Camera does not support the requested settings. Please try a different camera or adjust settings.";
       } else {
