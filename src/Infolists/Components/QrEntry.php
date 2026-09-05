@@ -78,6 +78,11 @@ class QrEntry extends Entry
         return $this;
     }
 
+    public function getCaption(): ?string
+    {
+        return $this->captionText;
+    }
+
     public function downloadable(bool|Closure $condition = true): static
     {
         $this->canDownload = $condition;

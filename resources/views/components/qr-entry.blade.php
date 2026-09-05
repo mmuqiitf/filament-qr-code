@@ -11,6 +11,10 @@
         <div class="inline-flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm space-y-2">
             <img src="{{ $qrDataUri }}" alt="QR Code" class="rounded-lg max-w-full h-auto" />
 
+            @if ($caption = $getCaption())
+                <p class="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">{{ $caption }}</p>
+            @endif
+
             @if ($isDownloadable)
                 <a
                     href="{{ $qrDataUri }}"

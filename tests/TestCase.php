@@ -14,7 +14,9 @@ use Filament\Notifications\NotificationsServiceProvider;
 use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
+use Illuminate\Support\ViewErrorBag;
 use Livewire\LivewireServiceProvider;
+use Livewire\Mechanisms\DataStore;
 use Mmuqiitf\FilamentQrCode\FilamentQrCodeServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
@@ -24,6 +26,8 @@ class TestCase extends Orchestra
     protected function setUp(): void
     {
         parent::setUp();
+
+        view()->share('errors', new ViewErrorBag);
     }
 
     protected function getPackageProviders($app): array
@@ -49,5 +53,6 @@ class TestCase extends Orchestra
     {
         config()->set('database.default', 'testing');
         config()->set('app.key', 'base64:6Cu/ozkhw+hgSU47S7oDg2BgSbFixMIWoFsRf5DQOkI=');
+        $app->singleton(DataStore::class);
     }
 }

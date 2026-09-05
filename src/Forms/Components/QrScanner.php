@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Forms\Components;
 
 use Closure;
+use Filament\Forms\Components\Concerns\CanBeReadOnly;
+use Filament\Forms\Components\Concerns\HasPlaceholder;
 use Filament\Forms\Components\Field;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
@@ -13,8 +15,10 @@ use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 
 class QrScanner extends Field
 {
+    use CanBeReadOnly;
     use HasFeedback;
     use HasHardwareScanner;
+    use HasPlaceholder;
     use HasSequentialScan;
 
     protected string $view = 'filament-qr-code::components.qr-scanner';

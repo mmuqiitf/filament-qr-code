@@ -45,6 +45,11 @@ class QrColumn extends Column
         return $this;
     }
 
+    public function size(int|Closure $size): static
+    {
+        return $this->thumbnailSize($size);
+    }
+
     public function modalSize(int|Closure $size): static
     {
         $this->modalSize = $size;
