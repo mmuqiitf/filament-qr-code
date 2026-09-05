@@ -290,15 +290,11 @@ class QrCodeService
 
         $logoData = file_get_contents((string) $this->logoPath);
         if ($logoData === false) {
-            imagedestroy($qrImage);
-
             return $qrPngData;
         }
 
         $logoImage = imagecreatefromstring($logoData);
         if ($logoImage === false) {
-            imagedestroy($qrImage);
-
             return $qrPngData;
         }
 
@@ -326,9 +322,6 @@ class QrCodeService
         ob_start();
         imagepng($qrImage);
         $result = (string) ob_get_clean();
-
-        imagedestroy($qrImage);
-        imagedestroy($logoImage);
 
         return $result;
     }
@@ -398,8 +391,6 @@ class QrCodeService
         $newHeight = max(1, $qrHeight + $textHeight + $padding);
         $canvas = imagecreatetruecolor(max(1, $qrWidth), $newHeight);
         if ($canvas === false) {
-            imagedestroy($qrImage);
-
             return $qrPngData;
         }
 
@@ -424,9 +415,6 @@ class QrCodeService
         ob_start();
         imagepng($canvas);
         $result = (string) ob_get_clean();
-
-        imagedestroy($qrImage);
-        imagedestroy($canvas);
 
         return $result;
     }
