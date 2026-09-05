@@ -34,7 +34,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction
+          if [ "${{ matrix.php }}" = "8.5" ]; then
+            composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction --ignore-platform-req=php+
+          else
+            composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction
+          fi
 
       - name: Execute tests
         run: vendor/bin/pest
