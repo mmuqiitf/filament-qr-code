@@ -1,4 +1,4 @@
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createWedgeHandler } from './qr-wedge.js';
 
@@ -15,6 +15,7 @@ export default function qrScannerComponent({
     fps = 15,
     qrbox = 250,
     preferRearCamera = true,
+    formats = [],
 } = {}) {
     return {
         // State
@@ -124,7 +125,13 @@ export default function qrScannerComponent({
             }
 
             if (!this.html5Qrcode) {
-                this.html5Qrcode = new Html5Qrcode(this.scannerElementId);
+                const scannerConfig = {};
+                if (Array.isArray(formats) && formats.length > 0) {
+                    scannerConfig.formatsToSupport = formats.map(f => {
+                        return Html5QrcodeSupportedFormats[f] !== undefined ? Html5QrcodeSupportedFormats[f] : f;
+                    });
+                }
+                this.html5Qrcode = new Html5Qrcode(this.scannerElementId, scannerConfig);
             }
 
             const config = {
@@ -142,7 +149,7 @@ export default function qrScannerComponent({
                         this.closeScannerModal();
                     },
                     () => {
-                        // Frame scan error (no QR detected in frame), silent ignore
+                        // Frame scan error (no QR/barcode detected in frame), silent ignore
                     }
                 );
 
@@ -232,7 +239,13 @@ export default function qrScannerComponent({
             if (!file) return;
 
             if (!this.html5Qrcode) {
-                this.html5Qrcode = new Html5Qrcode(this.scannerElementId);
+                const scannerConfig = {};
+                if (Array.isArray(formats) && formats.length > 0) {
+                    scannerConfig.formatsToSupport = formats.map(f => {
+                        return Html5QrcodeSupportedFormats[f] !== undefined ? Html5QrcodeSupportedFormats[f] : f;
+                    });
+                }
+                this.html5Qrcode = new Html5Qrcode(this.scannerElementId, scannerConfig);
             }
 
             this.html5Qrcode.scanFile(file, true)
@@ -240,9 +253,9 @@ export default function qrScannerComponent({
                     this.handleScanResult(decodedText);
                     this.closeScannerModal();
                 })
-                .catch((err) => {
+                .catch(() => {
                     this.hasError = true;
-                    this.errorMessage = 'No QR code found in selected image.';
+                    this.errorMessage = 'No barcode or QR code found in selected image.';
                 });
         },
     };

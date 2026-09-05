@@ -9,6 +9,7 @@ use Filament\Forms\Components\Field;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 
 class QrScanner extends Field
 {
@@ -25,6 +26,11 @@ class QrScanner extends Field
     protected bool|Closure $preferRearCamera = true;
 
     protected bool|Closure $allowUpload = true;
+
+    /**
+     * @var array<int, BarcodeFormat|string>|Closure
+     */
+    protected array|Closure $supportedFormats = [];
 
     protected ?Closure $scanFormatter = null;
 
@@ -54,6 +60,16 @@ class QrScanner extends Field
     public function allowUpload(bool|Closure $condition = true): static
     {
         $this->allowUpload = $condition;
+
+        return $this;
+    }
+
+    /**
+     * @param  array<int, BarcodeFormat|string>|Closure  $formats
+     */
+    public function formats(array|Closure $formats): static
+    {
+        $this->supportedFormats = $formats;
 
         return $this;
     }
@@ -90,6 +106,28 @@ class QrScanner extends Field
     public function isUploadAllowed(): bool
     {
         return (bool) $this->evaluate($this->allowUpload);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getSupportedFormats(): array
+    {
+        $formats = $this->evaluate($this->supportedFormats);
+        if (! is_array($formats)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($formats as $format) {
+            if ($format instanceof BarcodeFormat) {
+                $result[] = $format->value;
+            } elseif (is_string($format)) {
+                $result[] = $format;
+            }
+        }
+
+        return $result;
     }
 
     public function formatScannedValue(string $rawValue): mixed

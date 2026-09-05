@@ -32,7 +32,7 @@ class DownloadQrAction extends Action
         $this->icon('heroicon-o-arrow-down-tray');
         $this->color('gray');
 
-        $this->action(function (Model|null $record): ?StreamedResponse {
+        $this->action(function (?Model $record): ?StreamedResponse {
             $data = $this->getQrData($record);
             if ($data === null || $data === '') {
                 return null;
@@ -91,10 +91,11 @@ class DownloadQrAction extends Action
         return $this;
     }
 
-    public function getQrData(Model|null $record): ?string
+    public function getQrData(?Model $record): ?string
     {
         if ($this->qrData !== null) {
             $data = $this->evaluate($this->qrData, ['record' => $record]);
+
             return is_scalar($data) ? (string) $data : null;
         }
 
@@ -109,10 +110,11 @@ class DownloadQrAction extends Action
         return null;
     }
 
-    public function getQrFileName(Model|null $record): ?string
+    public function getQrFileName(?Model $record): ?string
     {
         if ($this->qrFileName !== null) {
             $name = $this->evaluate($this->qrFileName, ['record' => $record]);
+
             return is_scalar($name) ? (string) $name : null;
         }
 

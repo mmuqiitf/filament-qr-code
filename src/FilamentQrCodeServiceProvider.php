@@ -26,7 +26,7 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
     public function packageRegistered(): void
     {
         $this->app->bind(QrCodeService::class, function () {
-            return new QrCodeService();
+            return new QrCodeService;
         });
     }
 
@@ -34,8 +34,8 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
     {
         // Asset Registration
         FilamentAsset::register([
-            Js::make('filament-qr-code-scripts', __DIR__ . '/../resources/dist/filament-qr-code.js'),
-            Css::make('filament-qr-code-styles', __DIR__ . '/../resources/dist/filament-qr-code.css'),
+            Js::make('filament-qr-code-scripts', __DIR__.'/../resources/dist/filament-qr-code.js'),
+            Css::make('filament-qr-code-styles', __DIR__.'/../resources/dist/filament-qr-code.css'),
         ], package: 'mmuqiitf/filament-qr-code');
     }
 }

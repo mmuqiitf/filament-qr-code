@@ -11,6 +11,7 @@
     $qrbox = $getQrbox();
     $preferRear = $isPreferRearCamera();
     $allowUpload = $isUploadAllowed();
+    $supportedFormats = $getSupportedFormats();
 @endphp
 
 <x-dynamic-component
@@ -27,7 +28,8 @@
             burstThresholdMs: @js($burstThresholdMs),
             fps: @js($fps),
             qrbox: @js($qrbox),
-            preferRearCamera: @js($preferRear)
+            preferRearCamera: @js($preferRear),
+            formats: @js($supportedFormats)
         })"
         data-field-name="{{ $getName() }}"
         class="relative"

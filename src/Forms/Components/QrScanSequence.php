@@ -26,7 +26,7 @@ class QrScanSequence extends Component
     protected int|Closure $qrbox = 250;
 
     /**
-     * @param array<int, array{key: string, label: string}|string>|Closure $fields
+     * @param  array<int, array{key: string, label: string}|string>|Closure  $fields
      */
     public static function make(array|Closure $fields = []): static
     {
@@ -37,7 +37,7 @@ class QrScanSequence extends Component
     }
 
     /**
-     * @param array<int, array{key: string, label: string}|string>|Closure $fields
+     * @param  array<int, array{key: string, label: string}|string>|Closure  $fields
      */
     public function fields(array|Closure $fields): static
     {

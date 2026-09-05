@@ -54,9 +54,16 @@ Add a QR scanner field to your form schema with camera modal and hardware scanne
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 
 QrScanner::make('sku')
-    ->label('Product SKU')
+    ->label('Product SKU / Barcode')
+    ->formats([
+        BarcodeFormat::QrCode,
+        BarcodeFormat::Code128,
+        BarcodeFormat::Code39,
+        BarcodeFormat::Ean13,
+    ])
     ->sound(true)
     ->vibrate(true)
     ->hardwareScanner(enabled: true, burstThresholdMs: 50)
@@ -66,7 +73,26 @@ QrScanner::make('sku')
     });
 ```
 
-### 2. Sequential Field Scanning (Chaining)
+### 2. Hands-Free Station Mode (`QrWedgeListener`)
+
+For manufacturing stations and warehouse counters where operators shoot barcodes without touching the mouse:
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrWedgeListener;
+
+QrWedgeListener::make([
+    'step',
+    'employee',
+    'document',
+    'equipment',
+])
+    ->autoFocusNext(true)
+    ->sound(true);
+```
+Add `QrWedgeListener` anywhere in your schema. It intercepts hardware scanner bursts across the entire page, populates the active or first empty field, and auto-advances focus.
+
+
+### 3. Sequential Field Scanning (Chaining)
 
 Auto-focus the next field upon each scan:
 
@@ -80,7 +106,7 @@ QrScanner::make('serial_number')
 QrScanner::make('location_code'),
 ```
 
-### 3. Split-Screen Sequence Dashboard Container
+### 4. Split-Screen Sequence Dashboard Container
 
 Render a unified camera feed and field checklist:
 
@@ -99,7 +125,7 @@ QrScanSequence::make([
     ->vibrate(true);
 ```
 
-### 4. Batch Collector Scanning (Repeaters & Tables)
+### 5. Batch Collector Scanning (Repeaters & Tables)
 
 #### In Form Repeaters:
 ```php
@@ -120,7 +146,7 @@ $table->headerActions([
 ]);
 ```
 
-### 5. QR Code Generator Components
+### 6. QR Code Generator Components
 
 #### In Form Schemas:
 ```php

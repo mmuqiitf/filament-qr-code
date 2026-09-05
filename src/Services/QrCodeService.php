@@ -58,7 +58,7 @@ class QrCodeService
 
     public static function make(): self
     {
-        return new self();
+        return new self;
     }
 
     public function size(int $size): self
@@ -167,13 +167,13 @@ class QrCodeService
         );
 
         if ($this->format === QrFormat::Svg) {
-            $renderer = new ImageRenderer($rendererStyle, new SvgImageBackEnd());
+            $renderer = new ImageRenderer($rendererStyle, new SvgImageBackEnd);
             $writer = new Writer($renderer);
             $this->rawResult = $writer->writeString($data, 'UTF-8', $ecLevel);
         } else {
             // PNG rendering
             if (extension_loaded('imagick')) {
-                $renderer = new ImageRenderer($rendererStyle, new ImagickImageBackEnd());
+                $renderer = new ImageRenderer($rendererStyle, new ImagickImageBackEnd);
                 $writer = new Writer($renderer);
                 $pngData = $writer->writeString($data, 'UTF-8', $ecLevel);
             } else {
@@ -210,7 +210,7 @@ class QrCodeService
         $raw = $this->getRaw();
         $mime = $this->format->getMimeType();
 
-        return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        return 'data:'.$mime.';base64,'.base64_encode($raw);
     }
 
     public function download(?string $fileName = null): StreamedResponse
@@ -250,7 +250,7 @@ class QrCodeService
     protected function applyLogo(string $qrPngData): string
     {
         if (extension_loaded('imagick')) {
-            $qr = new Imagick();
+            $qr = new Imagick;
             $qr->readImageBlob($qrPngData);
 
             $logo = new Imagick($this->logoPath);
@@ -277,12 +277,14 @@ class QrCodeService
         $logoData = file_get_contents((string) $this->logoPath);
         if ($logoData === false) {
             imagedestroy($qrImage);
+
             return $qrPngData;
         }
 
         $logoImage = imagecreatefromstring($logoData);
         if ($logoImage === false) {
             imagedestroy($qrImage);
+
             return $qrPngData;
         }
 
@@ -324,13 +326,13 @@ class QrCodeService
         }
 
         if (extension_loaded('imagick')) {
-            $imagick = new Imagick();
+            $imagick = new Imagick;
             $imagick->readImageBlob($qrPngData);
 
             $qrWidth = $imagick->getImageWidth();
             $qrHeight = $imagick->getImageHeight();
 
-            $draw = new ImagickDraw();
+            $draw = new ImagickDraw;
             $draw->setFontSize($this->fontSize);
             $draw->setFillColor(new ImagickPixel($this->fontColor));
             $draw->setTextAlignment(Imagick::ALIGN_CENTER);
@@ -341,7 +343,7 @@ class QrCodeService
             $padding = 12;
             $newHeight = $qrHeight + $textHeight + $padding;
 
-            $canvas = new Imagick();
+            $canvas = new Imagick;
             $canvas->newImage($qrWidth, $newHeight, new ImagickPixel($this->backgroundColor));
             $canvas->setImageFormat('png');
 
@@ -375,6 +377,7 @@ class QrCodeService
         $canvas = imagecreatetruecolor(max(1, $qrWidth), $newHeight);
         if ($canvas === false) {
             imagedestroy($qrImage);
+
             return $qrPngData;
         }
 
@@ -414,7 +417,7 @@ class QrCodeService
         $hex = ltrim($hex, '#');
 
         if (strlen($hex) === 3) {
-            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
         }
 
         $r = min(255, max(0, (int) hexdec(substr($hex, 0, 2))));

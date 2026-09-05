@@ -34,6 +34,16 @@ _Avoid_: Barcode gun, physical reader
 An Alpine.js directive and event listener that buffers high-speed keystroke bursts from hardware scanners, prevents accidental form submissions, and routes values to the active field.
 _Avoid_: Keyboard listener, input hook
 
+**Station Listener**:
+A page-level or widget-level keyboard wedge listener that captures scans globally across the viewport and automatically routes inputs to the active or first empty registered field.
+_Avoid_: Global watcher, window listener
+
+### Symbologies & Formats
+
+**Barcode Format**:
+The optical symbology used to encode data, encompassing 2D matrices (QR Code, Data Matrix, Aztec) and 1D linear barcodes (Code 128, Code 39, EAN-13, UPC-A).
+_Avoid_: Code type, barcode variety
+
 ### Scanning Modes & Containers
 
 **Sequential Field Scanning**:
