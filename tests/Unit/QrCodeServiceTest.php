@@ -68,3 +68,14 @@ it('can create a streamed download response', function () {
         ->and($response->headers->get('content-disposition'))->toContain('attachment')
         ->and($response->headers->get('content-disposition'))->toContain('custom-qr.svg');
 });
+
+it('supports custom font path and graceful GD fallback for text overlay', function () {
+    $service = QrCodeService::make()
+        ->size(180)
+        ->font('non-existent-font.ttf')
+        ->withText('FALLBACK-TEST', 12)
+        ->generate('FALLBACK-TEST');
+
+    $raw = $service->getRaw();
+    expect(str_starts_with($raw, "\x89PNG\r\n\x1a\n"))->toBeTrue();
+});

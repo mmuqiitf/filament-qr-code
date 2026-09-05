@@ -45,6 +45,8 @@ class QrCodeService
 
     protected string $fontColor = '#000000';
 
+    protected ?string $fontPath = null;
+
     protected ?string $logoPath = null;
 
     protected int $logoSize = 50;
@@ -116,14 +118,22 @@ class QrCodeService
         return $this;
     }
 
-    public function withText(string $text, int $fontSize = 16, string $fontColor = '#000000'): self
+    public function withText(string $text, int $fontSize = 16, string $fontColor = '#000000', ?string $fontPath = null): self
     {
         $this->overlayText = $text;
         $this->fontSize = $fontSize;
         $this->fontColor = $fontColor;
+        $this->fontPath = $fontPath;
 
         // Overlay text requires PNG format for bitmap rasterization
         $this->format = QrFormat::Png;
+
+        return $this;
+    }
+
+    public function font(string $fontPath): self
+    {
+        $this->fontPath = $fontPath;
 
         return $this;
     }
@@ -250,22 +260,26 @@ class QrCodeService
     protected function applyLogo(string $qrPngData): string
     {
         if (extension_loaded('imagick')) {
-            $qr = new Imagick;
-            $qr->readImageBlob($qrPngData);
+            try {
+                $qr = new Imagick;
+                $qr->readImageBlob($qrPngData);
 
-            $logo = new Imagick($this->logoPath);
-            $logo->thumbnailImage($this->logoSize, $this->logoSize, true);
+                $logo = new Imagick($this->logoPath);
+                $logo->thumbnailImage($this->logoSize, $this->logoSize, true);
 
-            $x = (int) (($qr->getImageWidth() - $logo->getImageWidth()) / 2);
-            $y = (int) (($qr->getImageHeight() - $logo->getImageHeight()) / 2);
+                $x = (int) (($qr->getImageWidth() - $logo->getImageWidth()) / 2);
+                $y = (int) (($qr->getImageHeight() - $logo->getImageHeight()) / 2);
 
-            $qr->compositeImage($logo, Imagick::COMPOSITE_OVER, $x, $y);
-            $result = $qr->getImageBlob();
+                $qr->compositeImage($logo, Imagick::COMPOSITE_OVER, $x, $y);
+                $result = $qr->getImageBlob();
 
-            $qr->destroy();
-            $logo->destroy();
+                $qr->destroy();
+                $logo->destroy();
 
-            return $result;
+                return $result;
+            } catch (\Throwable) {
+                // Fall back to GD
+            }
         }
 
         // GD fallback
@@ -326,37 +340,45 @@ class QrCodeService
         }
 
         if (extension_loaded('imagick')) {
-            $imagick = new Imagick;
-            $imagick->readImageBlob($qrPngData);
+            try {
+                $imagick = new Imagick;
+                $imagick->readImageBlob($qrPngData);
 
-            $qrWidth = $imagick->getImageWidth();
-            $qrHeight = $imagick->getImageHeight();
+                $qrWidth = $imagick->getImageWidth();
+                $qrHeight = $imagick->getImageHeight();
 
-            $draw = new ImagickDraw;
-            $draw->setFontSize($this->fontSize);
-            $draw->setFillColor(new ImagickPixel($this->fontColor));
-            $draw->setTextAlignment(Imagick::ALIGN_CENTER);
+                $draw = new ImagickDraw;
+                $draw->setFontSize($this->fontSize);
+                $draw->setFillColor(new ImagickPixel($this->fontColor));
+                $draw->setTextAlignment(Imagick::ALIGN_CENTER);
 
-            $metrics = $imagick->queryFontMetrics($draw, $this->overlayText);
-            $textHeight = (int) $metrics['textHeight'];
+                if ($this->fontPath !== null && file_exists($this->fontPath)) {
+                    $draw->setFont($this->fontPath);
+                }
 
-            $padding = 12;
-            $newHeight = $qrHeight + $textHeight + $padding;
+                $metrics = $imagick->queryFontMetrics($draw, $this->overlayText);
+                $textHeight = (int) $metrics['textHeight'];
 
-            $canvas = new Imagick;
-            $canvas->newImage($qrWidth, $newHeight, new ImagickPixel($this->backgroundColor));
-            $canvas->setImageFormat('png');
+                $padding = 12;
+                $newHeight = $qrHeight + $textHeight + $padding;
 
-            $canvas->compositeImage($imagick, Imagick::COMPOSITE_OVER, 0, 0);
+                $canvas = new Imagick;
+                $canvas->newImage($qrWidth, $newHeight, new ImagickPixel($this->backgroundColor));
+                $canvas->setImageFormat('png');
 
-            $textY = $qrHeight + (int) ($textHeight * 0.8);
-            $canvas->annotateImage($draw, (float) ($qrWidth / 2), (float) $textY, 0.0, $this->overlayText);
+                $canvas->compositeImage($imagick, Imagick::COMPOSITE_OVER, 0, 0);
 
-            $imagick->destroy();
-            $result = $canvas->getImageBlob();
-            $canvas->destroy();
+                $textY = $qrHeight + (int) ($textHeight * 0.8);
+                $canvas->annotateImage($draw, (float) ($qrWidth / 2), (float) $textY, 0.0, $this->overlayText);
 
-            return $result;
+                $imagick->destroy();
+                $result = $canvas->getImageBlob();
+                $canvas->destroy();
+
+                return $result;
+            } catch (\Throwable) {
+                // If Imagick fails (e.g. FreeType font missing or not configured in container), gracefully fall back to GD
+            }
         }
 
         // GD fallback
