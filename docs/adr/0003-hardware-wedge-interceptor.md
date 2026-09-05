@@ -1,0 +1,3 @@
+# Hardware Scanner Wedge Interceptor and Premature Submit Prevention
+
+Physical USB and Bluetooth barcode/QR scanners act as HID keyboard emulation devices that stream characters with low latency (<50ms) and terminate with an `Enter` or `Tab` key. If unhandled, this causes accidental form submissions or validation failures in standard HTML forms. We decided to implement an Alpine.js directive and global listener that detects high-speed keystroke bursts, captures the full scanned token, suppresses the default submit action of the terminating key, and programmatically shifts focus to the target sequential field.
