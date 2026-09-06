@@ -9,7 +9,7 @@ export default defineConfig({
             entry: resolve(__dirname, 'resources/js/index.js'),
             name: 'FilamentQrCode',
             fileName: () => 'filament-qr-code.js',
-            formats: ['es'],
+            formats: ['iife'],
         },
         rollupOptions: {
             output: {

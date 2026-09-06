@@ -79,3 +79,104 @@ export function createWedgeHandler({
         },
     };
 }
+
+/**
+ * Alpine component for QrWedgeListener.
+ */
+export function qrWedgeListenerComponent({
+    fields = [],
+    burstThresholdMs = 50,
+    preventSubmit = true,
+    sound = true,
+    vibrate = true,
+    autoFocusNext = true,
+} = {}) {
+    return {
+        registeredFields: fields,
+        wedgeHandler: null,
+
+        init() {
+            this.wedgeHandler = createWedgeHandler({
+                burstThresholdMs,
+                preventFormSubmit: preventSubmit,
+                sound,
+                vibrate,
+                onScan: (scannedValue) => {
+                    this.handleGlobalScan(scannedValue);
+                },
+            });
+
+            window.addEventListener('keydown', (e) => {
+                this.wedgeHandler.handleKeyDown(e);
+            });
+        },
+
+        handleGlobalScan(scannedValue) {
+            let targetInput = null;
+            let targetFieldName = null;
+            const active = document.activeElement;
+
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                targetInput = active;
+                targetFieldName = active.getAttribute('name') || active.closest('[data-field-name]')?.getAttribute('data-field-name');
+            }
+
+            if (!targetInput && this.registeredFields.length > 0) {
+                for (const fieldName of this.registeredFields) {
+                    const el = document.querySelector(`[data-field-name="${fieldName}"] input, input[name="${fieldName}"], #${fieldName}`);
+                    if (el && !el.value) {
+                        targetInput = el;
+                        targetFieldName = fieldName;
+                        break;
+                    }
+                }
+            }
+
+            if (!targetInput) {
+                const inputs = document.querySelectorAll('form input[type="text"]:not([disabled]):not([readonly])');
+                for (const input of inputs) {
+                    if (!input.value) {
+                        targetInput = input;
+                        targetFieldName = input.getAttribute('name') || input.closest('[data-field-name]')?.getAttribute('data-field-name');
+                        break;
+                    }
+                }
+            }
+
+            if (targetInput) {
+                targetInput.focus();
+                targetInput.value = scannedValue;
+                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+                window.dispatchEvent(new CustomEvent('qr-wedge-scanned', {
+                    detail: {
+                        value: scannedValue,
+                        field: targetFieldName,
+                    },
+                }));
+
+                if (autoFocusNext) {
+                    this.$nextTick(() => {
+                        this.advanceToNextEmpty(targetInput);
+                    });
+                }
+            }
+        },
+
+        advanceToNextEmpty(currentInput) {
+            const allInputs = Array.from(document.querySelectorAll('form input[type="text"]:not([disabled]):not([readonly])'));
+            const currentIndex = allInputs.indexOf(currentInput);
+
+            if (currentIndex !== -1 && currentIndex < allInputs.length - 1) {
+                const nextInput = allInputs[currentIndex + 1];
+                if (nextInput) {
+                    nextInput.focus();
+                    if (typeof nextInput.select === 'function') {
+                        nextInput.select();
+                    }
+                }
+            }
+        },
+    };
+}

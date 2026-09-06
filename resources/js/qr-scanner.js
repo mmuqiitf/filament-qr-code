@@ -7,6 +7,7 @@ import { createWedgeHandler } from './qr-wedge.js';
  */
 export default function qrScannerComponent({
     state = null,
+    statePath = null,
     nextField = null,
     sound = true,
     vibrate = true,
@@ -20,6 +21,7 @@ export default function qrScannerComponent({
     return {
         // State
         value: state,
+        statePath: statePath,
         isModalOpen: false,
         isScanning: false,
         isLoading: false,
@@ -53,16 +55,22 @@ export default function qrScannerComponent({
 
             // Sync with Livewire state binding
             this.$watch('value', (newVal) => {
-                if (this.$wire) {
-                    this.$wire.set(this.getStatePath(), newVal);
+                const path = this.getStatePath();
+                if (this.$wire && path) {
+                    this.$wire.set(path, newVal);
                 }
             });
         },
 
         getStatePath() {
-            return this.$el.getAttribute('wire:model') ||
-                this.$el.getAttribute('wire:model.defer') ||
-                this.$el.getAttribute('wire:model.live') ||
+            if (this.statePath) {
+                return this.statePath;
+            }
+            const inputEl = this.$el.querySelector('input');
+            return inputEl?.getAttribute('wire:model') ||
+                inputEl?.getAttribute('wire:model.defer') ||
+                inputEl?.getAttribute('wire:model.live') ||
+                this.$el.getAttribute('wire:model') ||
                 '';
         },
 
@@ -203,6 +211,11 @@ export default function qrScannerComponent({
 
             this.value = trimmed;
 
+            const path = this.getStatePath();
+            if (this.$wire && path) {
+                this.$wire.set(path, trimmed);
+            }
+
             // Trigger sensory feedback
             qrFeedback.trigger({ sound, vibrate });
 
@@ -224,12 +237,23 @@ export default function qrScannerComponent({
         },
 
         advanceFocus(targetFieldName) {
-            // Find input by name, id, or wire:model
-            const targetEl = document.querySelector(`[data-field-name="${targetFieldName}"] input, input[name="${targetFieldName}"], #${targetFieldName}, [wire\\:model*="${targetFieldName}"]`);
-            if (targetEl) {
-                targetEl.focus();
-                if (typeof targetEl.select === 'function') {
-                    targetEl.select();
+            // Find input by data-field-name, name, id, or wire:model
+            const selectors = [
+                `[data-field-name="${targetFieldName}"] input`,
+                `input[name="${targetFieldName}"]`,
+                `#${targetFieldName}`,
+                `[wire\\:model*="${targetFieldName}"]`,
+                `[name*="${targetFieldName}"]`,
+            ];
+
+            for (const selector of selectors) {
+                const targetEl = document.querySelector(selector);
+                if (targetEl) {
+                    targetEl.focus();
+                    if (typeof targetEl.select === 'function') {
+                        targetEl.select();
+                    }
+                    break;
                 }
             }
         },

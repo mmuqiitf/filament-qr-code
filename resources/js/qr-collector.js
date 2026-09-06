@@ -6,6 +6,8 @@ import { createWedgeHandler } from './qr-wedge.js';
  * Alpine component for QrCollector (batch scanning).
  */
 export default function qrCollectorComponent({
+    state = null,
+    statePath = null,
     allowDuplicates = false,
     sound = true,
     vibrate = true,
@@ -14,9 +16,14 @@ export default function qrCollectorComponent({
     qrbox = 250,
     delayBetweenScansMs = 1200,
 } = {}) {
+    const initialItems = Array.isArray(state)
+        ? state.map(item => typeof item === 'object' && item !== null && item.code ? item : { code: String(item), scanned_at: new Date().toLocaleTimeString() })
+        : [];
+
     return {
-        items: [],
-        scannedSet: new Set(),
+        items: initialItems,
+        statePath: statePath,
+        scannedSet: new Set(initialItems.map(i => i.code)),
         isScanning: false,
         isProcessing: false,
         isLoading: false,
@@ -46,6 +53,13 @@ export default function qrCollectorComponent({
             }
 
             this.loadCameras();
+        },
+
+        syncState() {
+            const rawCodes = this.items.map(i => i.code);
+            if (this.statePath && this.$wire) {
+                this.$wire.set(this.statePath, rawCodes);
+            }
         },
 
         async loadCameras() {
@@ -131,6 +145,8 @@ export default function qrCollectorComponent({
                 detail: { code: trimmed },
             }));
 
+            this.syncState();
+
             setTimeout(() => {
                 this.isProcessing = false;
             }, delayBetweenScansMs);
@@ -141,12 +157,14 @@ export default function qrCollectorComponent({
             if (item) {
                 this.scannedSet.delete(item.code);
                 this.items.splice(index, 1);
+                this.syncState();
             }
         },
 
         clearAll() {
             this.items = [];
             this.scannedSet.clear();
+            this.syncState();
         },
     };
 }

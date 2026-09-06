@@ -22,6 +22,7 @@
     <div
         x-data="qrScanner({
             state: $wire.entangle('{{ $statePath }}'),
+            statePath: @js($statePath),
             nextField: @js($nextField),
             sound: @js($hasSound),
             vibrate: @js($hasVibration),

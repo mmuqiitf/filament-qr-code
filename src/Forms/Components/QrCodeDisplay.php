@@ -27,7 +27,28 @@ class QrCodeDisplay extends Field
 
     protected ?string $captionText = null;
 
+    protected string|Closure|null $errorCorrectionLevel = null;
+
+    protected string|Closure|null $logoPath = null;
+
+    protected int|Closure $logoSize = 50;
+
     protected bool|Closure $canDownload = true;
+
+    public function errorCorrection(string|Closure|null $level): static
+    {
+        $this->errorCorrectionLevel = $level;
+
+        return $this;
+    }
+
+    public function logo(string|Closure|null $path, int|Closure $size = 50): static
+    {
+        $this->logoPath = $path;
+        $this->logoSize = $size;
+
+        return $this;
+    }
 
     public function data(string|Closure|null $data): static
     {
@@ -120,6 +141,14 @@ class QrCodeDisplay extends Field
             $service->format($format);
         } elseif (is_string($format)) {
             $service->format($format);
+        }
+
+        if ($this->errorCorrectionLevel !== null) {
+            $service->errorCorrection((string) $this->evaluate($this->errorCorrectionLevel));
+        }
+
+        if ($this->logoPath !== null) {
+            $service->logo((string) $this->evaluate($this->logoPath), (int) $this->evaluate($this->logoSize));
         }
 
         if ($this->captionText !== null) {

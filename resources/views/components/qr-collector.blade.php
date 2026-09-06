@@ -15,6 +15,8 @@
 >
     <div
         x-data="qrCollector({
+            state: $wire.entangle('{{ $statePath }}'),
+            statePath: @js($statePath),
             allowDuplicates: @js($allowDuplicates),
             sound: @js($hasSound),
             vibrate: @js($hasVibration),
