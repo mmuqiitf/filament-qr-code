@@ -8,12 +8,43 @@
 A powerful, modern QR code package designed exclusively for **Filament v5** and **Laravel 11 / 12**.
 
 Features:
-- 📷 **Interactive Camera Scanner**: Real-time camera stream, rear-camera prioritization, torch/flashlight toggle, and image upload fallback with zero CDN latency.
-- 🔗 **Sequential Field Scanning**: Step seamlessly through chained form fields (`->nextField('next_field')`) or via the `QrScanSequence` split-screen container.
+- 📷 **Interactive Camera Scanner**: Real-time camera stream, rear-camera prioritization with remembered choice, responsive decode box synced to the on-screen reticle, and image upload fallback with zero CDN latency.
+- 🔗 **Sequential Scanning**: One shared camera feed walks through a multi-field checklist (`QrScanSequence`), with editable or locked steps.
 - 🔫 **Hardware Scanner (Keyboard Wedge) Support**: Native burst keystroke detection (<50ms) that absorbs trailing `Enter` keys to prevent premature form submissions.
-- 📦 **Batch Collector (Repeaters & Lists)**: Continuous scanning mode with duplicate protection and sound/haptic confirmation for rapid inventory/trainee logging.
+- 📦 **Batch Collector (Repeaters & Lists)**: Continuous scanning mode with duplicate protection and sound/haptic confirmation for rapid inventory logging.
 - 🎨 **Full QR Generator Suite**: Generate SVG & PNG QR codes with captions/text overlays, logo embedding, and schema components for Forms, Tables, Infolists, and Actions.
-- 🔊 **Sensory Confirmation**: Instant zero-latency synthesized Web Audio tone and mobile haptic feedback.
+- 🔊 **Sensory Confirmation**: Instant zero-latency synthesized Web Audio tone and mobile haptic feedback, pitch and duration tunable per component.
+
+---
+
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [1. Individual QR Scanner Field](#1-individual-qr-scanner-field)
+  - [2. Hands-Free Station Mode](#2-hands-free-station-mode)
+  - [3. Sequential Scanning — One Scanner, Many Fields](#3-sequential-scanning--one-scanner-many-fields)
+  - [4. Focus Handoff Between Fields](#4-focus-handoff-between-fields)
+  - [5. Batch Collector Scanning (Repeaters & Tables)](#5-batch-collector-scanning-repeaters--tables)
+  - [6. QR Code Generator Components](#6-qr-code-generator-components)
+- [Tutorial: Cashier POS with a Handheld Scanner](#tutorial-cashier-pos-with-a-handheld-scanner)
+- [Configuration](#configuration)
+- [Browser Events](#browser-events)
+- [Translations](#translations)
+- [Testing](#testing)
+- [Static Analysis](#static-analysis)
+- [Changelog](#changelog)
+- [Security Vulnerabilities](#security-vulnerabilities)
+- [Credits](#credits)
+- [License](#license)
+
+---
+
+## Requirements
+
+- PHP `^8.2`, Laravel 11/12/13, Filament v5.
+- PNG generation needs `gd` or `imagick` plus system fonts (`fonts-dejavu-core` on Debian).
+- Camera scanning needs a secure context (`https` or `localhost`).
+- The camera bundle (`html5-qrcode`) is compiled into `resources/dist/` — no CDN. After changing anything under `resources/js` or `resources/css`, rebuild with `npm run build` (CI fails when committed `dist/` is stale).
 
 ---
 
@@ -44,6 +75,10 @@ public function panel(Panel $panel): Panel
 }
 ```
 
+### Symbologies
+
+Pass `BarcodeFormat` cases (or raw strings) via `->formats([...])` on every camera component. Supported: `QrCode`, `Aztec`, `DataMatrix`, `Maxicode`, `Codabar`, `Code39`, `Code93`, `Code128`, `Itf`, `Ean13`, `Ean8`, `UpcA`, `UpcE`. Filtering formats speeds up decoding and cuts false positives — always set it when you know what you scan. One-dimensional codes automatically get a wide decode band instead of a square.
+
 ---
 
 ## Usage
@@ -73,6 +108,22 @@ QrScanner::make('sku')
     });
 ```
 
+Option reference:
+
+- `formats()` — symbologies the decoder attempts. Omit only when truly unknown.
+- `scanFormat()` — normalizes the raw value before it hits state.
+- `onScan()` — server-side hook, run via `$component->triggerOnScan()` after every scan.
+- `nextField('other')` — focuses that field after a scan (field handoff, see §4).
+- `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a *maximum*: the actual decode box scales to the viewfinder and the green reticle follows it.
+- `preferRearCamera()` — rear heuristic, but the operator's last camera choice (stored in `localStorage`) always wins.
+- `allowUpload(false)` — hides the image-file fallback.
+- `beepFrequency()` / `beepDuration()` / `vibrateDuration()` — feedback tuning.
+- `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — wedge tuning.
+
+The modal lists every detected camera (switching restarts the feed and is remembered) and closes automatically after a successful camera scan. Upload scans reuse the same decoder instance.
+
+> Hardware wedge note: `QrScanner`'s wedge listener is field-scoped on purpose. Mount `QrWedgeListener` on the page for global capture, otherwise both listeners will double-handle the same burst.
+
 ### 2. Hands-Free Station Mode (`QrWedgeListener`)
 
 For manufacturing stations and warehouse counters where operators shoot barcodes without touching the mouse:
@@ -89,26 +140,14 @@ QrWedgeListener::make([
     ->autoFocusNext(true)
     ->sound(true);
 ```
-Add `QrWedgeListener` anywhere in your schema. It intercepts hardware scanner bursts across the entire page, populates the active or first empty field, and auto-advances focus.
 
+Add `QrWedgeListener` anywhere in your schema. It intercepts hardware scanner bursts across the entire page, populates the active or first empty field (covering `text`, `search`, `number` inputs and textareas), syncs Livewire state, and auto-advances focus.
 
-### 3. Sequential Field Scanning (Chaining)
+The interceptor buffers keystrokes and treats gaps under `burstThresholdMs` (default 50) as a scanner burst. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), beeps, and routes the value. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
 
-Auto-focus the next field upon each scan:
+### 3. Sequential Scanning — One Scanner, Many Fields
 
-```php
-QrScanner::make('batch_number')
-    ->nextField('serial_number'),
-
-QrScanner::make('serial_number')
-    ->nextField('location_code'),
-
-QrScanner::make('location_code'),
-```
-
-### 4. Split-Screen Sequence Dashboard Container
-
-Render a unified camera feed and field checklist:
+Sequential scanning means **one scanner driving multiple fields**: a single shared camera feed (or one handheld gun) walks through a checklist. That is `QrScanSequence`:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
@@ -124,28 +163,63 @@ QrScanSequence::make([
     ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
     ->preferRearCamera()
     ->statePathPrefix('data') // Livewire form state prefix scans are written to
-    ->scanFormat(fn ($rawValue) => strtoupper(trim($rawValue)))
-    ->onStepScanned(fn ($field, $scannedValue) => logger()->info("Scanned {$field}: {$scannedValue}"))
     ->sound(true)
     ->vibrate(true);
 ```
 
-Scans are written to `{prefix}.{field}` Livewire state (default `data.*`), so the
-container stays bound to your Filament form and passes validation. Camera choice,
-torch, and zoom controls match the single-field scanner.
+One feed, one checklist: steps auto-advance, clicking a step re-targets it, and the camera dropdown matches the single-field scanner. It renders stacked on mobile and split-screen on desktop. When the last step lands, the feed stops by itself so the button never gets stuck on "Stop".
+
+`statePathPrefix()` (default `data`) is what keeps the container bound to your form — set it to whatever `statePath()` your schema uses. For programmatic flows, `scanFormat()` / `onStepScanned()` pair with `formatScannedValue()` and `triggerOnStep()`.
+
+#### Correcting a scan (unedited vs edited values)
+
+Every step is a plain input: scans fill it, and operators can type or fix any value by hand — handy for unreadable labels. Every change syncs to the bound Livewire state and dispatches `qr-sequence-edited`. Pass `->editable(false)` to render locked read-only values instead. To flip modes live without a re-render wiping the running feed, dispatch `qr-sequence-editable` with `{ enabled }` on `window`; the component listens for it (its DOM is `wire:ignore`d so scans survive Livewire morphs).
+
+#### Caveat: `getState()` misses container writes
+
+The container writes via `$wire.set`, bypassing field components. Merge raw state in your submit handler, then validate the required keys yourself:
+
+```php
+$state = array_merge($this->data ?? [], $this->form->getState());
+
+if (blank($state['batch_number'] ?? null)) {
+    Notification::make()->title('Incomplete sequence')->warning()->send();
+    return;
+}
+```
+
+### 4. Focus Handoff Between Fields
+
+Move focus to the next field after each scan (a two-field handoff — distinct from sequential scanning above):
+
+```php
+QrScanner::make('batch_number')
+    ->nextField('serial_number'),
+
+QrScanner::make('serial_number')
+    ->nextField('location_code'),
+
+QrScanner::make('location_code'),
+```
 
 ### 5. Batch Collector Scanning (Repeaters & Tables)
 
+Continuous camera multi-scan for inventory and repeater flows (not the register — cashiers use a gun, see the tutorial below).
+
 #### In Form Repeaters:
+
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 
 QrCollector::make('scanned_items')
     ->allowDuplicates(false)
-    ->delayBetweenScans(1200);
+    ->delayBetweenScans(1200)
+    ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
+    ->preferRearCamera();
 ```
 
 #### As a Table / Repeater Action:
+
 ```php
 use Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction;
 
@@ -157,21 +231,14 @@ $table->headerActions([
 ]);
 ```
 
-Each scan dispatches a `qr-collector-item-added` window event (with `{ code }`).
-Forward it into server-side handling — e.g. `x-on:qr-collector-item-added.window`
-calling your Livewire method, which can then invoke
-`$action->handleScan($code)` to run the `onScan` callback.
+Each scan dispatches a `qr-collector-item-added` window event (with `{ code }`). Forward it into server-side handling — e.g. `x-on:qr-collector-item-added.window` calling your Livewire method, which can then invoke `$action->handleScan($code)` to run the `onScan` callback. On the host, `$wire.handleCollectorScan($code)` is also honored when defined — but pick one channel, not both.
 
-> Hardware wedge note: `QrScanner`'s wedge listener is field-scoped on purpose.
-> Mount `QrWedgeListener` on the page for global cashier capture, otherwise both
-> listeners will double-handle the same burst. Custom terminators and minimum
-> lengths are configurable via `->hardwareScanner(terminators: [...],
-> minBarcodeLength: 3)` and feedback pitch/duration via `->beepFrequency(660)`,
-> `->beepDuration(120)`, `->vibrateDuration(200)`.
+Custom terminators and minimum lengths are configurable via `->hardwareScanner(terminators: [...], minBarcodeLength: 3)` and feedback pitch/duration via `->beepFrequency(660)`, `->beepDuration(120)`, `->vibrateDuration(200)`.
 
 ### 6. QR Code Generator Components
 
 #### In Form Schemas:
+
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCodeDisplay;
 
@@ -184,6 +251,7 @@ QrCodeDisplay::make('qr')
 ```
 
 #### In Table Columns:
+
 ```php
 use Mmuqiitf\FilamentQrCode\Tables\Columns\QrColumn;
 
@@ -194,7 +262,10 @@ QrColumn::make('sku')
     ->downloadable();
 ```
 
+Thumbnails and modal previews share a capped in-process render cache, and the modal honors the same `format`/`margin` as the thumbnail.
+
 #### In Infolists:
+
 ```php
 use Mmuqiitf\FilamentQrCode\Infolists\Components\QrEntry;
 
@@ -204,17 +275,22 @@ QrEntry::make('verification_code')
 ```
 
 #### As a Download Action:
+
 ```php
 use Mmuqiitf\FilamentQrCode\Tables\Actions\DownloadQrAction;
 
 $table->actions([
     DownloadQrAction::make()
         ->qrData(fn ($record) => $record->verification_url)
-        ->qrFileName(fn ($record) => "qr-{$record->id}"),
+        ->qrFileName(fn ($record) => "qr-{$record->id}")
+        ->qrFormat(QrFormat::Png)
+        ->qrImageSize(400)
+        ->qrMargin(2),
 ]);
 ```
 
 #### Programmatic Standalone Generation:
+
 ```php
 use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
@@ -223,6 +299,10 @@ use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 $dataUri = FilamentQrCode::make()
     ->format(QrFormat::Svg)
     ->size(300)
+    ->margin(2)
+    ->color('#0f172a')
+    ->backgroundColor('#ffffff')
+    ->errorCorrection('M') // L, M, Q, H
     ->generate('https://example.com')
     ->toDataUri();
 
@@ -230,22 +310,70 @@ $dataUri = FilamentQrCode::make()
 return FilamentQrCode::make()
     ->withText('BATCH #1024', 16, '#000000')
     ->generate('BATCH-1024')
-    ->download('batch-1024');
+    ->download('batch-1024'); // StreamedResponse download; stream() inlines
 ```
+
+Rules that bite:
+
+- `withText()` and `logo()` need raster output, so the service always returns PNG when either is set — regardless of whether `format()` was called before or after. Request PNG explicitly when overlaying.
+- Invalid hex colors throw `InvalidArgumentException` instead of silently rendering black.
+- `logo($path, $size)` forces error-correction level H for scannability.
+- Identical payloads share the render cache, so tables with repeated values encode once.
 
 ---
 
-## Testing
+## Tutorial: Cashier POS with a Handheld Scanner
 
-```bash
-composer test
+Cashiers scan with a physical gun, so there is **no camera UI** — just an input box and the invisible wedge interceptor catching bursts anywhere on the page.
+
+### Step 1 — mount the wedge listener
+
+A Filament page needs a schema to host the component:
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrWedgeListener;
+
+public ?array $data = [];
+
+public function form(Schema $schema): Schema
+{
+    return $schema->statePath('data')->components([
+        QrWedgeListener::make(['scanInput'])
+            ->autoFocusNext(false) // stay on the SKU box for rapid scans
+            ->sound(true)
+            ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2),
+    ]);
+}
 ```
 
-## Static Analysis
+Render `{{ $this->form }}` — it outputs nothing visible.
 
-```bash
-composer analyse
+### Step 2 — funnel every scan into one method
+
+Gun bursts and typed input must converge, or quantities double-count:
+
+```blade
+<div x-on:qr-wedge-scanned.window="$wire.scanProduct($event.detail.value)">
 ```
+
+```php
+public function scanProduct(string $code): void
+{
+    $product = Product::where('sku', trim($code))
+        ->orWhere('barcode', trim($code))->first();
+
+    if (! $product) {
+        Notification::make()->title('Product Not Found')->danger()->send();
+        return;
+    }
+
+    // bump quantity if already in cart, else push a new line
+}
+```
+
+Keep the manual input's Enter handler: wedge bursts swallow their terminator (`preventFormSubmit`), so Enter only fires for typed input — no double-adds.
+
+---
 
 ## Configuration
 
@@ -269,13 +397,78 @@ QrScanner::make('sku')
     ->vibrateDuration(100);
 ```
 
-Text overlays (`withText()`) and logos (`logo()`) require raster output, so the
-generator always returns PNG when either is set — regardless of whether
-`format()` was called before or after. Invalid hex colors throw
-`InvalidArgumentException` instead of silently rendering black.
+### `hardware_scanner`
 
-All UI strings live under the `filament-qr-code::ui` translation namespace
-(`resources/lang/en/ui.php`) and can be overridden per locale.
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | `true` | master switch (components also gate individually) |
+| `burst_threshold_ms` | `50` | max gap between keystrokes counted as one burst |
+| `min_barcode_length` | `2` | shorter bursts are treated as typing |
+| `prevent_form_submit` | `true` | swallow the terminator key during bursts |
+| `default_terminators` | `['Enter', 'Tab']` | gun suffix keys ending a scan |
+
+### `feedback`
+
+| Key | Default |
+|---|---|
+| `sound` | `true` |
+| `beep_frequency` | `880` Hz |
+| `beep_duration_ms` | `80` |
+| `vibrate` | `true` |
+| `vibrate_duration_ms` | `100` |
+
+### `camera`
+
+| Key | Default | Meaning |
+|---|---|---|
+| `fps` | `25` | decode attempts per second |
+| `qrbox` | `250` | *maximum* decode-box edge; the real box scales to the viewfinder (wide band for 1D) |
+| `prefer_rear_camera` | `true` | rear heuristic; the remembered `localStorage` choice wins |
+
+### `generator`
+
+`size` (300), `margin` (2), `format` (`svg`), `foreground_color`, `background_color`, `error_correction` (`M`).
+
+---
+
+## Browser Events
+
+| Event | Detail | Fired when |
+|---|---|---|
+| `qr-scanned` | `{ value, field, nextField }` | any `QrScanner` scan |
+| `qr-wedge-scanned` | `{ value, field }` | page-global wedge burst |
+| `qr-sequence-step` | `{ field, value, index }` | each container step |
+| `qr-sequence-completed` | `{ results }` | last container step |
+| `qr-sequence-edited` | `{ field, value }` | operator edits a step |
+| `qr-collector-item-added` | `{ code }` | each batch-collector scan |
+
+---
+
+## Translations
+
+All UI strings live under the `filament-qr-code::ui` translation namespace (`resources/lang/en/ui.php`). Publish with:
+
+```bash
+php artisan vendor:publish --tag="filament-qr-code-translations"
+```
+
+and translate per locale.
+
+---
+
+## Testing
+
+```bash
+composer test
+```
+
+Run a single file or test with `vendor/bin/pest tests/Unit/QrCodeServiceTest.php` or `vendor/bin/pest --filter="can generate a PNG QR code"`.
+
+## Static Analysis
+
+```bash
+composer analyse
+```
 
 ---
 

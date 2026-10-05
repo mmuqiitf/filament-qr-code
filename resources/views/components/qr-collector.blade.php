@@ -42,6 +42,7 @@
             delayBetweenScansMs: @js($delayMs)
         })"
         class="space-y-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
+        wire:ignore
     >
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -53,15 +54,6 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <button
-                    x-show="hasTorch && isScanning"
-                    type="button"
-                    @click="toggleTorch()"
-                    class="px-2 py-1.5 text-xs font-semibold text-gray-500 hover:text-amber-500 dark:text-gray-400 rounded-lg transition"
-                    :class="{ 'text-amber-500 dark:text-amber-400': torchActive }"
-                >
-                    {{ __('filament-qr-code::ui.flash') }}
-                </button>
                 <button
                     x-show="!isScanning"
                     type="button"
@@ -95,19 +87,6 @@
                                 <option :value="dev.id" x-text="dev.label || ('Camera ' + dev.id)"></option>
                             </template>
                         </select>
-                    </div>
-
-                    <div x-show="hasZoom && isScanning" class="flex items-center gap-2 text-xs">
-                        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.zoom') }}</label>
-                        <input
-                            type="range"
-                            :min="zoomMin"
-                            :max="zoomMax"
-                            step="0.1"
-                            x-model.number="zoomValue"
-                            @input="onZoomInput()"
-                            class="w-full accent-primary-600"
-                        />
                     </div>
                 </div>
 

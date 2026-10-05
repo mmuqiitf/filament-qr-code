@@ -2,10 +2,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createWedgeHandler } from './qr-wedge.js';
 import {
-    applyZoomLevel,
     computeQrboxForElement,
-    getZoomState,
-    hasTorchSupport,
     mapFormats,
     persistCameraId,
     selectPreferredCamera,
@@ -52,12 +49,6 @@ export default function qrScannerComponent({
         html5Qrcode: null,
         scannerElementId: '',
         wedgeHandler: null,
-        torchActive: false,
-        hasTorch: false,
-        zoomMin: 1,
-        zoomMax: 5,
-        zoomValue: 1,
-        hasZoom: false,
         boundWedgeHandler: null,
 
         init() {
@@ -199,8 +190,6 @@ export default function qrScannerComponent({
 
                 this.isScanning = true;
                 persistCameraId(storageKey, this.selectedDeviceId);
-                this.checkTorchSupport();
-                this.checkZoomSupport();
             } catch (err) {
                 this.hasError = true;
                 this.errorMessage = err.message || 'Error starting camera scanner.';
@@ -215,44 +204,8 @@ export default function qrScannerComponent({
                     console.debug('Scanner stop error:', e);
                 } finally {
                     this.isScanning = false;
-                    this.torchActive = false;
-                    this.hasZoom = false;
                 }
             }
-        },
-
-        async toggleTorch() {
-            if (!this.html5Qrcode || !this.isScanning) return;
-
-            try {
-                const capabilities = this.html5Qrcode.getRunningTrackCameraCapabilities();
-                if (capabilities && capabilities.torchFeature().isSupported()) {
-                    this.torchActive = !this.torchActive;
-                    await capabilities.torchFeature().apply(this.torchActive);
-                }
-            } catch (e) {
-                console.debug('Torch toggle error:', e);
-            }
-        },
-
-        checkTorchSupport() {
-            this.hasTorch = hasTorchSupport(this.html5Qrcode);
-        },
-
-        checkZoomSupport() {
-            const zoom = getZoomState(this.html5Qrcode);
-            if (zoom) {
-                this.hasZoom = true;
-                this.zoomMin = zoom.min;
-                this.zoomMax = zoom.max;
-                this.zoomValue = zoom.min;
-            } else {
-                this.hasZoom = false;
-            }
-        },
-
-        async onZoomInput() {
-            await applyZoomLevel(this.html5Qrcode, this.zoomValue);
         },
 
         handleScanResult(scannedText) {

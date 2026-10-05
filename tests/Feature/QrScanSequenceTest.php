@@ -63,3 +63,9 @@ it('supports per-step scan formatting and step callbacks', function () {
 
     expect($seen)->toBe(['step', 'ABC-123']);
 });
+
+it('allows inline correction of captured values by default', function () {
+    expect(QrScanSequence::make(['step'])->isEditable())->toBeTrue();
+
+    expect(QrScanSequence::make(['step'])->editable(false)->isEditable())->toBeFalse();
+});

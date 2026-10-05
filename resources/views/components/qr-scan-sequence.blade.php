@@ -14,6 +14,7 @@
     $burstThresholdMs = $getBurstThresholdMs();
     $terminators = $getTerminators();
     $minBarcodeLength = $getMinBarcodeLength();
+    $isEditable = $isEditable();
 @endphp
 
 <div
@@ -32,9 +33,12 @@
         qrbox: @js($qrbox),
         preferRearCamera: @js($preferRear),
         formats: @js($supportedFormats),
-        statePrefix: @js($statePrefix)
+        statePrefix: @js($statePrefix),
+        editable: @js($isEditable)
     })"
+    @qr-sequence-editable.window="editable = $event.detail.enabled"
     class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm"
+    wire:ignore
 >
     {{-- Left: Scanner Viewfinder & Controls --}}
     <div class="lg:col-span-5 space-y-4">
@@ -45,15 +49,6 @@
             </h4>
 
             <div class="flex items-center gap-2">
-                <button
-                    x-show="hasTorch && isScanning"
-                    type="button"
-                    @click="toggleTorch()"
-                    class="px-2 py-1 text-gray-500 hover:text-amber-500 dark:text-gray-400 rounded-lg transition text-xs font-semibold"
-                    :class="{ 'text-amber-500 dark:text-amber-400': torchActive }"
-                >
-                    {{ __('filament-qr-code::ui.flash') }}
-                </button>
                 <button
                     x-show="!isScanning"
                     type="button"
@@ -85,19 +80,6 @@
                         <option :value="dev.id" x-text="dev.label || ('Camera ' + dev.id)"></option>
                     </template>
                 </select>
-            </div>
-
-            <div x-show="hasZoom && isScanning" class="flex items-center gap-2 text-xs">
-                <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.zoom') }}</label>
-                <input
-                    type="range"
-                    :min="zoomMin"
-                    :max="zoomMax"
-                    step="0.1"
-                    x-model.number="zoomValue"
-                    @input="onZoomInput()"
-                    class="w-full accent-primary-600"
-                />
             </div>
         </div>
 
@@ -159,10 +141,27 @@
                     </div>
 
                     <div class="text-right">
-                        <span x-show="results[f.key]" class="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700" x-text="results[f.key]"></span>
-                        <span x-show="!results[f.key] && currentFieldIndex === idx" class="text-xs font-semibold text-primary-600 dark:text-primary-400 animate-pulse">
-                            {{ __('filament-qr-code::ui.ready_to_scan') }}
-                        </span>
+                        {{-- Edited mode: every step is an input — scans fill it, operators can type or correct freely --}}
+                        <template x-if="editable">
+                            <input
+                                type="text"
+                                :value="results[f.key] || ''"
+                                @input="results[f.key] = $event.target.value"
+                                @change="syncEditedValue(f.key)"
+                                placeholder="{{ __('filament-qr-code::ui.type_or_scan') }}"
+                                class="fi-input font-mono text-xs w-44 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2 py-1"
+                            />
+                        </template>
+
+                        {{-- Unedited (locked) mode: captured values are read-only --}}
+                        <template x-if="!editable">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <span class="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700" x-text="results[f.key] || ''"></span>
+                                <span x-show="!results[f.key] && currentFieldIndex === idx" class="text-xs font-semibold text-primary-600 dark:text-primary-400 animate-pulse">
+                                    {{ __('filament-qr-code::ui.ready_to_scan') }}
+                                </span>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </template>

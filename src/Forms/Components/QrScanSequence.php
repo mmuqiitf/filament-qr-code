@@ -39,6 +39,8 @@ class QrScanSequence extends Component
 
     protected ?Closure $onStepCallback = null;
 
+    protected bool|Closure $allowEdit = true;
+
     /**
      * @param  array<int, array{key: string, label: string}|string>|Closure  $fields
      */
@@ -199,5 +201,20 @@ class QrScanSequence extends Component
         if ($this->onStepCallback instanceof Closure) {
             $this->evaluate($this->onStepCallback, ['field' => $fieldKey, 'scannedValue' => $scannedValue, 'component' => $this]);
         }
+    }
+
+    /**
+     * Allow operators to correct a captured value inline (unedited vs edited modes).
+     */
+    public function editable(bool|Closure $condition = true): static
+    {
+        $this->allowEdit = $condition;
+
+        return $this;
+    }
+
+    public function isEditable(): bool
+    {
+        return (bool) $this->evaluate($this->allowEdit);
     }
 }

@@ -162,50 +162,6 @@ export function selectPreferredCamera(devices, { preferRear = true, storageKey =
     return devices[0].id;
 }
 
-export function getZoomState(html5Qrcode) {
-    try {
-        const capabilities = html5Qrcode?.getRunningTrackCameraCapabilities?.();
-        const zoom = capabilities?.zoomFeature?.();
-
-        if (!zoom || !zoom.isSupported()) {
-            return null;
-        }
-
-        return {
-            min: zoom.getMin?.() ?? 1,
-            max: zoom.getMax?.() ?? 5,
-            step: 0.1,
-        };
-    } catch {
-        return null;
-    }
-}
-
-export async function applyZoomLevel(html5Qrcode, value) {
-    try {
-        const capabilities = html5Qrcode?.getRunningTrackCameraCapabilities?.();
-        const zoom = capabilities?.zoomFeature?.();
-
-        if (zoom && zoom.isSupported()) {
-            await zoom.apply(value);
-            return true;
-        }
-    } catch (e) {
-        console.debug('Zoom apply error:', e);
-    }
-
-    return false;
-}
-
-export function hasTorchSupport(html5Qrcode) {
-    try {
-        const capabilities = html5Qrcode?.getRunningTrackCameraCapabilities?.();
-        return !!(capabilities && capabilities.torchFeature?.().isSupported());
-    } catch {
-        return false;
-    }
-}
-
 export function triggerFeedback(feedback, { sound = true, vibrate = true, frequency = 880, duration = 80, vibrateDuration = 100 } = {}) {
     feedback?.trigger?.({
         sound,

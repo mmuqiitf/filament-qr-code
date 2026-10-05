@@ -96,19 +96,6 @@
 
                     <div class="flex items-center gap-2">
                         <button
-                            x-show="hasTorch"
-                            type="button"
-                            @click="toggleTorch()"
-                            class="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white rounded-lg transition"
-                            :class="{ 'text-amber-500 dark:text-amber-400': torchActive }"
-                            title="{{ __('filament-qr-code::ui.toggle_flashlight') }}"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
-                            </svg>
-                        </button>
-
-                        <button
                             type="button"
                             @click="closeScannerModal()"
                             class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg"
@@ -120,8 +107,8 @@
                     </div>
                 </div>
 
-                {{-- Camera Feed Container --}}
-                <div class="p-4 space-y-3">
+                {{-- Camera Feed Container (Livewire-ignored: morphs would kill the video element mid-scan) --}}
+                <div class="p-4 space-y-3" wire:ignore>
                     {{-- Camera device selector --}}
                     <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
                         <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.camera') }}</label>
@@ -134,20 +121,6 @@
                                 <option :value="dev.id" x-text="dev.label || ('Camera ' + dev.id)"></option>
                             </template>
                         </select>
-                    </div>
-
-                    {{-- Zoom slider (shown when the active camera reports zoom support) --}}
-                    <div x-show="hasZoom && isScanning" class="flex items-center gap-2 text-xs">
-                        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.zoom') }}</label>
-                        <input
-                            type="range"
-                            :min="zoomMin"
-                            :max="zoomMax"
-                            step="0.1"
-                            x-model.number="zoomValue"
-                            @input="onZoomInput()"
-                            class="w-full accent-primary-600"
-                        />
                     </div>
 
                     {{-- Viewfinder --}}

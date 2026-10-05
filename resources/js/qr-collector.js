@@ -2,10 +2,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createWedgeHandler } from './qr-wedge.js';
 import {
-    applyZoomLevel,
     computeQrboxForElement,
-    getZoomState,
-    hasTorchSupport,
     mapFormats,
     persistCameraId,
     selectPreferredCamera,
@@ -58,12 +55,6 @@ export default function qrCollectorComponent({
         elementId: '',
         wedgeHandler: null,
         boundWedgeHandler: null,
-        torchActive: false,
-        hasTorch: false,
-        zoomMin: 1,
-        zoomMax: 5,
-        zoomValue: 1,
-        hasZoom: false,
 
         init() {
             this.elementId = `qr-collector-${this.$id('qr-col')}`;
@@ -161,14 +152,6 @@ export default function qrCollectorComponent({
                 );
                 this.isScanning = true;
                 persistCameraId(storageKey, this.selectedDeviceId);
-                this.hasTorch = hasTorchSupport(this.html5Qrcode);
-                const zoom = getZoomState(this.html5Qrcode);
-                if (zoom) {
-                    this.hasZoom = true;
-                    this.zoomMin = zoom.min;
-                    this.zoomMax = zoom.max;
-                    this.zoomValue = zoom.min;
-                }
             } catch (err) {
                 this.hasError = true;
                 this.errorMessage = 'Failed to start camera.';
@@ -183,28 +166,8 @@ export default function qrCollectorComponent({
                     console.debug('Error stopping collector:', e);
                 } finally {
                     this.isScanning = false;
-                    this.torchActive = false;
-                    this.hasZoom = false;
                 }
             }
-        },
-
-        async toggleTorch() {
-            if (!this.html5Qrcode || !this.isScanning) return;
-
-            try {
-                const capabilities = this.html5Qrcode.getRunningTrackCameraCapabilities();
-                if (capabilities && capabilities.torchFeature().isSupported()) {
-                    this.torchActive = !this.torchActive;
-                    await capabilities.torchFeature().apply(this.torchActive);
-                }
-            } catch (e) {
-                console.debug('Torch toggle error:', e);
-            }
-        },
-
-        async onZoomInput() {
-            await applyZoomLevel(this.html5Qrcode, this.zoomValue);
         },
 
         handleDetectedCode(code) {

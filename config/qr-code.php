@@ -51,8 +51,6 @@ return [
         'fps' => 25,
         'qrbox' => 250,
         'prefer_rear_camera' => true,
-        'show_torch_button' => true,
-        'show_zoom_slider' => true,
     ],
 
     /*

@@ -2,10 +2,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createWedgeHandler } from './qr-wedge.js';
 import {
-    applyZoomLevel,
     computeQrboxForElement,
-    getZoomState,
-    hasTorchSupport,
     mapFormats,
     persistCameraId,
     selectPreferredCamera,
@@ -33,6 +30,7 @@ export default function qrScanSequenceComponent({
     preferRearCamera = true,
     formats = [],
     statePrefix = 'data',
+    editable = true,
     cameraStorageKey = null,
 } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('sequence');
@@ -41,6 +39,7 @@ export default function qrScanSequenceComponent({
         fields: fields, // array of { key: string, label: string }
         currentFieldIndex: 0,
         results: {},
+        editable: editable,
         isScanning: false,
         isLoading: false,
         hasError: false,
@@ -51,12 +50,6 @@ export default function qrScanSequenceComponent({
         elementId: '',
         wedgeHandler: null,
         boundWedgeHandler: null,
-        torchActive: false,
-        hasTorch: false,
-        zoomMin: 1,
-        zoomMax: 5,
-        zoomValue: 1,
-        hasZoom: false,
 
         init() {
             this.elementId = `qr-sequence-${this.$id('qr-seq')}`;
@@ -166,14 +159,6 @@ export default function qrScanSequenceComponent({
                 );
                 this.isScanning = true;
                 persistCameraId(storageKey, this.selectedDeviceId);
-                this.hasTorch = hasTorchSupport(this.html5Qrcode);
-                const zoom = getZoomState(this.html5Qrcode);
-                if (zoom) {
-                    this.hasZoom = true;
-                    this.zoomMin = zoom.min;
-                    this.zoomMax = zoom.max;
-                    this.zoomValue = zoom.min;
-                }
             } catch (err) {
                 this.hasError = true;
                 this.errorMessage = 'Failed to start camera feed.';
@@ -188,28 +173,8 @@ export default function qrScanSequenceComponent({
                     console.debug('Error stopping sequence scanner:', e);
                 } finally {
                     this.isScanning = false;
-                    this.torchActive = false;
-                    this.hasZoom = false;
                 }
             }
-        },
-
-        async toggleTorch() {
-            if (!this.html5Qrcode || !this.isScanning) return;
-
-            try {
-                const capabilities = this.html5Qrcode.getRunningTrackCameraCapabilities();
-                if (capabilities && capabilities.torchFeature().isSupported()) {
-                    this.torchActive = !this.torchActive;
-                    await capabilities.torchFeature().apply(this.torchActive);
-                }
-            } catch (e) {
-                console.debug('Torch toggle error:', e);
-            }
-        },
-
-        async onZoomInput() {
-            await applyZoomLevel(this.html5Qrcode, this.zoomValue);
         },
 
         processScan(decodedText) {
@@ -241,14 +206,40 @@ export default function qrScanSequenceComponent({
                 },
             }));
 
-            // Auto-advance to next field
+            // Auto-advance to next field, or stop the feed when complete
+            // so the button never gets stuck on "Stop".
             if (this.currentFieldIndex < this.fields.length - 1) {
                 this.currentFieldIndex++;
             } else {
+                this.stopScanner();
                 window.dispatchEvent(new CustomEvent('qr-sequence-completed', {
                     detail: { results: { ...this.results } },
                 }));
             }
+        },
+
+        /**
+         * Sync a manually typed or corrected step value to form state.
+         */
+        syncEditedValue(fieldKey) {
+            const trimmed = ((this.results[fieldKey] || '') + '').trim();
+
+            if (!trimmed) {
+                delete this.results[fieldKey];
+            } else {
+                this.results[fieldKey] = trimmed;
+            }
+
+            if (this.$wire) {
+                this.$wire.set(this.statePathFor(fieldKey), trimmed);
+            }
+
+            window.dispatchEvent(new CustomEvent('qr-sequence-edited', {
+                detail: {
+                    field: fieldKey,
+                    value: trimmed,
+                },
+            }));
         },
 
         resetSequence() {

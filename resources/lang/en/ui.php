@@ -15,7 +15,6 @@ return [
     'download_image' => 'Download Image',
     'download_qr_code' => 'Download QR Code',
     'empty_collector' => 'No items scanned yet. Position a QR code in front of the camera.',
-    'flash' => 'Flash',
     'items' => 'items',
     'loading_camera' => 'Loading camera...',
     'no_data' => 'No QR code data available',
@@ -38,6 +37,5 @@ return [
     'start_scanning' => 'Start Scanning',
     'starting_feed' => 'Starting camera feed...',
     'stop' => 'Stop',
-    'toggle_flashlight' => 'Toggle Flashlight',
-    'zoom' => 'Zoom:',
+    'type_or_scan' => 'Type or scan a code...',
 ];
