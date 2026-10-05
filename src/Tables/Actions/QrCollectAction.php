@@ -34,14 +34,14 @@ class QrCollectAction extends Action
         parent::setUp();
 
         $this->name('qr_collect');
-        $this->label(__('Batch Scan QR Codes'));
+        $this->label(__('filament-qr-code::ui.batch_scan_qrcodes'));
         $this->icon('heroicon-o-qr-code');
         $this->color('primary');
 
-        $this->modalHeading(__('Batch QR Scanner'));
-        $this->modalDescription(__('Continuously scan QR codes to add items.'));
+        $this->modalHeading(__('filament-qr-code::ui.batch_qr_scanner'));
+        $this->modalDescription(__('filament-qr-code::ui.collect_description'));
         $this->modalSubmitAction(false);
-        $this->modalCancelActionLabel(__('Done'));
+        $this->modalCancelActionLabel(__('filament-qr-code::ui.done'));
 
         $this->modalContent(function (): View {
             /** @var view-string $viewName */

@@ -28,7 +28,7 @@ class DownloadQrAction extends Action
         parent::setUp();
 
         $this->name('download_qr');
-        $this->label(__('Download QR Code'));
+        $this->label(__('filament-qr-code::ui.download_qr_code'));
         $this->icon('heroicon-o-arrow-down-tray');
         $this->color('gray');
 

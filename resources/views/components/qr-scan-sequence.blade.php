@@ -41,7 +41,7 @@
         <div class="flex items-center justify-between">
             <h4 class="font-semibold text-sm text-gray-900 dark:text-white flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full" :class="isScanning ? 'bg-success-500 animate-pulse' : 'bg-gray-400'"></span>
-                {{ __('QR Sequence Scanner') }}
+                {{ __('filament-qr-code::ui.sequence_scanner') }}
             </h4>
 
             <div class="flex items-center gap-2">
@@ -52,7 +52,7 @@
                     class="px-2 py-1 text-gray-500 hover:text-amber-500 dark:text-gray-400 rounded-lg transition text-xs font-semibold"
                     :class="{ 'text-amber-500 dark:text-amber-400': torchActive }"
                 >
-                    {{ __('Flash') }}
+                    {{ __('filament-qr-code::ui.flash') }}
                 </button>
                 <button
                     x-show="!isScanning"
@@ -60,7 +60,7 @@
                     @click="startScanner()"
                     class="px-3 py-1 bg-success-600 hover:bg-success-700 text-white rounded-lg text-xs font-semibold shadow-sm"
                 >
-                    {{ __('Start') }}
+                    {{ __('filament-qr-code::ui.start') }}
                 </button>
                 <button
                     x-show="isScanning"
@@ -68,14 +68,14 @@
                     @click="stopScanner()"
                     class="px-3 py-1 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold shadow-sm"
                 >
-                    {{ __('Stop') }}
+                    {{ __('filament-qr-code::ui.stop') }}
                 </button>
             </div>
         </div>
 
         <div class="space-y-2">
             <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
-                <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Camera:') }}</label>
+                <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.camera') }}</label>
                 <select
                     x-model="selectedDeviceId"
                     @change="isScanning ? startScanner() : null"
@@ -88,7 +88,7 @@
             </div>
 
             <div x-show="hasZoom && isScanning" class="flex items-center gap-2 text-xs">
-                <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Zoom:') }}</label>
+                <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.zoom') }}</label>
                 <input
                     type="range"
                     :min="zoomMin"
@@ -117,7 +117,7 @@
             <div x-show="isLoading" class="absolute inset-0 flex items-center justify-center bg-gray-950/80 z-20">
                 <div class="text-center text-white space-y-2">
                     <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent"></div>
-                    <p class="text-xs">{{ __('Loading camera...') }}</p>
+                    <p class="text-xs">{{ __('filament-qr-code::ui.loading_camera') }}</p>
                 </div>
             </div>
         </div>
@@ -127,10 +127,10 @@
     <div class="lg:col-span-7 space-y-3">
         <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
             <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {{ __('Sequential Steps') }}
+                {{ __('filament-qr-code::ui.sequential_steps') }}
             </span>
             <span class="text-xs font-medium text-primary-600 dark:text-primary-400">
-                <span x-text="Object.keys(results).length"></span> / <span x-text="fields.length"></span> {{ __('Captured') }}
+                <span x-text="Object.keys(results).length"></span> / <span x-text="fields.length"></span> {{ __('filament-qr-code::ui.captured') }}
             </span>
         </div>
 
@@ -161,7 +161,7 @@
                     <div class="text-right">
                         <span x-show="results[f.key]" class="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700" x-text="results[f.key]"></span>
                         <span x-show="!results[f.key] && currentFieldIndex === idx" class="text-xs font-semibold text-primary-600 dark:text-primary-400 animate-pulse">
-                            {{ __('Ready to scan') }}
+                            {{ __('filament-qr-code::ui.ready_to_scan') }}
                         </span>
                     </div>
                 </div>

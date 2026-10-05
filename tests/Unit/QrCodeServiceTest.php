@@ -79,3 +79,48 @@ it('supports custom font path and graceful GD fallback for text overlay', functi
     $raw = $service->getRaw();
     expect(str_starts_with($raw, "\x89PNG\r\n\x1a\n"))->toBeTrue();
 });
+
+it('keeps PNG output when format is set after withText', function () {
+    $dataUri = QrCodeService::make()
+        ->withText('LATE-FORMAT', 14, '#111827')
+        ->format(QrFormat::Svg)
+        ->generate('LATE-FORMAT')
+        ->toDataUri();
+
+    expect($dataUri)->toStartWith('data:image/png;base64,');
+});
+
+it('keeps PNG output when format is set after logo', function () {
+    $dataUri = QrCodeService::make()
+        ->logo('non-existent-logo.png')
+        ->format(QrFormat::Svg)
+        ->generate('LOGO-FORMAT-ORDER')
+        ->toDataUri();
+
+    expect($dataUri)->toStartWith('data:image/png;base64,');
+});
+
+it('rejects invalid hex colors instead of silently rendering black', function () {
+    expect(fn () => QrCodeService::make()->color('not-a-color')->generate('X'))
+        ->toThrow(InvalidArgumentException::class);
+
+    expect(fn () => QrCodeService::make()->backgroundColor('#zzz')->generate('X'))
+        ->toThrow(InvalidArgumentException::class);
+});
+
+it('shares renders for identical payloads through the render cache', function () {
+    QrCodeService::flushRenderCache();
+
+    $first = QrCodeService::make()->size(200)->generate('CACHE-ME')->getRaw();
+    $second = QrCodeService::make()->size(200)->generate('CACHE-ME')->getRaw();
+
+    expect($first)->toBe($second)->and($first)->toContain('<svg');
+
+    QrCodeService::flushRenderCache();
+
+    $third = QrCodeService::make()->size(200)->generate('CACHE-ME')->getRaw();
+
+    expect($third)->toBe($first);
+
+    QrCodeService::flushRenderCache();
+});

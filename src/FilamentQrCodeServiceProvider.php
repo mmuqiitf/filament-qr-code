@@ -20,6 +20,7 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
         $package
             ->name(static::$name)
             ->hasConfigFile('qr-code')
+            ->hasTranslations()
             ->hasViews(static::$name);
     }
 

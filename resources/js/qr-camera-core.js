@@ -52,15 +52,32 @@ export function hasOneDimensionalCode(formats) {
  * Returns `{ width, height }` so the crop scales with the container instead
  * of using a fixed pixel square. Linear (1D) barcodes get a wide band,
  * which is what makes Code128 / EAN scans reliable without perfect alignment.
+ * Both axes are clamped to the measured container so the box (and its
+ * reticle) never overflows a 4:3 or otherwise non-square viewfinder.
  */
 export function computeQrboxForElement(element, maxBox = 250, formats = []) {
     const containerWidth = element?.clientWidth || 480;
+    const containerHeight = element?.clientHeight || 0;
     const wide = hasOneDimensionalCode(formats);
     const target = Math.min(Math.max(maxBox, 120), 600);
-    const width = Math.max(160, Math.min(target, Math.floor(containerWidth * 0.85)));
-    const height = wide ? Math.max(110, Math.floor(width * 0.55)) : width;
+    const maxWidth = Math.max(120, Math.min(target, Math.floor(containerWidth * 0.85)));
 
-    return { width, height };
+    if (wide) {
+        let height = Math.max(110, Math.floor(maxWidth * 0.55));
+        if (containerHeight > 0) {
+            height = Math.min(height, Math.floor(containerHeight * 0.8));
+        }
+
+        return { width: maxWidth, height: Math.max(80, height) };
+    }
+
+    let side = maxWidth;
+    if (containerHeight > 0) {
+        side = Math.min(side, Math.floor(containerHeight * 0.85));
+    }
+    side = Math.max(120, side);
+
+    return { width: side, height: side };
 }
 
 /**

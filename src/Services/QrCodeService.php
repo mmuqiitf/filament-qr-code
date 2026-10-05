@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Response;
 use Imagick;
 use ImagickDraw;
 use ImagickPixel;
+use InvalidArgumentException;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -52,6 +53,11 @@ class QrCodeService
     protected int $logoSize = 50;
 
     protected string $fileName = 'qrcode';
+
+    /**
+     * @var array<string, string>
+     */
+    protected static array $renderCache = [];
 
     public function __construct()
     {
@@ -158,7 +164,39 @@ class QrCodeService
     public function generate(string $data): self
     {
         $this->data = $data;
+
+        // Text overlays and logos are raster operations: they require PNG
+        // regardless of the order format()/withText()/logo() were called in.
+        if ($this->format === QrFormat::Svg && ($this->overlayText !== null || $this->logoPath !== null)) {
+            $this->format = QrFormat::Png;
+        }
+
         $ecLevel = $this->errorCorrectionLevel ?? ErrorCorrectionLevel::M();
+
+        // Render output is fully determined by these inputs, so identical
+        // payloads (e.g. repeated table rows or thumbnail + modal previews)
+        // share one cached render instead of re-encoding every time.
+        $cacheKey = md5(implode('|', [
+            $data,
+            $this->size,
+            $this->margin,
+            $this->format->value,
+            $this->foregroundColor,
+            $this->backgroundColor,
+            $ecLevel->getBits(),
+            $this->overlayText ?? '',
+            $this->fontSize,
+            $this->fontColor,
+            $this->fontPath ?? '',
+            $this->logoPath ?? '',
+            $this->logoSize,
+        ]));
+
+        if (isset(static::$renderCache[$cacheKey])) {
+            $this->rawResult = static::$renderCache[$cacheKey];
+
+            return $this;
+        }
 
         $fgRgb = $this->hexToRgb($this->foregroundColor);
         $bgRgb = $this->hexToRgb($this->backgroundColor);
@@ -187,7 +225,7 @@ class QrCodeService
                 $writer = new Writer($renderer);
                 $pngData = $writer->writeString($data, 'UTF-8', $ecLevel);
             } else {
-                $renderer = new GDLibRenderer($this->size, $this->margin);
+                $renderer = new GDLibRenderer($this->size, $this->margin, imageFormat: 'png', fill: $fill);
                 $writer = new Writer($renderer);
                 $pngData = $writer->writeString($data, 'UTF-8', $ecLevel);
             }
@@ -203,7 +241,18 @@ class QrCodeService
             $this->rawResult = $pngData;
         }
 
+        if (count(static::$renderCache) >= 200) {
+            array_shift(static::$renderCache);
+        }
+
+        static::$renderCache[$cacheKey] = $this->rawResult;
+
         return $this;
+    }
+
+    public static function flushRenderCache(): void
+    {
+        static::$renderCache = [];
     }
 
     public function getRaw(): string
@@ -428,6 +477,10 @@ class QrCodeService
 
         if (strlen($hex) === 3) {
             $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
+        }
+
+        if (! preg_match('/^[0-9a-fA-F]{6}$/', $hex)) {
+            throw new InvalidArgumentException("Invalid hex color [{$hex}]. Expected 3 or 6 hex digits, e.g. '#0f172a'.");
         }
 
         $r = min(255, max(0, (int) hexdec(substr($hex, 0, 2))));

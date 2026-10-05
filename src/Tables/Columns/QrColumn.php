@@ -37,11 +37,6 @@ class QrColumn extends Column
 
     protected bool|Closure $canDownload = true;
 
-    /**
-     * @var array<string, string>
-     */
-    protected static array $dataUriCache = [];
-
     public function errorCorrection(string|Closure|null $level): static
     {
         $this->errorCorrectionLevel = $level;
@@ -159,24 +154,17 @@ class QrColumn extends Column
 
     public static function flushDataUriCache(): void
     {
-        static::$dataUriCache = [];
+        QrCodeService::flushRenderCache();
     }
 
     protected function buildDataUri(string $data, int $size, int $margin): string
     {
         $format = $this->evaluate($this->format);
-        $formatValue = $format instanceof QrFormat ? $format->value : (string) $format;
         $foreground = (string) $this->evaluate($this->foregroundColor);
         $background = (string) $this->evaluate($this->backgroundColor);
         $errorCorrection = $this->errorCorrectionLevel === null ? '' : (string) $this->evaluate($this->errorCorrectionLevel);
         $logoPath = $this->logoPath === null ? '' : (string) $this->evaluate($this->logoPath);
         $logoSize = (int) $this->evaluate($this->logoSize);
-
-        $cacheKey = md5(implode('|', [$data, $size, $margin, $formatValue, $foreground, $background, $errorCorrection, $logoPath, $logoSize]));
-
-        if (isset(static::$dataUriCache[$cacheKey])) {
-            return static::$dataUriCache[$cacheKey];
-        }
 
         $service = QrCodeService::make()
             ->size($size)
@@ -198,15 +186,7 @@ class QrColumn extends Column
             $service->logo($logoPath, $logoSize);
         }
 
-        $uri = $service->generate($data)->toDataUri();
-
-        if (count(static::$dataUriCache) >= 200) {
-            array_shift(static::$dataUriCache);
-        }
-
-        static::$dataUriCache[$cacheKey] = $uri;
-
-        return $uri;
+        return $service->generate($data)->toDataUri();
     }
 
     public function isPreviewable(): bool

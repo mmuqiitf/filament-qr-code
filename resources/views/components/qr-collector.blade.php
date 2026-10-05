@@ -46,9 +46,9 @@
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full" :class="isScanning ? 'bg-success-500 animate-pulse' : 'bg-gray-400'"></span>
-                <span class="font-semibold text-sm text-gray-900 dark:text-white">{{ __('Batch QR Collector') }}</span>
+                <span class="font-semibold text-sm text-gray-900 dark:text-white">{{ __('filament-qr-code::ui.batch_qr_collector') }}</span>
                 <span class="text-xs bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-300 font-bold px-2 py-0.5 rounded-full">
-                    <span x-text="items.length"></span> {{ __('items') }}
+                    <span x-text="items.length"></span> {{ __('filament-qr-code::ui.items') }}
                 </span>
             </div>
 
@@ -60,7 +60,7 @@
                     class="px-2 py-1.5 text-xs font-semibold text-gray-500 hover:text-amber-500 dark:text-gray-400 rounded-lg transition"
                     :class="{ 'text-amber-500 dark:text-amber-400': torchActive }"
                 >
-                    {{ __('Flash') }}
+                    {{ __('filament-qr-code::ui.flash') }}
                 </button>
                 <button
                     x-show="!isScanning"
@@ -68,7 +68,7 @@
                     @click="startCollector()"
                     class="px-3 py-1.5 bg-success-600 hover:bg-success-700 text-white rounded-lg text-xs font-semibold"
                 >
-                    {{ __('Start Scanning') }}
+                    {{ __('filament-qr-code::ui.start_scanning') }}
                 </button>
                 <button
                     x-show="isScanning"
@@ -76,7 +76,7 @@
                     @click="stopCollector()"
                     class="px-3 py-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold"
                 >
-                    {{ __('Pause') }}
+                    {{ __('filament-qr-code::ui.pause') }}
                 </button>
             </div>
         </div>
@@ -85,7 +85,7 @@
             <div class="md:col-span-6">
                 <div class="space-y-2">
                     <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
-                        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Camera:') }}</label>
+                        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.camera') }}</label>
                         <select
                             x-model="selectedDeviceId"
                             @change="isScanning ? startCollector() : null"
@@ -98,7 +98,7 @@
                     </div>
 
                     <div x-show="hasZoom && isScanning" class="flex items-center gap-2 text-xs">
-                        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Zoom:') }}</label>
+                        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.zoom') }}</label>
                         <input
                             type="range"
                             :min="zoomMin"
@@ -127,14 +127,14 @@
 
             <div class="md:col-span-6 space-y-2">
                 <div class="flex items-center justify-between pb-1">
-                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ __('Scanned Items List') }}</span>
+                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ __('filament-qr-code::ui.scanned_items_list') }}</span>
                     <button
                         x-show="items.length > 0"
                         type="button"
                         @click="clearAll()"
                         class="text-xs text-danger-600 dark:text-danger-400 hover:underline"
                     >
-                        {{ __('Clear All') }}
+                        {{ __('filament-qr-code::ui.clear_all') }}
                     </button>
                 </div>
 
@@ -155,7 +155,7 @@
                         </div>
                     </template>
                     <div x-show="items.length === 0" class="text-center py-6 text-xs text-gray-400">
-                        {{ __('No items scanned yet. Position a QR code in front of the camera.') }}
+                        {{ __('filament-qr-code::ui.empty_collector') }}
                     </div>
                 </div>
             </div>

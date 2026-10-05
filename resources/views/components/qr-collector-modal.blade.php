@@ -18,7 +18,7 @@
     class="space-y-4"
 >
     <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
-        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Camera:') }}</label>
+        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.camera') }}</label>
         <select
             x-model="selectedDeviceId"
             @change="isScanning ? startCollector() : null"
@@ -50,7 +50,7 @@
             @click="startCollector()"
             class="px-4 py-2 bg-success-600 hover:bg-success-700 text-white rounded-lg text-sm font-semibold shadow-sm w-full"
         >
-            {{ __('Start Camera Scanner') }}
+            {{ __('filament-qr-code::ui.start_camera_scanner') }}
         </button>
         <button
             x-show="hasTorch && isScanning"
@@ -59,7 +59,7 @@
             class="px-3 py-2 text-xs font-semibold text-gray-500 hover:text-amber-500 dark:text-gray-400 rounded-lg transition shrink-0"
             :class="{ 'text-amber-500 dark:text-amber-400': torchActive }"
         >
-            {{ __('Flash') }}
+            {{ __('filament-qr-code::ui.flash') }}
         </button>
         <button
             x-show="isScanning"
@@ -67,12 +67,12 @@
             @click="stopCollector()"
             class="px-4 py-2 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold shadow-sm w-full"
         >
-            {{ __('Pause Scanner') }}
+            {{ __('filament-qr-code::ui.pause_scanner') }}
         </button>
     </div>
 
     <div x-show="hasZoom && isScanning" class="flex items-center gap-2 text-xs">
-        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Zoom:') }}</label>
+        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.zoom') }}</label>
         <input
             type="range"
             :min="zoomMin"
@@ -87,7 +87,7 @@
     <div class="space-y-2">
         <div class="flex items-center justify-between">
             <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                {{ __('Scanned Codes') }} (<span x-text="items.length"></span>)
+                {{ __('filament-qr-code::ui.scanned_codes') }} (<span x-text="items.length"></span>)
             </span>
             <button
                 x-show="items.length > 0"
@@ -95,7 +95,7 @@
                 @click="clearAll()"
                 class="text-xs text-danger-600 hover:underline"
             >
-                {{ __('Clear All') }}
+                {{ __('filament-qr-code::ui.clear_all') }}
             </button>
         </div>
 

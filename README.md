@@ -247,6 +247,36 @@ composer test
 composer analyse
 ```
 
+## Configuration
+
+Publish the config to tune defaults (`config/qr-code.php`):
+
+```bash
+php artisan vendor:publish --tag="filament-qr-code-config"
+```
+
+Per-component options override these defaults:
+
+```php
+QrScanner::make('sku')
+    ->fps(25)
+    ->qrbox(250) // responsive max; the decode box scales to the viewfinder
+    ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
+    ->preferRearCamera()
+    ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2)
+    ->beepFrequency(880)
+    ->beepDuration(80)
+    ->vibrateDuration(100);
+```
+
+Text overlays (`withText()`) and logos (`logo()`) require raster output, so the
+generator always returns PNG when either is set — regardless of whether
+`format()` was called before or after. Invalid hex colors throw
+`InvalidArgumentException` instead of silently rendering black.
+
+All UI strings live under the `filament-qr-code::ui` translation namespace
+(`resources/lang/en/ui.php`) and can be overridden per locale.
+
 ---
 
 ## Changelog
