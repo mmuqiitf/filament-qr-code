@@ -482,7 +482,7 @@ Please review [our security policy](../../security/policy) on how to report secu
 
 ## Credits
 
-- [Muhammad Muqiit Faturrahman](https://github.com/mmuqiitf)
+- [Mohamad Muqiit Faturrahman](https://github.com/mmuqiitf)
 - [All Contributors](../../contributors)
 
 ## License
