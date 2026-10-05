@@ -48,7 +48,7 @@ return [
     |
     */
     'camera' => [
-        'fps' => 15,
+        'fps' => 25,
         'qrbox' => 250,
         'prefer_rear_camera' => true,
         'show_torch_button' => true,

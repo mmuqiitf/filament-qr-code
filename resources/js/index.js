@@ -3,6 +3,7 @@ import qrScanSequenceComponent from './qr-sequence.js';
 import qrCollectorComponent from './qr-collector.js';
 import { createWedgeHandler, qrWedgeListenerComponent } from './qr-wedge.js';
 import { qrFeedback } from './audio-feedback.js';
+import * as qrCameraCore from './qr-camera-core.js';
 import '../css/qr-code.css';
 
 export {
@@ -12,6 +13,7 @@ export {
     qrWedgeListenerComponent,
     createWedgeHandler,
     qrFeedback,
+    qrCameraCore,
 };
 
 // Global registration for Alpine.js
@@ -23,6 +25,7 @@ if (typeof window !== 'undefined') {
         qrWedgeListenerComponent,
         createWedgeHandler,
         qrFeedback,
+        qrCameraCore,
     };
 
     const registerComponents = () => {

@@ -35,6 +35,22 @@ it('evaluates hardware scanner configuration correctly', function (): void {
         ->and($component->shouldPreventFormSubmit())->toBeFalse();
 });
 
+it('exposes wedge terminator and minimum-length configuration', function (): void {
+    $component = new DummyComponentWithScanner;
+
+    expect($component->getTerminators())->toBe(['Enter', 'Tab'])
+        ->and($component->getMinBarcodeLength())->toBe(2);
+
+    $component->hardwareScanner(
+        enabled: true,
+        terminators: ['Enter'],
+        minBarcodeLength: 5,
+    );
+
+    expect($component->getTerminators())->toBe(['Enter'])
+        ->and($component->getMinBarcodeLength())->toBe(5);
+});
+
 it('supports all 1D and 2D barcode format enumerations', function (): void {
     expect(BarcodeFormat::QrCode->getLabel())->toBe('QR Code')
         ->and(BarcodeFormat::Aztec->getLabel())->toBe('Aztec Code')

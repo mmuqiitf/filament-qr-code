@@ -5,6 +5,11 @@
     $burstThresholdMs = $getBurstThresholdMs();
     $preventSubmit = $shouldPreventFormSubmit();
     $autoFocusNext = $isAutoFocusNext();
+    $beepFrequency = $getBeepFrequencyHz();
+    $beepDuration = $getBeepDurationMs();
+    $vibrateDuration = $getVibrateDurationMs();
+    $terminators = $getTerminators();
+    $minBarcodeLength = $getMinBarcodeLength();
 @endphp
 
 <div
@@ -14,6 +19,11 @@
         preventSubmit: @js($preventSubmit),
         sound: @js($hasSound),
         vibrate: @js($hasVibration),
+        beepFrequency: @js($beepFrequency),
+        beepDurationMs: @js($beepDuration),
+        vibrateDurationMs: @js($vibrateDuration),
+        terminators: @js($terminators),
+        minBarcodeLength: @js($minBarcodeLength),
         autoFocusNext: @js($autoFocusNext)
     })"
     class="hidden"

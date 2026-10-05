@@ -23,7 +23,7 @@ class QrScanner extends Field
 
     protected string $view = 'filament-qr-code::components.qr-scanner';
 
-    protected int|Closure $fps = 15;
+    protected int|Closure $fps = 25;
 
     protected int|Closure $qrbox = 250;
 

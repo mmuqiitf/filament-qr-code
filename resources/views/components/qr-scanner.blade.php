@@ -13,6 +13,11 @@
     $allowUpload = $isUploadAllowed();
     $supportedFormats = $getSupportedFormats();
     $placeholder = $getPlaceholder();
+    $beepFrequency = $getBeepFrequencyHz();
+    $beepDuration = $getBeepDurationMs();
+    $vibrateDuration = $getVibrateDurationMs();
+    $terminators = $getTerminators();
+    $minBarcodeLength = $getMinBarcodeLength();
 @endphp
 
 <x-dynamic-component
@@ -26,8 +31,13 @@
             nextField: @js($nextField),
             sound: @js($hasSound),
             vibrate: @js($hasVibration),
+            beepFrequency: @js($beepFrequency),
+            beepDurationMs: @js($beepDuration),
+            vibrateDurationMs: @js($vibrateDuration),
             hardwareScanner: @js($isHardwareScanner),
             burstThresholdMs: @js($burstThresholdMs),
+            terminators: @js($terminators),
+            minBarcodeLength: @js($minBarcodeLength),
             fps: @js($fps),
             qrbox: @js($qrbox),
             preferRearCamera: @js($preferRear),
@@ -124,6 +134,20 @@
                                 <option :value="dev.id" x-text="dev.label || ('Camera ' + dev.id)"></option>
                             </template>
                         </select>
+                    </div>
+
+                    {{-- Zoom slider (shown when the active camera reports zoom support) --}}
+                    <div x-show="hasZoom && isScanning" class="flex items-center gap-2 text-xs">
+                        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Zoom:') }}</label>
+                        <input
+                            type="range"
+                            :min="zoomMin"
+                            :max="zoomMax"
+                            step="0.1"
+                            x-model.number="zoomValue"
+                            @input="onZoomInput()"
+                            class="w-full accent-primary-600"
+                        />
                     </div>
 
                     {{-- Viewfinder --}}

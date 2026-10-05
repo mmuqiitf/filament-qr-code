@@ -3,12 +3,33 @@
         allowDuplicates: @js($allowDuplicates ?? false),
         sound: @js($sound ?? true),
         vibrate: @js($vibrate ?? true),
+        beepFrequency: @js($beepFrequency ?? 880),
+        beepDurationMs: @js($beepDuration ?? 80),
+        vibrateDurationMs: @js($vibrateDuration ?? 100),
         hardwareScanner: @js($hardwareScanner ?? true),
-        fps: @js($fps ?? 15),
-        qrbox: @js($qrbox ?? 250)
+        burstThresholdMs: @js($burstThresholdMs ?? 50),
+        terminators: @js($terminators ?? ['Enter', 'Tab']),
+        minBarcodeLength: @js($minBarcodeLength ?? 2),
+        fps: @js($fps ?? 25),
+        qrbox: @js($qrbox ?? 250),
+        formats: @js($formats ?? []),
+        cameraStorageKey: @js('filament-qr-code:camera:collect-action:' . ($actionName ?? 'default'))
     })"
     class="space-y-4"
 >
+    <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
+        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Camera:') }}</label>
+        <select
+            x-model="selectedDeviceId"
+            @change="isScanning ? startCollector() : null"
+            class="fi-select-input w-full rounded-md border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white py-1 px-2"
+        >
+            <template x-for="dev in devices" :key="dev.id">
+                <option :value="dev.id" x-text="dev.label || ('Camera ' + dev.id)"></option>
+            </template>
+        </select>
+    </div>
+
     <div class="filament-qr-viewfinder">
         <div :id="elementId" class="w-full h-full"></div>
         <div x-show="isScanning" class="filament-qr-reticle">
@@ -22,7 +43,7 @@
         </div>
     </div>
 
-    <div class="flex items-center justify-between">
+    <div class="flex items-center gap-2">
         <button
             x-show="!isScanning"
             type="button"
@@ -32,6 +53,15 @@
             {{ __('Start Camera Scanner') }}
         </button>
         <button
+            x-show="hasTorch && isScanning"
+            type="button"
+            @click="toggleTorch()"
+            class="px-3 py-2 text-xs font-semibold text-gray-500 hover:text-amber-500 dark:text-gray-400 rounded-lg transition shrink-0"
+            :class="{ 'text-amber-500 dark:text-amber-400': torchActive }"
+        >
+            {{ __('Flash') }}
+        </button>
+        <button
             x-show="isScanning"
             type="button"
             @click="stopCollector()"
@@ -39,6 +69,19 @@
         >
             {{ __('Pause Scanner') }}
         </button>
+    </div>
+
+    <div x-show="hasZoom && isScanning" class="flex items-center gap-2 text-xs">
+        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Zoom:') }}</label>
+        <input
+            type="range"
+            :min="zoomMin"
+            :max="zoomMax"
+            step="0.1"
+            x-model.number="zoomValue"
+            @input="onZoomInput()"
+            class="w-full accent-primary-600"
+        />
     </div>
 
     <div class="space-y-2">

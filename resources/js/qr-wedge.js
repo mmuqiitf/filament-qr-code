@@ -13,6 +13,9 @@ export function createWedgeHandler({
     onScan = null,
     sound = true,
     vibrate = true,
+    beepFrequency = 880,
+    beepDurationMs = 80,
+    vibrateDurationMs = 100,
 } = {}) {
     let buffer = '';
     let lastKeyTime = 0;
@@ -46,7 +49,13 @@ export function createWedgeHandler({
                     buffer = '';
                     isBursting = false;
 
-                    qrFeedback.trigger({ sound, vibrate });
+                    qrFeedback.trigger({
+                        sound,
+                        vibrate,
+                        frequency: beepFrequency,
+                        duration: beepDurationMs,
+                        vibrateDuration: vibrateDurationMs,
+                    });
 
                     if (typeof onScan === 'function') {
                         onScan(scannedValue);
@@ -89,26 +98,71 @@ export function qrWedgeListenerComponent({
     preventSubmit = true,
     sound = true,
     vibrate = true,
+    beepFrequency = 880,
+    beepDurationMs = 80,
+    vibrateDurationMs = 100,
+    terminators = ['Enter', 'Tab'],
+    minBarcodeLength = 2,
     autoFocusNext = true,
 } = {}) {
+    // Filament text inputs plus numeric / textarea fallbacks for cashier forms.
+    const SCANNABLE_SELECTOR = 'input[type="text"], input[type="search"], input[type="number"], textarea';
+
     return {
         registeredFields: fields,
         wedgeHandler: null,
+        boundKeyHandler: null,
 
         init() {
             this.wedgeHandler = createWedgeHandler({
                 burstThresholdMs,
+                minBarcodeLength,
                 preventFormSubmit: preventSubmit,
+                terminators,
                 sound,
                 vibrate,
+                beepFrequency,
+                beepDurationMs,
+                vibrateDurationMs,
                 onScan: (scannedValue) => {
                     this.handleGlobalScan(scannedValue);
                 },
             });
 
-            window.addEventListener('keydown', (e) => {
+            this.boundKeyHandler = (e) => {
                 this.wedgeHandler.handleKeyDown(e);
-            });
+            };
+            window.addEventListener('keydown', this.boundKeyHandler);
+        },
+
+        destroy() {
+            if (this.boundKeyHandler) {
+                window.removeEventListener('keydown', this.boundKeyHandler);
+                this.boundKeyHandler = null;
+            }
+        },
+
+        findFieldElement(fieldName) {
+            const selectors = [
+                `[data-field-name="${fieldName}"] input`,
+                `[data-field-name="${fieldName}"] textarea`,
+                `input[name="${fieldName}"]`,
+                `textarea[name="${fieldName}"]`,
+                `#${fieldName}`,
+            ];
+
+            for (const selector of selectors) {
+                try {
+                    const el = document.querySelector(selector);
+                    if (el) {
+                        return el;
+                    }
+                } catch {
+                    // Ignore invalid selector characters in dynamic field names.
+                }
+            }
+
+            return null;
         },
 
         handleGlobalScan(scannedValue) {
@@ -123,8 +177,8 @@ export function qrWedgeListenerComponent({
 
             if (!targetInput && this.registeredFields.length > 0) {
                 for (const fieldName of this.registeredFields) {
-                    const el = document.querySelector(`[data-field-name="${fieldName}"] input, input[name="${fieldName}"], #${fieldName}`);
-                    if (el && !el.value) {
+                    const el = this.findFieldElement(fieldName);
+                    if (el && !el.value && !el.disabled && !el.readOnly) {
                         targetInput = el;
                         targetFieldName = fieldName;
                         break;
@@ -133,7 +187,7 @@ export function qrWedgeListenerComponent({
             }
 
             if (!targetInput) {
-                const inputs = document.querySelectorAll('form input[type="text"]:not([disabled]):not([readonly])');
+                const inputs = document.querySelectorAll(`form ${SCANNABLE_SELECTOR}:not([disabled]):not([readonly])`);
                 for (const input of inputs) {
                     if (!input.value) {
                         targetInput = input;
@@ -148,6 +202,19 @@ export function qrWedgeListenerComponent({
                 targetInput.value = scannedValue;
                 targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                 targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+                // Keep Livewire / entangled Alpine state in sync when the DOM
+                // event alone is not enough (e.g. x-model bound scanner fields).
+                try {
+                    const livewirePath = targetInput.getAttribute('wire:model')
+                        || targetInput.getAttribute('wire:model.defer')
+                        || targetInput.getAttribute('wire:model.live');
+                    if (livewirePath && this.$wire) {
+                        this.$wire.set(livewirePath, scannedValue);
+                    }
+                } catch {
+                    // DOM events above are the primary sync channel.
+                }
 
                 window.dispatchEvent(new CustomEvent('qr-wedge-scanned', {
                     detail: {
@@ -165,7 +232,9 @@ export function qrWedgeListenerComponent({
         },
 
         advanceToNextEmpty(currentInput) {
-            const allInputs = Array.from(document.querySelectorAll('form input[type="text"]:not([disabled]):not([readonly])'));
+            const allInputs = Array.from(document.querySelectorAll(
+                `form ${SCANNABLE_SELECTOR}:not([disabled]):not([readonly])`
+            ));
             const currentIndex = allInputs.indexOf(currentInput);
 
             if (currentIndex !== -1 && currentIndex < allInputs.length - 1) {

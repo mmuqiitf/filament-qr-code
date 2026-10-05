@@ -7,6 +7,14 @@
     $qrbox = $getQrbox();
     $allowDuplicates = $isDuplicatesAllowed();
     $delayMs = $getDelayBetweenScansMs();
+    $preferRear = $isPreferRearCamera();
+    $supportedFormats = $getSupportedFormats();
+    $beepFrequency = $getBeepFrequencyHz();
+    $beepDuration = $getBeepDurationMs();
+    $vibrateDuration = $getVibrateDurationMs();
+    $burstThresholdMs = $getBurstThresholdMs();
+    $terminators = $getTerminators();
+    $minBarcodeLength = $getMinBarcodeLength();
 @endphp
 
 <x-dynamic-component
@@ -20,9 +28,17 @@
             allowDuplicates: @js($allowDuplicates),
             sound: @js($hasSound),
             vibrate: @js($hasVibration),
+            beepFrequency: @js($beepFrequency),
+            beepDurationMs: @js($beepDuration),
+            vibrateDurationMs: @js($vibrateDuration),
             hardwareScanner: @js($isHardwareScanner),
+            burstThresholdMs: @js($burstThresholdMs),
+            terminators: @js($terminators),
+            minBarcodeLength: @js($minBarcodeLength),
             fps: @js($fps),
             qrbox: @js($qrbox),
+            preferRearCamera: @js($preferRear),
+            formats: @js($supportedFormats),
             delayBetweenScansMs: @js($delayMs)
         })"
         class="space-y-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
@@ -37,6 +53,15 @@
             </div>
 
             <div class="flex items-center gap-2">
+                <button
+                    x-show="hasTorch && isScanning"
+                    type="button"
+                    @click="toggleTorch()"
+                    class="px-2 py-1.5 text-xs font-semibold text-gray-500 hover:text-amber-500 dark:text-gray-400 rounded-lg transition"
+                    :class="{ 'text-amber-500 dark:text-amber-400': torchActive }"
+                >
+                    {{ __('Flash') }}
+                </button>
                 <button
                     x-show="!isScanning"
                     type="button"
@@ -58,6 +83,34 @@
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
             <div class="md:col-span-6">
+                <div class="space-y-2">
+                    <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
+                        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Camera:') }}</label>
+                        <select
+                            x-model="selectedDeviceId"
+                            @change="isScanning ? startCollector() : null"
+                            class="fi-select-input w-full rounded-md border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white py-1 px-2"
+                        >
+                            <template x-for="dev in devices" :key="dev.id">
+                                <option :value="dev.id" x-text="dev.label || ('Camera ' + dev.id)"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <div x-show="hasZoom && isScanning" class="flex items-center gap-2 text-xs">
+                        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('Zoom:') }}</label>
+                        <input
+                            type="range"
+                            :min="zoomMin"
+                            :max="zoomMax"
+                            step="0.1"
+                            x-model.number="zoomValue"
+                            @input="onZoomInput()"
+                            class="w-full accent-primary-600"
+                        />
+                    </div>
+                </div>
+
                 <div class="filament-qr-viewfinder">
                     <div :id="elementId" class="w-full h-full"></div>
                     <div x-show="isScanning" class="filament-qr-reticle">

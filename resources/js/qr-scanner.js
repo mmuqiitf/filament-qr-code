@@ -1,6 +1,18 @@
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createWedgeHandler } from './qr-wedge.js';
+import {
+    applyZoomLevel,
+    computeQrboxForElement,
+    getZoomState,
+    hasTorchSupport,
+    mapFormats,
+    persistCameraId,
+    selectPreferredCamera,
+    storageKeyFor,
+    syncReticleToQrbox,
+    triggerFeedback,
+} from './qr-camera-core.js';
 
 /**
  * Alpine component for QrScanner field.
@@ -11,13 +23,21 @@ export default function qrScannerComponent({
     nextField = null,
     sound = true,
     vibrate = true,
+    beepFrequency = 880,
+    beepDurationMs = 80,
+    vibrateDurationMs = 100,
     hardwareScanner = true,
     burstThresholdMs = 50,
-    fps = 15,
+    terminators = ['Enter', 'Tab'],
+    minBarcodeLength = 2,
+    fps = 25,
     qrbox = 250,
     preferRearCamera = true,
     formats = [],
+    cameraStorageKey = null,
 } = {}) {
+    const storageKey = cameraStorageKey || storageKeyFor('scanner');
+
     return {
         // State
         value: state,
@@ -34,6 +54,11 @@ export default function qrScannerComponent({
         wedgeHandler: null,
         torchActive: false,
         hasTorch: false,
+        zoomMin: 1,
+        zoomMax: 5,
+        zoomValue: 1,
+        hasZoom: false,
+        boundWedgeHandler: null,
 
         init() {
             this.scannerElementId = `qr-reader-${this.$id('qr-reader')}`;
@@ -41,16 +66,24 @@ export default function qrScannerComponent({
             if (hardwareScanner) {
                 this.wedgeHandler = createWedgeHandler({
                     burstThresholdMs,
+                    minBarcodeLength,
+                    terminators,
                     sound,
                     vibrate,
+                    beepFrequency,
+                    beepDurationMs,
+                    vibrateDurationMs,
                     onScan: (scannedValue) => {
                         this.handleScanResult(scannedValue);
                     },
                 });
 
-                this.$el.addEventListener('keydown', (e) => {
+                // Field-scoped on purpose: pair with QrWedgeListener for
+                // page-global cashier capture to avoid double handling.
+                this.boundWedgeHandler = (e) => {
                     this.wedgeHandler.handleKeyDown(e);
-                });
+                };
+                this.$el.addEventListener('keydown', this.boundWedgeHandler);
             }
 
             // Sync with Livewire state binding
@@ -60,6 +93,14 @@ export default function qrScannerComponent({
                     this.$wire.set(path, newVal);
                 }
             });
+        },
+
+        destroy() {
+            if (this.boundWedgeHandler) {
+                this.$el.removeEventListener('keydown', this.boundWedgeHandler);
+                this.boundWedgeHandler = null;
+            }
+            this.stopScan();
         },
 
         getStatePath() {
@@ -101,7 +142,10 @@ export default function qrScannerComponent({
                     throw new Error('No camera devices detected on this system.');
                 }
 
-                this.selectedDeviceId = this.selectPreferredCamera(this.devices);
+                this.selectedDeviceId = selectPreferredCamera(this.devices, {
+                    preferRear: preferRearCamera,
+                    storageKey,
+                });
                 this.isLoading = false;
                 await this.startScan();
             } catch (err) {
@@ -111,18 +155,17 @@ export default function qrScannerComponent({
             }
         },
 
-        selectPreferredCamera(devices) {
-            if (!preferRearCamera || !devices.length) {
-                return devices[0]?.id || null;
-            }
+        scannerFormatsConfig() {
+            const mapped = mapFormats(formats);
+            return mapped.length > 0 ? { formatsToSupport: mapped } : {};
+        },
 
-            const backKeywords = ['back', 'rear', 'environment', 'camera 0', 'facing back', 'main'];
-            const rearCamera = devices.find(device => {
-                const label = (device.label || '').toLowerCase();
-                return backKeywords.some(kw => label.includes(kw));
-            });
+        currentQrbox() {
+            const container = document.getElementById(this.scannerElementId);
+            const box = computeQrboxForElement(container, qrbox, formats);
+            syncReticleToQrbox(container, box);
 
-            return rearCamera ? rearCamera.id : devices[0].id;
+            return box;
         },
 
         async startScan() {
@@ -133,19 +176,12 @@ export default function qrScannerComponent({
             }
 
             if (!this.html5Qrcode) {
-                const scannerConfig = {};
-                if (Array.isArray(formats) && formats.length > 0) {
-                    scannerConfig.formatsToSupport = formats.map(f => {
-                        return Html5QrcodeSupportedFormats[f] !== undefined ? Html5QrcodeSupportedFormats[f] : f;
-                    });
-                }
-                this.html5Qrcode = new Html5Qrcode(this.scannerElementId, scannerConfig);
+                this.html5Qrcode = new Html5Qrcode(this.scannerElementId, this.scannerFormatsConfig());
             }
 
             const config = {
                 fps: fps,
-                qrbox: qrbox,
-                aspectRatio: 1.0,
+                qrbox: this.currentQrbox(),
             };
 
             try {
@@ -162,7 +198,9 @@ export default function qrScannerComponent({
                 );
 
                 this.isScanning = true;
+                persistCameraId(storageKey, this.selectedDeviceId);
                 this.checkTorchSupport();
+                this.checkZoomSupport();
             } catch (err) {
                 this.hasError = true;
                 this.errorMessage = err.message || 'Error starting camera scanner.';
@@ -178,6 +216,7 @@ export default function qrScannerComponent({
                 } finally {
                     this.isScanning = false;
                     this.torchActive = false;
+                    this.hasZoom = false;
                 }
             }
         },
@@ -197,12 +236,23 @@ export default function qrScannerComponent({
         },
 
         checkTorchSupport() {
-            try {
-                const capabilities = this.html5Qrcode?.getRunningTrackCameraCapabilities();
-                this.hasTorch = !!(capabilities && capabilities.torchFeature().isSupported());
-            } catch {
-                this.hasTorch = false;
+            this.hasTorch = hasTorchSupport(this.html5Qrcode);
+        },
+
+        checkZoomSupport() {
+            const zoom = getZoomState(this.html5Qrcode);
+            if (zoom) {
+                this.hasZoom = true;
+                this.zoomMin = zoom.min;
+                this.zoomMax = zoom.max;
+                this.zoomValue = zoom.min;
+            } else {
+                this.hasZoom = false;
             }
+        },
+
+        async onZoomInput() {
+            await applyZoomLevel(this.html5Qrcode, this.zoomValue);
         },
 
         handleScanResult(scannedText) {
@@ -217,7 +267,13 @@ export default function qrScannerComponent({
             }
 
             // Trigger sensory feedback
-            qrFeedback.trigger({ sound, vibrate });
+            triggerFeedback(qrFeedback, {
+                sound,
+                vibrate,
+                frequency: beepFrequency,
+                duration: beepDurationMs,
+                vibrateDuration: vibrateDurationMs,
+            });
 
             // Dispatch custom window event
             window.dispatchEvent(new CustomEvent('qr-scanned', {
@@ -241,13 +297,19 @@ export default function qrScannerComponent({
             const selectors = [
                 `[data-field-name="${targetFieldName}"] input`,
                 `input[name="${targetFieldName}"]`,
+                `textarea[name="${targetFieldName}"]`,
                 `#${targetFieldName}`,
                 `[wire\\:model*="${targetFieldName}"]`,
                 `[name*="${targetFieldName}"]`,
             ];
 
             for (const selector of selectors) {
-                const targetEl = document.querySelector(selector);
+                let targetEl = null;
+                try {
+                    targetEl = document.querySelector(selector);
+                } catch {
+                    continue;
+                }
                 if (targetEl) {
                     targetEl.focus();
                     if (typeof targetEl.select === 'function') {
@@ -263,13 +325,7 @@ export default function qrScannerComponent({
             if (!file) return;
 
             if (!this.html5Qrcode) {
-                const scannerConfig = {};
-                if (Array.isArray(formats) && formats.length > 0) {
-                    scannerConfig.formatsToSupport = formats.map(f => {
-                        return Html5QrcodeSupportedFormats[f] !== undefined ? Html5QrcodeSupportedFormats[f] : f;
-                    });
-                }
-                this.html5Qrcode = new Html5Qrcode(this.scannerElementId, scannerConfig);
+                this.html5Qrcode = new Html5Qrcode(this.scannerElementId, this.scannerFormatsConfig());
             }
 
             this.html5Qrcode.scanFile(file, true)

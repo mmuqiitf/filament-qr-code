@@ -30,6 +30,8 @@
     height: 220px;
     border: 2px solid rgba(255, 255, 255, 0.4);
     border-radius: 12px;
+    /* Sized at runtime by syncReticleToQrbox() to match the decoder crop. */
+    transition: width 0.2s ease, height 0.2s ease;
 }
 
 .filament-qr-reticle-corner {

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 
 it('configures sequential scan fields properly', function () {
@@ -25,4 +26,40 @@ it('configures sequential scan fields properly', function () {
         ->and($fields[4]['key'])->toBe('equipment')
         ->and($sequence->getFps())->toBe(20)
         ->and($sequence->getQrbox())->toBe(300);
+});
+
+it('binds sequence scans to a configurable form state prefix', function () {
+    $sequence = QrScanSequence::make(['step', 'employee'])
+        ->statePathPrefix('order');
+
+    expect($sequence->getStatePathPrefix())->toBe('order');
+});
+
+it('defaults the state prefix to the conventional form data path', function () {
+    expect(QrScanSequence::make(['step'])->getStatePathPrefix())->toBe('data');
+});
+
+it('filters symbologies and prefers the rear camera by default', function () {
+    $sequence = QrScanSequence::make(['step'])
+        ->formats([BarcodeFormat::QrCode, BarcodeFormat::Ean13])
+        ->preferRearCamera(false);
+
+    expect($sequence->getSupportedFormats())->toBe(['QR_CODE', 'EAN_13'])
+        ->and($sequence->isPreferRearCamera())->toBeFalse();
+});
+
+it('supports per-step scan formatting and step callbacks', function () {
+    $seen = [];
+
+    $sequence = QrScanSequence::make(['step'])
+        ->scanFormat(fn ($rawValue) => strtoupper(trim((string) $rawValue)))
+        ->onStepScanned(function ($field, $scannedValue) use (&$seen) {
+            $seen = [$field, $scannedValue];
+        });
+
+    expect($sequence->formatScannedValue('  abc-123  '))->toBe('ABC-123');
+
+    $sequence->triggerOnStep('step', 'ABC-123');
+
+    expect($seen)->toBe(['step', 'ABC-123']);
 });

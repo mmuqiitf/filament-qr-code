@@ -119,11 +119,20 @@ QrScanSequence::make([
     'document' => 'Document Number',
     'equipment' => 'Equipment Code',
 ])
-    ->fps(15)
+    ->fps(25)
     ->qrbox(250)
+    ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
+    ->preferRearCamera()
+    ->statePathPrefix('data') // Livewire form state prefix scans are written to
+    ->scanFormat(fn ($rawValue) => strtoupper(trim($rawValue)))
+    ->onStepScanned(fn ($field, $scannedValue) => logger()->info("Scanned {$field}: {$scannedValue}"))
     ->sound(true)
     ->vibrate(true);
 ```
+
+Scans are written to `{prefix}.{field}` Livewire state (default `data.*`), so the
+container stays bound to your Filament form and passes validation. Camera choice,
+torch, and zoom controls match the single-field scanner.
 
 ### 5. Batch Collector Scanning (Repeaters & Tables)
 
@@ -142,9 +151,23 @@ use Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction;
 
 $table->headerActions([
     QrCollectAction::make()
-        ->allowDuplicates(false),
+        ->allowDuplicates(false)
+        ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
+        ->onScan(fn ($code) => logger()->info("Collected {$code}")),
 ]);
 ```
+
+Each scan dispatches a `qr-collector-item-added` window event (with `{ code }`).
+Forward it into server-side handling — e.g. `x-on:qr-collector-item-added.window`
+calling your Livewire method, which can then invoke
+`$action->handleScan($code)` to run the `onScan` callback.
+
+> Hardware wedge note: `QrScanner`'s wedge listener is field-scoped on purpose.
+> Mount `QrWedgeListener` on the page for global cashier capture, otherwise both
+> listeners will double-handle the same burst. Custom terminators and minimum
+> lengths are configurable via `->hardwareScanner(terminators: [...],
+> minBarcodeLength: 3)` and feedback pitch/duration via `->beepFrequency(660)`,
+> `->beepDuration(120)`, `->vibrateDuration(200)`.
 
 ### 6. QR Code Generator Components
 
