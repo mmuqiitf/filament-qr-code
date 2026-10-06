@@ -2,13 +2,14 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createWedgeHandler } from './qr-wedge.js';
 import {
-    computeQrboxForElement,
-    mapFormats,
+    emitScanFeedback,
+    ensureScannerInstance,
+    loadCameraDevices,
     persistCameraId,
-    selectPreferredCamera,
+    resolveQrboxFor,
+    scannerFormatsConfigFor,
+    stopCameraFeed,
     storageKeyFor,
-    syncReticleToQrbox,
-    triggerFeedback,
 } from './qr-camera-core.js';
 
 /**
@@ -99,35 +100,21 @@ export default function qrCollectorComponent({
         },
 
         async loadCameras() {
-            this.isLoading = true;
-            try {
-                const devices = await Html5Qrcode.getCameras();
-                this.devices = devices || [];
-                if (this.devices.length > 0) {
-                    this.selectedDeviceId = selectPreferredCamera(this.devices, {
-                        preferRear: preferRearCamera,
-                        storageKey,
-                    });
-                }
-                this.isLoading = false;
-            } catch {
-                this.isLoading = false;
-                this.hasError = true;
-                this.errorMessage = 'Camera access unavailable.';
-            }
+            await loadCameraDevices(this, {
+                Html5QrcodeClass: Html5Qrcode,
+                preferRearCamera,
+                storageKey,
+                deniedMessage: 'Camera access unavailable.',
+                fixedMessage: true,
+            });
         },
 
         scannerFormatsConfig() {
-            const mapped = mapFormats(formats);
-            return mapped.length > 0 ? { formatsToSupport: mapped } : {};
+            return scannerFormatsConfigFor(formats);
         },
 
         currentQrbox() {
-            const container = document.getElementById(this.elementId);
-            const box = computeQrboxForElement(container, qrbox, formats);
-            syncReticleToQrbox(container, box);
-
-            return box;
+            return resolveQrboxFor(this.elementId, qrbox, formats);
         },
 
         async startCollector() {
@@ -138,7 +125,7 @@ export default function qrCollectorComponent({
             }
 
             if (!this.html5Qrcode) {
-                this.html5Qrcode = new Html5Qrcode(this.elementId, this.scannerFormatsConfig());
+                ensureScannerInstance(this, this.elementId, formats, Html5Qrcode);
             }
 
             try {
@@ -159,15 +146,7 @@ export default function qrCollectorComponent({
         },
 
         async stopCollector() {
-            if (this.html5Qrcode && this.isScanning) {
-                try {
-                    await this.html5Qrcode.stop();
-                } catch (e) {
-                    console.debug('Error stopping collector:', e);
-                } finally {
-                    this.isScanning = false;
-                }
-            }
+            await stopCameraFeed(this, 'collector');
         },
 
         handleDetectedCode(code) {
@@ -185,12 +164,12 @@ export default function qrCollectorComponent({
                 scanned_at: new Date().toLocaleTimeString(),
             });
 
-            triggerFeedback(qrFeedback, {
+            emitScanFeedback(qrFeedback, {
                 sound,
                 vibrate,
-                frequency: beepFrequency,
-                duration: beepDurationMs,
-                vibrateDuration: vibrateDurationMs,
+                beepFrequency,
+                beepDurationMs,
+                vibrateDurationMs,
             });
 
             // Notify Livewire if action handler or state binding exists

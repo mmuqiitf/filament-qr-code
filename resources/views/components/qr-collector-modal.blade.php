@@ -12,6 +12,7 @@
         minBarcodeLength: @js($minBarcodeLength ?? 2),
         fps: @js($fps ?? 25),
         qrbox: @js($qrbox ?? 250),
+        preferRearCamera: @js($preferRearCamera ?? true),
         formats: @js($formats ?? []),
         cameraStorageKey: @js('filament-qr-code:camera:collect-action:' . ($actionName ?? 'default'))
     })"

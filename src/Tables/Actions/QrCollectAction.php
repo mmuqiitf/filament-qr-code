@@ -7,25 +7,17 @@ namespace Mmuqiitf\FilamentQrCode\Tables\Actions;
 use Closure;
 use Filament\Actions\Action;
 use Illuminate\Contracts\View\View;
+use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
-use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 
 class QrCollectAction extends Action
 {
+    use HasCameraScanning;
     use HasFeedback;
     use HasHardwareScanner;
 
     protected bool|Closure $allowDuplicates = false;
-
-    protected int|Closure $fps = 25;
-
-    protected int|Closure $qrbox = 250;
-
-    /**
-     * @var array<int, BarcodeFormat|string>|Closure
-     */
-    protected array|Closure $supportedFormats = [];
 
     protected ?Closure $onItemScanned = null;
 
@@ -61,6 +53,7 @@ class QrCollectAction extends Action
                 'minBarcodeLength' => $this->getMinBarcodeLength(),
                 'fps' => $this->getFps(),
                 'qrbox' => $this->getQrbox(),
+                'preferRearCamera' => $this->isPreferRearCamera(),
                 'formats' => $this->getSupportedFormats(),
             ]);
         });
@@ -76,62 +69,6 @@ class QrCollectAction extends Action
     public function onScan(?Closure $callback): static
     {
         $this->onItemScanned = $callback;
-
-        return $this;
-    }
-
-    /**
-     * @param  array<int, BarcodeFormat|string>|Closure  $formats
-     */
-    public function formats(array|Closure $formats): static
-    {
-        $this->supportedFormats = $formats;
-
-        return $this;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    public function getSupportedFormats(): array
-    {
-        $formats = $this->evaluate($this->supportedFormats);
-        if (! is_array($formats)) {
-            return [];
-        }
-
-        $result = [];
-        foreach ($formats as $format) {
-            if ($format instanceof BarcodeFormat) {
-                $result[] = $format->value;
-            } elseif (is_string($format)) {
-                $result[] = $format;
-            }
-        }
-
-        return $result;
-    }
-
-    public function getFps(): int
-    {
-        return (int) $this->evaluate($this->fps);
-    }
-
-    public function fps(int|Closure $fps): static
-    {
-        $this->fps = $fps;
-
-        return $this;
-    }
-
-    public function getQrbox(): int
-    {
-        return (int) $this->evaluate($this->qrbox);
-    }
-
-    public function qrbox(int|Closure $qrbox): static
-    {
-        $this->qrbox = $qrbox;
 
         return $this;
     }

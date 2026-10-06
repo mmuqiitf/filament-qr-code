@@ -6,11 +6,13 @@ namespace Mmuqiitf\FilamentQrCode\Forms\Components;
 
 use Closure;
 use Filament\Forms\Components\Field;
+use Mmuqiitf\FilamentQrCode\Concerns\HasQrRendering;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
-use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
 
 class QrCodeDisplay extends Field
 {
+    use HasQrRendering;
+
     protected string $view = 'filament-qr-code::components.qr-code-display';
 
     protected string|Closure|null $qrData = null;
@@ -123,41 +125,35 @@ class QrCodeDisplay extends Field
         return is_scalar($state) ? (string) $state : null;
     }
 
-    public function getQrSvgOrDataUri(): string
+    public function getQrDataUri(): string
     {
         $data = $this->getQrData();
         if ($data === null || $data === '') {
             return '';
         }
 
-        $service = QrCodeService::make()
-            ->size((int) $this->evaluate($this->size))
-            ->margin((int) $this->evaluate($this->margin))
-            ->color((string) $this->evaluate($this->foregroundColor))
-            ->backgroundColor((string) $this->evaluate($this->backgroundColor));
-
         $format = $this->evaluate($this->format);
-        if ($format instanceof QrFormat) {
-            $service->format($format);
-        } elseif (is_string($format)) {
-            $service->format($format);
-        }
 
-        if ($this->errorCorrectionLevel !== null) {
-            $service->errorCorrection((string) $this->evaluate($this->errorCorrectionLevel));
-        }
+        return $this->renderQrDataUri(
+            data: $data,
+            size: (int) $this->evaluate($this->size),
+            margin: (int) $this->evaluate($this->margin),
+            foreground: (string) $this->evaluate($this->foregroundColor),
+            background: (string) $this->evaluate($this->backgroundColor),
+            format: $format instanceof QrFormat || is_string($format) ? $format : null,
+            errorCorrection: $this->errorCorrectionLevel === null ? null : (string) $this->evaluate($this->errorCorrectionLevel),
+            logoPath: $this->logoPath === null ? null : (string) $this->evaluate($this->logoPath),
+            logoSize: (int) $this->evaluate($this->logoSize),
+            caption: $this->captionText,
+        );
+    }
 
-        if ($this->logoPath !== null) {
-            $service->logo((string) $this->evaluate($this->logoPath), (int) $this->evaluate($this->logoSize));
-        }
-
-        if ($this->captionText !== null) {
-            $service->withText($this->captionText);
-        }
-
-        $service->generate($data);
-
-        return $service->toDataUri();
+    /**
+     * @deprecated Use getQrDataUri() instead. Kept for backward compatibility.
+     */
+    public function getQrSvgOrDataUri(): string
+    {
+        return $this->getQrDataUri();
     }
 
     public function isDownloadable(): bool

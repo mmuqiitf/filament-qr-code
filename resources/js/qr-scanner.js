@@ -2,13 +2,14 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createWedgeHandler } from './qr-wedge.js';
 import {
-    computeQrboxForElement,
-    mapFormats,
+    emitScanFeedback,
+    ensureScannerInstance,
+    loadCameraDevices,
     persistCameraId,
-    selectPreferredCamera,
+    resolveQrboxFor,
+    scannerFormatsConfigFor,
+    stopCameraFeed,
     storageKeyFor,
-    syncReticleToQrbox,
-    triggerFeedback,
 } from './qr-camera-core.js';
 
 /**
@@ -122,41 +123,26 @@ export default function qrScannerComponent({
         },
 
         async loadCamerasAndStart() {
-            this.isLoading = true;
-            this.hasError = false;
+            await loadCameraDevices(this, {
+                Html5QrcodeClass: Html5Qrcode,
+                preferRearCamera,
+                storageKey,
+                requireDevices: true,
+                emptyMessage: 'No camera devices detected on this system.',
+                deniedMessage: 'Failed to access camera.',
+            });
 
-            try {
-                const devices = await Html5Qrcode.getCameras();
-                this.devices = devices || [];
-
-                if (!this.devices.length) {
-                    throw new Error('No camera devices detected on this system.');
-                }
-
-                this.selectedDeviceId = selectPreferredCamera(this.devices, {
-                    preferRear: preferRearCamera,
-                    storageKey,
-                });
-                this.isLoading = false;
+            if (!this.hasError) {
                 await this.startScan();
-            } catch (err) {
-                this.isLoading = false;
-                this.hasError = true;
-                this.errorMessage = err.message || 'Failed to access camera.';
             }
         },
 
         scannerFormatsConfig() {
-            const mapped = mapFormats(formats);
-            return mapped.length > 0 ? { formatsToSupport: mapped } : {};
+            return scannerFormatsConfigFor(formats);
         },
 
         currentQrbox() {
-            const container = document.getElementById(this.scannerElementId);
-            const box = computeQrboxForElement(container, qrbox, formats);
-            syncReticleToQrbox(container, box);
-
-            return box;
+            return resolveQrboxFor(this.scannerElementId, qrbox, formats);
         },
 
         async startScan() {
@@ -167,7 +153,7 @@ export default function qrScannerComponent({
             }
 
             if (!this.html5Qrcode) {
-                this.html5Qrcode = new Html5Qrcode(this.scannerElementId, this.scannerFormatsConfig());
+                ensureScannerInstance(this, this.scannerElementId, formats, Html5Qrcode);
             }
 
             const config = {
@@ -197,15 +183,7 @@ export default function qrScannerComponent({
         },
 
         async stopScan() {
-            if (this.html5Qrcode && this.isScanning) {
-                try {
-                    await this.html5Qrcode.stop();
-                } catch (e) {
-                    console.debug('Scanner stop error:', e);
-                } finally {
-                    this.isScanning = false;
-                }
-            }
+            await stopCameraFeed(this, 'camera scanner');
         },
 
         handleScanResult(scannedText) {
@@ -220,12 +198,12 @@ export default function qrScannerComponent({
             }
 
             // Trigger sensory feedback
-            triggerFeedback(qrFeedback, {
+            emitScanFeedback(qrFeedback, {
                 sound,
                 vibrate,
-                frequency: beepFrequency,
-                duration: beepDurationMs,
-                vibrateDuration: vibrateDurationMs,
+                beepFrequency,
+                beepDurationMs,
+                vibrateDurationMs,
             });
 
             // Dispatch custom window event
@@ -278,7 +256,7 @@ export default function qrScannerComponent({
             if (!file) return;
 
             if (!this.html5Qrcode) {
-                this.html5Qrcode = new Html5Qrcode(this.scannerElementId, this.scannerFormatsConfig());
+                ensureScannerInstance(this, this.scannerElementId, formats, Html5Qrcode);
             }
 
             this.html5Qrcode.scanFile(file, true)

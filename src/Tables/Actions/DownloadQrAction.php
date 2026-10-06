@@ -7,12 +7,14 @@ namespace Mmuqiitf\FilamentQrCode\Tables\Actions;
 use Closure;
 use Filament\Actions\Action;
 use Illuminate\Database\Eloquent\Model;
+use Mmuqiitf\FilamentQrCode\Concerns\HasQrRendering;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
-use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DownloadQrAction extends Action
 {
+    use HasQrRendering;
+
     protected string|Closure|null $qrData = null;
 
     protected string|Closure|null $qrFileName = null;
@@ -40,17 +42,15 @@ class DownloadQrAction extends Action
 
             $fileName = $this->getQrFileName($record) ?? 'qrcode';
 
-            $service = QrCodeService::make()
-                ->size((int) $this->evaluate($this->qrImageSize, ['record' => $record]))
-                ->margin((int) $this->evaluate($this->qrMargin, ['record' => $record]))
-                ->fileName($fileName);
-
             $format = $this->evaluate($this->qrFormat, ['record' => $record]);
-            if ($format instanceof QrFormat) {
-                $service->format($format);
-            } elseif (is_string($format)) {
-                $service->format($format);
-            }
+
+            $service = $this->buildQrCodeService(
+                size: (int) $this->evaluate($this->qrImageSize, ['record' => $record]),
+                margin: (int) $this->evaluate($this->qrMargin, ['record' => $record]),
+                foreground: '#000000',
+                background: '#ffffff',
+                format: $format instanceof QrFormat || is_string($format) ? $format : null,
+            )->fileName($fileName);
 
             return $service->generate($data)->download($fileName);
         });

@@ -171,3 +171,117 @@ export function triggerFeedback(feedback, { sound = true, vibrate = true, freque
         vibrateDuration,
     });
 }
+
+/**
+ * Shared decoder-format config for all camera Alpine modules.
+ *
+ * Deepens the camera scanning module: the three camera components
+ * (QR Scanner Field, Scan Sequence Container, Batch Collector Scanning)
+ * previously each carried a verbatim `scannerFormatsConfig()` copy.
+ */
+export function scannerFormatsConfigFor(formats) {
+    const mapped = mapFormats(formats);
+    return mapped.length > 0 ? { formatsToSupport: mapped } : {};
+}
+
+/**
+ * Resolve the responsive decode box for a viewfinder element id and keep
+ * the on-screen reticle in sync. Replaces the per-component `currentQrbox()`.
+ */
+export function resolveQrboxFor(elementId, maxBox = 250, formats = []) {
+    const container = typeof document !== 'undefined' ? document.getElementById(elementId) : null;
+    const box = computeQrboxForElement(container, maxBox, formats);
+    syncReticleToQrbox(container, box);
+
+    return box;
+}
+
+/**
+ * Load camera devices into an Alpine component's state.
+ *
+ * Owns the `isLoading / devices / selectedDeviceId / hasError` triad so
+ * callers keep only their empty-device policy (`requireDevices`) and
+ * user-facing error strings.
+ */
+export async function loadCameraDevices(component, {
+    Html5QrcodeClass,
+    preferRearCamera = true,
+    storageKey = null,
+    requireDevices = false,
+    emptyMessage = 'No camera devices detected on this system.',
+    deniedMessage = 'Camera access unavailable.',
+    fixedMessage = false,
+} = {}) {
+    component.isLoading = true;
+    component.hasError = false;
+
+    try {
+        const devices = await Html5QrcodeClass.getCameras();
+        component.devices = devices || [];
+
+        if (requireDevices && component.devices.length === 0) {
+            throw new Error(emptyMessage);
+        }
+
+        if (component.devices.length > 0) {
+            component.selectedDeviceId = selectPreferredCamera(component.devices, {
+                preferRear: preferRearCamera,
+                storageKey,
+            });
+        }
+
+        component.isLoading = false;
+    } catch (err) {
+        component.isLoading = false;
+        component.hasError = true;
+        component.errorMessage = fixedMessage ? deniedMessage : (err?.message || deniedMessage);
+    }
+}
+
+/**
+ * Lazily construct the Html5Qrcode instance for a viewfinder element.
+ */
+export function ensureScannerInstance(component, elementId, formats, Html5QrcodeClass) {
+    if (!component.html5Qrcode) {
+        component.html5Qrcode = new Html5QrcodeClass(elementId, scannerFormatsConfigFor(formats));
+    }
+
+    return component.html5Qrcode;
+}
+
+/**
+ * Shared camera stop: every camera module guards on the same
+ * `html5Qrcode && isScanning` seam and clears `isScanning` in `finally`.
+ */
+export async function stopCameraFeed(component, logLabel = 'scanner') {
+    if (component.html5Qrcode && component.isScanning) {
+        try {
+            await component.html5Qrcode.stop();
+        } catch (e) {
+            console.debug(`Error stopping ${logLabel}:`, e);
+        } finally {
+            component.isScanning = false;
+        }
+    }
+}
+
+/**
+ * Remap Alpine feedback options onto the Scan Feedback module's seam.
+ * Replaces the identical `triggerFeedback(qrFeedback, {...})` block
+ * previously copied into every decode handler.
+ */
+export function emitScanFeedback(feedback, {
+    sound = true,
+    vibrate = true,
+    beepFrequency = 880,
+    beepDurationMs = 80,
+    vibrateDurationMs = 100,
+} = {}) {
+    triggerFeedback(feedback, {
+        sound,
+        vibrate,
+        frequency: beepFrequency,
+        duration: beepDurationMs,
+        vibrateDuration: vibrateDurationMs,
+    });
+}

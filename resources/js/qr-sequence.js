@@ -2,13 +2,14 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createWedgeHandler } from './qr-wedge.js';
 import {
-    computeQrboxForElement,
-    mapFormats,
+    emitScanFeedback,
+    ensureScannerInstance,
+    loadCameraDevices,
     persistCameraId,
-    selectPreferredCamera,
+    resolveQrboxFor,
+    scannerFormatsConfigFor,
+    stopCameraFeed,
     storageKeyFor,
-    syncReticleToQrbox,
-    triggerFeedback,
 } from './qr-camera-core.js';
 
 /**
@@ -97,39 +98,21 @@ export default function qrScanSequenceComponent({
         },
 
         async loadCameras() {
-            this.isLoading = true;
-            this.hasError = false;
-
-            try {
-                const devices = await Html5Qrcode.getCameras();
-                this.devices = devices || [];
-
-                if (this.devices.length > 0) {
-                    this.selectedDeviceId = selectPreferredCamera(this.devices, {
-                        preferRear: preferRearCamera,
-                        storageKey,
-                    });
-                }
-
-                this.isLoading = false;
-            } catch (err) {
-                this.isLoading = false;
-                this.hasError = true;
-                this.errorMessage = 'Camera access denied or unavailable.';
-            }
+            await loadCameraDevices(this, {
+                Html5QrcodeClass: Html5Qrcode,
+                preferRearCamera,
+                storageKey,
+                deniedMessage: 'Camera access denied or unavailable.',
+                fixedMessage: true,
+            });
         },
 
         scannerFormatsConfig() {
-            const mapped = mapFormats(formats);
-            return mapped.length > 0 ? { formatsToSupport: mapped } : {};
+            return scannerFormatsConfigFor(formats);
         },
 
         currentQrbox() {
-            const container = document.getElementById(this.elementId);
-            const box = computeQrboxForElement(container, qrbox, formats);
-            syncReticleToQrbox(container, box);
-
-            return box;
+            return resolveQrboxFor(this.elementId, qrbox, formats);
         },
 
         statePathFor(fieldKey) {
@@ -145,7 +128,7 @@ export default function qrScanSequenceComponent({
             }
 
             if (!this.html5Qrcode) {
-                this.html5Qrcode = new Html5Qrcode(this.elementId, this.scannerFormatsConfig());
+                ensureScannerInstance(this, this.elementId, formats, Html5Qrcode);
             }
 
             try {
@@ -166,15 +149,7 @@ export default function qrScanSequenceComponent({
         },
 
         async stopScanner() {
-            if (this.html5Qrcode && this.isScanning) {
-                try {
-                    await this.html5Qrcode.stop();
-                } catch (e) {
-                    console.debug('Error stopping sequence scanner:', e);
-                } finally {
-                    this.isScanning = false;
-                }
-            }
+            await stopCameraFeed(this, 'sequence scanner');
         },
 
         processScan(decodedText) {
@@ -185,12 +160,12 @@ export default function qrScanSequenceComponent({
             if (!trimmed) return;
 
             this.results[currentField.key] = trimmed;
-            triggerFeedback(qrFeedback, {
+            emitScanFeedback(qrFeedback, {
                 sound,
                 vibrate,
-                frequency: beepFrequency,
-                duration: beepDurationMs,
-                vibrateDuration: vibrateDurationMs,
+                beepFrequency,
+                beepDurationMs,
+                vibrateDurationMs,
             });
 
             // Sync with Livewire form state (bound by statePrefix, default `data.*`)

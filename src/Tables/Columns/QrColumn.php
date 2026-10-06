@@ -6,11 +6,14 @@ namespace Mmuqiitf\FilamentQrCode\Tables\Columns;
 
 use Closure;
 use Filament\Tables\Columns\Column;
+use Mmuqiitf\FilamentQrCode\Concerns\HasQrRendering;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
 
 class QrColumn extends Column
 {
+    use HasQrRendering;
+
     protected string $view = 'filament-qr-code::components.qr-column';
 
     protected string|Closure|null $qrData = null;
@@ -160,33 +163,18 @@ class QrColumn extends Column
     protected function buildDataUri(string $data, int $size, int $margin): string
     {
         $format = $this->evaluate($this->format);
-        $foreground = (string) $this->evaluate($this->foregroundColor);
-        $background = (string) $this->evaluate($this->backgroundColor);
-        $errorCorrection = $this->errorCorrectionLevel === null ? '' : (string) $this->evaluate($this->errorCorrectionLevel);
-        $logoPath = $this->logoPath === null ? '' : (string) $this->evaluate($this->logoPath);
-        $logoSize = (int) $this->evaluate($this->logoSize);
 
-        $service = QrCodeService::make()
-            ->size($size)
-            ->margin($margin)
-            ->color($foreground)
-            ->backgroundColor($background);
-
-        if ($format instanceof QrFormat) {
-            $service->format($format);
-        } elseif (is_string($format)) {
-            $service->format($format);
-        }
-
-        if ($errorCorrection !== '') {
-            $service->errorCorrection($errorCorrection);
-        }
-
-        if ($logoPath !== '') {
-            $service->logo($logoPath, $logoSize);
-        }
-
-        return $service->generate($data)->toDataUri();
+        return $this->renderQrDataUri(
+            data: $data,
+            size: $size,
+            margin: $margin,
+            foreground: (string) $this->evaluate($this->foregroundColor),
+            background: (string) $this->evaluate($this->backgroundColor),
+            format: $format instanceof QrFormat || is_string($format) ? $format : null,
+            errorCorrection: $this->errorCorrectionLevel === null ? null : (string) $this->evaluate($this->errorCorrectionLevel),
+            logoPath: $this->logoPath === null ? null : (string) $this->evaluate($this->logoPath),
+            logoSize: (int) $this->evaluate($this->logoSize),
+        );
     }
 
     public function isPreviewable(): bool
