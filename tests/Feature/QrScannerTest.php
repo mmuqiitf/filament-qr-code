@@ -43,7 +43,7 @@ it('can trigger onScan callback', function () {
         ->and($scanned)->toBe('SCANNED_CODE_XYZ');
 });
 
-it('exposes wedge, feedback, and camera defaults', function () {
+it('exposes hardware scanner, feedback, and camera defaults', function () {
     $field = QrScanner::make('sku')
         ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128]);
 

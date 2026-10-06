@@ -82,13 +82,18 @@ export function computeQrboxForElement(element, maxBox = 250, formats = []) {
 
 /**
  * Resize the decorative reticle overlay to match the active decode box.
+ *
+ * The reticle lives beside (not inside) the decoder host element, so scope
+ * the lookup to the shared viewfinder; the library's own shaded overlay is
+ * hidden in CSS, leaving exactly one rectangle.
  */
 export function syncReticleToQrbox(viewfinderElement, qrbox) {
     if (!viewfinderElement || !qrbox) {
         return;
     }
 
-    const box = viewfinderElement.querySelector('.filament-qr-reticle-box');
+    const scope = viewfinderElement.closest?.('.filament-qr-viewfinder') || viewfinderElement;
+    const box = scope.querySelector('.filament-qr-reticle-box');
     if (!box) {
         return;
     }

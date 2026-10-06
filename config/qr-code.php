@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     /*
     |--------------------------------------------------------------------------
-    | Hardware Wedge Scanner Configuration
+    | Hardware Scanner Configuration
     |--------------------------------------------------------------------------
     |
     | Configuration for physical USB/Bluetooth handheld barcode and QR scanners.

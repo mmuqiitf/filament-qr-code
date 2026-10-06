@@ -9,12 +9,12 @@ use Filament\Schemas\Components\Component;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 
-class QrWedgeListener extends Component
+class QrHardwareScannerListener extends Component
 {
     use HasFeedback;
     use HasHardwareScanner;
 
-    protected string $view = 'filament-qr-code::components.qr-wedge-listener';
+    protected string $view = 'filament-qr-code::components.qr-hardware-scanner-listener';
 
     /**
      * @var array<int, string>|Closure

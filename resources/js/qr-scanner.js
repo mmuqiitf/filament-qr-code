@@ -1,6 +1,6 @@
 import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
-import { createWedgeHandler } from './qr-wedge.js';
+import { createHardwareScannerHandler } from './qr-hardware-scanner.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -49,14 +49,14 @@ export default function qrScannerComponent({
         selectedDeviceId: null,
         html5Qrcode: null,
         scannerElementId: '',
-        wedgeHandler: null,
-        boundWedgeHandler: null,
+        hardwareScannerHandler: null,
+        boundHardwareScannerHandler: null,
 
         init() {
             this.scannerElementId = `qr-reader-${this.$id('qr-reader')}`;
 
             if (hardwareScanner) {
-                this.wedgeHandler = createWedgeHandler({
+                this.hardwareScannerHandler = createHardwareScannerHandler({
                     burstThresholdMs,
                     minBarcodeLength,
                     terminators,
@@ -70,12 +70,12 @@ export default function qrScannerComponent({
                     },
                 });
 
-                // Field-scoped on purpose: pair with QrWedgeListener for
+                // Field-scoped on purpose: pair with QrHardwareScannerListener for
                 // page-global cashier capture to avoid double handling.
-                this.boundWedgeHandler = (e) => {
-                    this.wedgeHandler.handleKeyDown(e);
+                this.boundHardwareScannerHandler = (e) => {
+                    this.hardwareScannerHandler.handleKeyDown(e);
                 };
-                this.$el.addEventListener('keydown', this.boundWedgeHandler);
+                this.$el.addEventListener('keydown', this.boundHardwareScannerHandler);
             }
 
             // Sync with Livewire state binding
@@ -88,9 +88,9 @@ export default function qrScannerComponent({
         },
 
         destroy() {
-            if (this.boundWedgeHandler) {
-                this.$el.removeEventListener('keydown', this.boundWedgeHandler);
-                this.boundWedgeHandler = null;
+            if (this.boundHardwareScannerHandler) {
+                this.$el.removeEventListener('keydown', this.boundHardwareScannerHandler);
+                this.boundHardwareScannerHandler = null;
             }
             this.stopScan();
         },

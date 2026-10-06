@@ -1,7 +1,7 @@
 import qrScannerComponent from './qr-scanner.js';
 import qrScanSequenceComponent from './qr-sequence.js';
 import qrCollectorComponent from './qr-collector.js';
-import { createWedgeHandler, qrWedgeListenerComponent } from './qr-wedge.js';
+import { createHardwareScannerHandler, qrHardwareScannerListenerComponent } from './qr-hardware-scanner.js';
 import { qrFeedback } from './audio-feedback.js';
 import * as qrCameraCore from './qr-camera-core.js';
 import '../css/qr-code.css';
@@ -10,8 +10,8 @@ export {
     qrScannerComponent,
     qrScanSequenceComponent,
     qrCollectorComponent,
-    qrWedgeListenerComponent,
-    createWedgeHandler,
+    qrHardwareScannerListenerComponent,
+    createHardwareScannerHandler,
     qrFeedback,
     qrCameraCore,
 };
@@ -22,8 +22,8 @@ if (typeof window !== 'undefined') {
         qrScannerComponent,
         qrScanSequenceComponent,
         qrCollectorComponent,
-        qrWedgeListenerComponent,
-        createWedgeHandler,
+        qrHardwareScannerListenerComponent,
+        createHardwareScannerHandler,
         qrFeedback,
         qrCameraCore,
     };
@@ -33,7 +33,7 @@ if (typeof window !== 'undefined') {
             window.Alpine.data('qrScanner', qrScannerComponent);
             window.Alpine.data('qrScanSequence', qrScanSequenceComponent);
             window.Alpine.data('qrCollector', qrCollectorComponent);
-            window.Alpine.data('qrWedgeListener', qrWedgeListenerComponent);
+            window.Alpine.data('qrHardwareScannerListener', qrHardwareScannerListenerComponent);
         }
     };
 

@@ -13,9 +13,9 @@ use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCodeDisplay;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
-use Mmuqiitf\FilamentQrCode\Forms\Components\QrWedgeListener;
 
 class TestLivewireFormComponent extends Component implements HasForms
 {
@@ -37,7 +37,7 @@ class TestLivewireFormComponent extends Component implements HasForms
     {
         return $form
             ->schema([
-                QrWedgeListener::make(['step', 'employee']),
+                QrHardwareScannerListener::make(['step', 'employee']),
                 QrScanner::make('step')
                     ->formats([BarcodeFormat::Code128, BarcodeFormat::QrCode])
                     ->nextField('employee')
@@ -91,7 +91,7 @@ it('validates and submits scanned values end-to-end in Livewire form', function 
         // Try submitting empty required fields -> errors
         ->call('submit')
         ->assertHasErrors(['data.step', 'data.employee'])
-        // Simulate hardware wedge / camera scanning filling the fields
+        // Simulate hardware scanner / camera scanning filling the fields
         ->set('data.step', 'STEP-001')
         ->set('data.employee', 'EMP-4421')
         ->call('submit')

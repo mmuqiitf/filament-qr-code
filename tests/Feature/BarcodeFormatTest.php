@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
-use Mmuqiitf\FilamentQrCode\Forms\Components\QrWedgeListener;
 
 it('supports multi-format barcode configurations in QrScanner', function () {
     $field = QrScanner::make('barcode')
@@ -23,8 +23,8 @@ it('supports multi-format barcode configurations in QrScanner', function () {
         ->toContain('EAN_13');
 });
 
-it('configures QrWedgeListener for hands-free warehouse scanning', function () {
-    $listener = QrWedgeListener::make([
+it('configures QrHardwareScannerListener for hands-free warehouse scanning', function () {
+    $listener = QrHardwareScannerListener::make([
         'step',
         'employee',
         'serial',

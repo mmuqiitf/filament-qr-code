@@ -1,6 +1,6 @@
 import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
-import { createWedgeHandler } from './qr-wedge.js';
+import { createHardwareScannerHandler } from './qr-hardware-scanner.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -54,14 +54,14 @@ export default function qrCollectorComponent({
         selectedDeviceId: null,
         html5Qrcode: null,
         elementId: '',
-        wedgeHandler: null,
-        boundWedgeHandler: null,
+        hardwareScannerHandler: null,
+        boundHardwareScannerHandler: null,
 
         init() {
             this.elementId = `qr-collector-${this.$id('qr-col')}`;
 
             if (hardwareScanner) {
-                this.wedgeHandler = createWedgeHandler({
+                this.hardwareScannerHandler = createHardwareScannerHandler({
                     burstThresholdMs,
                     minBarcodeLength,
                     terminators,
@@ -75,19 +75,19 @@ export default function qrCollectorComponent({
                     },
                 });
 
-                this.boundWedgeHandler = (e) => {
-                    this.wedgeHandler.handleKeyDown(e);
+                this.boundHardwareScannerHandler = (e) => {
+                    this.hardwareScannerHandler.handleKeyDown(e);
                 };
-                window.addEventListener('keydown', this.boundWedgeHandler);
+                window.addEventListener('keydown', this.boundHardwareScannerHandler);
             }
 
             this.loadCameras();
         },
 
         destroy() {
-            if (this.boundWedgeHandler) {
-                window.removeEventListener('keydown', this.boundWedgeHandler);
-                this.boundWedgeHandler = null;
+            if (this.boundHardwareScannerHandler) {
+                window.removeEventListener('keydown', this.boundHardwareScannerHandler);
+                this.boundHardwareScannerHandler = null;
             }
             this.stopCollector();
         },

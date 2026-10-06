@@ -26,16 +26,16 @@ _Avoid_: QR info field, view QR
 A Table column component that displays an encoded QR thumbnail with click-to-enlarge and download capabilities.
 _Avoid_: Barcode column, QR table cell
 
-**Hardware Wedge Scanner**:
+**Hardware Scanner**:
 A physical handheld USB/Bluetooth scanner that inputs scanned characters into the browser via rapid keystroke emulation followed by a terminator key.
 _Avoid_: Barcode gun, physical reader
 
-**Wedge Interceptor**:
+**Hardware Scanner Interceptor**:
 An Alpine.js directive and event listener that buffers high-speed keystroke bursts from hardware scanners, prevents accidental form submissions, and routes values to the active field.
 _Avoid_: Keyboard listener, input hook
 
 **Station Listener**:
-A page-level or widget-level keyboard wedge listener that captures scans globally across the viewport and automatically routes inputs to the active or first empty registered field.
+A page-level or widget-level hardware scanner listener that captures scans globally across the viewport and automatically routes inputs to the active or first empty registered field.
 _Avoid_: Global watcher, window listener
 
 ### Symbologies & Formats

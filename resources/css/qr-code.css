@@ -32,8 +32,16 @@
     height: 220px;
     border: 2px solid rgba(255, 255, 255, 0.4);
     border-radius: 12px;
+    /* Spotlight dimming around the single scan rectangle. */
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
     /* Sized at runtime by syncReticleToQrbox() to match the decoder crop. */
     transition: width 0.2s ease, height 0.2s ease;
+}
+
+/* The decoder library paints its own shaded overlay with corner shaders;
+   hide it so only the synced reticle above is visible (one rectangle). */
+.filament-qr-viewfinder #qr-shaded-region {
+    display: none !important;
 }
 
 .filament-qr-reticle-corner {

@@ -35,7 +35,7 @@ it('evaluates hardware scanner configuration correctly', function (): void {
         ->and($component->shouldPreventFormSubmit())->toBeFalse();
 });
 
-it('exposes wedge terminator and minimum-length configuration', function (): void {
+it('exposes hardware scanner terminator and minimum-length configuration', function (): void {
     $component = new DummyComponentWithScanner;
 
     expect($component->getTerminators())->toBe(['Enter', 'Tab'])
@@ -67,7 +67,7 @@ it('supports all 1D and 2D barcode format enumerations', function (): void {
         ->and(BarcodeFormat::UpcE->getLabel())->toBe('UPC-E');
 });
 
-it('sanitizes typical hardware wedge scanner payloads', function (): void {
+it('sanitizes typical hardware scanner payloads', function (): void {
     // Barcode hardware scanners often send prefixes (\x02 STX) and suffixes (\r, \n, \x03 ETX)
     $rawScannerPayload = "\x02PROD-9988234-XYZ\r\n\x03";
     $cleaned = trim($rawScannerPayload, "\x00..\x1F");

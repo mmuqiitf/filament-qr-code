@@ -13,7 +13,7 @@
 @endphp
 
 <div
-    x-data="qrWedgeListener({
+    x-data="qrHardwareScannerListener({
         fields: @js($fields),
         burstThresholdMs: @js($burstThresholdMs),
         preventSubmit: @js($preventSubmit),

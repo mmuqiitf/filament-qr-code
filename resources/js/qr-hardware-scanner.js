@@ -1,11 +1,11 @@
 import { qrFeedback } from './audio-feedback.js';
 
 /**
- * Hardware Keyboard Wedge Scanner Interceptor.
+ * Hardware keyboard scanner interceptor.
  * Detects rapid burst keystrokes typical of USB/Bluetooth barcode guns (<50ms per key),
  * suppresses default submit action on terminating Enter/Tab, and coordinates field updates.
  */
-export function createWedgeHandler({
+export function createHardwareScannerHandler({
     burstThresholdMs = 50,
     minBarcodeLength = 2,
     preventFormSubmit = true,
@@ -90,9 +90,9 @@ export function createWedgeHandler({
 }
 
 /**
- * Alpine component for QrWedgeListener.
+ * Alpine component for QrHardwareScannerListener.
  */
-export function qrWedgeListenerComponent({
+export function qrHardwareScannerListenerComponent({
     fields = [],
     burstThresholdMs = 50,
     preventSubmit = true,
@@ -110,11 +110,11 @@ export function qrWedgeListenerComponent({
 
     return {
         registeredFields: fields,
-        wedgeHandler: null,
+        hardwareScannerHandler: null,
         boundKeyHandler: null,
 
         init() {
-            this.wedgeHandler = createWedgeHandler({
+            this.hardwareScannerHandler = createHardwareScannerHandler({
                 burstThresholdMs,
                 minBarcodeLength,
                 preventFormSubmit: preventSubmit,
@@ -130,7 +130,7 @@ export function qrWedgeListenerComponent({
             });
 
             this.boundKeyHandler = (e) => {
-                this.wedgeHandler.handleKeyDown(e);
+                this.hardwareScannerHandler.handleKeyDown(e);
             };
             window.addEventListener('keydown', this.boundKeyHandler);
         },
@@ -216,7 +216,7 @@ export function qrWedgeListenerComponent({
                     // DOM events above are the primary sync channel.
                 }
 
-                window.dispatchEvent(new CustomEvent('qr-wedge-scanned', {
+                window.dispatchEvent(new CustomEvent('qr-hardware-scanned', {
                     detail: {
                         value: scannedValue,
                         field: targetFieldName,

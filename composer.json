@@ -1,6 +1,6 @@
 {
     "name": "mmuqiitf/filament-qr-code",
-    "description": "A powerful, modern QR code package for Filament v5 supporting generation, camera reading, sequential fields, and hardware wedge scanners.",
+    "description": "A powerful, modern QR code package for Filament v5 supporting generation, camera reading, sequential fields, and hardware scanners.",
     "keywords": [
         "mmuqiitf",
         "laravel",

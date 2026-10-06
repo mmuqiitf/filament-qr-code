@@ -9,7 +9,7 @@ All notable changes to `filament-qr-code` will be documented in this file.
 - `QrScanner` form field with camera scan modal, rear camera preference, torch toggle, and image upload fallback.
 - Sequential field chaining via `->nextField('...')`.
 - `QrScanSequence` split-screen dashboard orchestrator container.
-- Hardware keyboard wedge scanner support with burst detection (<50ms) and premature form submit prevention.
+- Hardware keyboard scanner support with burst detection (<50ms) and premature form submit prevention.
 - `QrCollector` and `QrCollectAction` for batch continuous scanning with duplicate prevention.
 - Full QR generator suite (`QrCodeService`, `QrCodeDisplay`, `QrColumn`, `QrEntry`, `DownloadQrAction`).
 - Sensory feedback (synthesized Web Audio API tone and haptic vibration).
