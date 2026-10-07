@@ -347,6 +347,22 @@ $table->actions([
 ]);
 ```
 
+#### As a Bulk ZIP Export:
+
+```php
+use Mmuqiitf\FilamentQrCode\Tables\Actions\DownloadQrBulkAction;
+
+$table->bulkActions([
+    DownloadQrBulkAction::make()
+        ->qrData('sku') // attribute name, or fn ($record) => ...
+        ->qrFileName(fn ($record) => $record->sku)
+        ->qrFormat(QrFormat::Png)
+        ->zipName('shelf-labels.zip'),
+]);
+```
+
+Rows without data are skipped; the archive downloads as one ZIP (needs the PHP `zip` extension). For printed shelf labels, wrap any QR images in `.filament-qr-label-sheet` / `.filament-qr-label` — the print stylesheet hides camera UI and tiles three labels per row.
+
 #### Programmatic Standalone Generation:
 
 ```php

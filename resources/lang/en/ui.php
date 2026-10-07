@@ -14,6 +14,7 @@ return [
     'duplicate_codes' => 'Duplicate codes are not allowed.',
     'download' => 'Download',
     'download_image' => 'Download Image',
+    'download_qr_bulk' => 'Download QR Codes (ZIP)',
     'download_qr_code' => 'Download QR Code',
     'empty_collector' => 'No items scanned yet. Position a QR code in front of the camera.',
     'items' => 'items',

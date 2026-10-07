@@ -109,3 +109,28 @@
         opacity: 0.3;
     }
 }
+
+/* Label sheets & printing: camera UI never prints, QR images tile cleanly. */
+@media print {
+    .filament-qr-viewfinder,
+    .filament-qr-reticle,
+    .filament-qr-no-print {
+        display: none !important;
+    }
+
+    .filament-qr-label-sheet {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12mm 8mm;
+    }
+
+    .filament-qr-label {
+        break-inside: avoid;
+        text-align: center;
+        font-size: 10pt;
+    }
+
+    .filament-qr-label img {
+        max-width: 100%;
+    }
+}
