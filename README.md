@@ -512,6 +512,25 @@ and translate per locale.
 
 ---
 
+## Troubleshooting
+
+Run the built-in checks first:
+
+```bash
+php artisan qr-code:doctor
+```
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| Camera modal says no devices / access denied | Page served over plain `http` (not `localhost`) | Serve via `https` or test on `localhost`; browsers block cameras in insecure contexts. |
+| Camera modal empty on first open | Permission not granted yet, labels unavailable | Grant permission, reopen; the remembered `localStorage` choice wins afterwards. |
+| Stale scanner UI after updating the package | Committed `dist/` rebuilt but host serving old assets | `npm run build` in the package, then `php artisan filament:assets` in the host app. |
+| PNG looks wrong / text overlay is blocky | Missing GD/Imagick or system fonts | Install `gd` or `imagick` plus `fonts-dejavu-core`; the service falls back to GD bitmap fonts otherwise. |
+| Sequence submit misses scanned values | `statePathPrefix()` doesn't match the schema `statePath()` | Set both to the same prefix, or give the sequence `->statePath()` and read via `mergeSequenceState()`. A banner warns in the UI when they differ. |
+| Same burst handled twice | Field `QrScanner` listener + page `QrHardwareScannerListener` both active | Keep the global listener; field handlers stand down automatically (or `->suppressWhenGlobalListener(false)`). |
+| Typed text becomes a "scan" | `minBarcodeLength` too low for a keyboard-heavy form | Raise `minBarcodeLength` to 4–6 on that component. |
+| Table page is slow with many QRs | Eager modal data-URIs per row | Keep `->lazyModal()` (default) and the persistent cache enabled; tune `generator.cache_ttl`. |
+
 ## Testing
 
 ```bash

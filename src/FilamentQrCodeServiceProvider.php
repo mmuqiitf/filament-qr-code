@@ -8,6 +8,7 @@ use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Facades\Route;
+use Mmuqiitf\FilamentQrCode\Console\Commands;
 use Mmuqiitf\FilamentQrCode\Http\Controllers\QrImageController;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
 use Spatie\LaravelPackageTools\Package;
@@ -25,7 +26,8 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
             ->name(static::$name)
             ->hasConfigFile('qr-code')
             ->hasTranslations()
-            ->hasViews(static::$name);
+            ->hasViews(static::$name)
+            ->hasCommand(Commands\QrCodeDoctorCommand::class);
     }
 
     public static function registerAssetsOnce(): void
