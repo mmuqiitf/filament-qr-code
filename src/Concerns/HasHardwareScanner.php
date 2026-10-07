@@ -21,6 +21,10 @@ trait HasHardwareScanner
 
     protected int|Closure $minBarcodeLength = 2;
 
+    protected int|Closure $scanTimeoutMs = 150;
+
+    protected bool|Closure $suppressWhenGlobalListenerActive = true;
+
     /**
      * @param  array<int, string>|Closure  $terminators
      */
@@ -30,12 +34,16 @@ trait HasHardwareScanner
         bool|Closure $preventFormSubmit = true,
         array|Closure $terminators = ['Enter', 'Tab'],
         int|Closure $minBarcodeLength = 2,
+        int|Closure $scanTimeoutMs = 150,
+        bool|Closure $suppressWhenGlobalListenerActive = true,
     ): static {
         $this->isHardwareScannerEnabled = $enabled;
         $this->burstThresholdMs = $burstThresholdMs;
         $this->preventFormSubmit = $preventFormSubmit;
         $this->terminators = $terminators;
         $this->minBarcodeLength = $minBarcodeLength;
+        $this->scanTimeoutMs = $scanTimeoutMs;
+        $this->suppressWhenGlobalListenerActive = $suppressWhenGlobalListenerActive;
 
         return $this;
     }
@@ -72,5 +80,43 @@ trait HasHardwareScanner
     public function getMinBarcodeLength(): int
     {
         return max(1, (int) $this->evaluate($this->minBarcodeLength));
+    }
+
+    public function scanTimeout(int|Closure $milliseconds): static
+    {
+        $this->scanTimeoutMs = $milliseconds;
+
+        return $this;
+    }
+
+    public function getScanTimeoutMs(): int
+    {
+        return max(0, (int) $this->evaluate($this->scanTimeoutMs));
+    }
+
+    /**
+     * When a page-global QrHardwareScannerListener is mounted, field-scoped
+     * burst handlers stand down by default so the same gun burst is not
+     * handled twice. Pass false to force the field listener to stay active.
+     */
+    public function suppressWhenGlobalListener(bool|Closure $condition = true): static
+    {
+        $this->suppressWhenGlobalListenerActive = $condition;
+
+        return $this;
+    }
+
+    public function isSuppressedWhenGlobalListenerActive(): bool
+    {
+        return (bool) $this->evaluate($this->suppressWhenGlobalListenerActive);
+    }
+
+    /**
+     * Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and
+     * surrounding whitespace. Mirrors the JS sanitizeScannedValue().
+     */
+    public static function sanitizeScannedValue(string $value): string
+    {
+        return trim($value, "\x00..\x1F\x7F \t\n\r\0\x0B");
     }
 }

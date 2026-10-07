@@ -19,6 +19,7 @@ return [
         'enabled' => true,
         'burst_threshold_ms' => 50,
         'min_barcode_length' => 2,
+        'scan_timeout_ms' => 150,
         'prevent_form_submit' => true,
         'default_terminators' => ['Enter', 'Tab'],
     ],
@@ -68,5 +69,7 @@ return [
         'foreground_color' => '#000000',
         'background_color' => '#ffffff',
         'error_correction' => 'M', // L, M, Q, H
+        'cache_ttl' => 86400, // seconds; null = forever, false = disable persistent L2
+        'cache_store' => null, // null = default cache store
     ],
 ];

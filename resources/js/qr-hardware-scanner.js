@@ -1,15 +1,55 @@
 import { qrFeedback } from './audio-feedback.js';
 
+const GLOBAL_LISTENER_KEY = '__filamentQrCodeGlobalHardwareListeners';
+
+function globalListenerCount() {
+    if (typeof window === 'undefined') {
+        return 0;
+    }
+
+    return window[GLOBAL_LISTENER_KEY] || 0;
+}
+
+function trackGlobalListener(delta) {
+    if (typeof window === 'undefined') {
+        return 0;
+    }
+
+    window[GLOBAL_LISTENER_KEY] = Math.max(0, (window[GLOBAL_LISTENER_KEY] || 0) + delta);
+
+    return window[GLOBAL_LISTENER_KEY];
+}
+
+/**
+ * Strip handheld-scanner framing (STX/ETX, CR/LF) and surrounding
+ * whitespace. Mirrors PHP HasHardwareScanner::sanitizeScannedValue().
+ */
+export function sanitizeScannedValue(value) {
+    // eslint-disable-next-line no-control-regex
+    return String(value ?? '').replace(/^[\u0000-\u0020\u007F]+|[\u0000-\u0020\u007F]+$/g, '');
+}
+
+export function isGlobalHardwareListenerActive() {
+    return globalListenerCount() > 0;
+}
+
 /**
  * Hardware keyboard scanner interceptor.
- * Detects rapid burst keystrokes typical of USB/Bluetooth barcode guns (<50ms per key),
+ * Detects rapid burst keystrokes typical of USB/Bluetooth barcode guns,
  * suppresses default submit action on terminating Enter/Tab, and coordinates field updates.
+ *
+ * Guards: IME compositions and modifier-held keys are never buffered, a
+ * burst requires consecutive fast gaps (a single fast pair amid slow typing
+ * is not enough), and terminator-less guns flush via scanTimeoutMs.
  */
 export function createHardwareScannerHandler({
     burstThresholdMs = 50,
     minBarcodeLength = 2,
     preventFormSubmit = true,
     terminators = ['Enter', 'Tab'],
+    scanTimeoutMs = 150,
+    suppressWhenGlobalListenerActive = false,
+    isGlobalListener = false,
     onScan = null,
     sound = true,
     vibrate = true,
@@ -19,59 +59,113 @@ export function createHardwareScannerHandler({
 } = {}) {
     let buffer = '';
     let lastKeyTime = 0;
+    let fastStreak = 0;
     let isBursting = false;
+    let flushTimer = null;
+
+    const clearFlushTimer = () => {
+        if (flushTimer) {
+            clearTimeout(flushTimer);
+            flushTimer = null;
+        }
+    };
+
+    const emit = (rawValue) => {
+        const scannedValue = sanitizeScannedValue(rawValue);
+        buffer = '';
+        fastStreak = 0;
+        isBursting = false;
+        clearFlushTimer();
+
+        if (scannedValue.length < minBarcodeLength) {
+            return false;
+        }
+
+        qrFeedback.trigger({
+            sound,
+            vibrate,
+            frequency: beepFrequency,
+            duration: beepDurationMs,
+            vibrateDuration: vibrateDurationMs,
+        });
+
+        if (typeof onScan === 'function') {
+            onScan(scannedValue);
+        }
+
+        return true;
+    };
+
+    const scheduleFlush = () => {
+        if (!scanTimeoutMs || scanTimeoutMs <= 0) {
+            return;
+        }
+
+        clearFlushTimer();
+        flushTimer = setTimeout(() => {
+            // Terminator-less gun: a completed burst with no suffix key.
+            // Only flush when the burst actually looked like a scan.
+            if (isBursting && fastStreak >= 2 && buffer.length >= minBarcodeLength) {
+                emit(buffer);
+            } else if (!isBursting) {
+                buffer = '';
+                fastStreak = 0;
+            }
+        }, scanTimeoutMs);
+    };
 
     return {
         handleKeyDown(event) {
+            // Field-scoped handlers stand down while a page-global Station
+            // Listener is mounted, so one burst is never handled twice.
+            if (suppressWhenGlobalListenerActive && !isGlobalListener && isGlobalHardwareListenerActive()) {
+                return false;
+            }
+
+            // IME compositions / modifier-held keys are human typing, not scans.
+            if (event.isComposing || event.ctrlKey || event.altKey || event.metaKey) {
+                return false;
+            }
+
             const now = Date.now();
             const timeDiff = now - lastKeyTime;
             lastKeyTime = now;
 
             const isTerminator = terminators.includes(event.key);
 
-            // If time between keystrokes is very fast, we are in a scanner burst
-            if (timeDiff <= burstThresholdMs) {
-                isBursting = true;
-            } else if (timeDiff > burstThresholdMs * 3) {
-                // Too slow, reset burst buffer
-                buffer = '';
-                isBursting = false;
-            }
-
             if (isTerminator) {
-                if (isBursting && buffer.length >= minBarcodeLength) {
+                if (isBursting && fastStreak >= 1 && buffer.length >= minBarcodeLength) {
                     if (preventFormSubmit) {
                         event.preventDefault();
                         event.stopPropagation();
                     }
 
-                    const scannedValue = buffer.trim();
-                    buffer = '';
-                    isBursting = false;
-
-                    qrFeedback.trigger({
-                        sound,
-                        vibrate,
-                        frequency: beepFrequency,
-                        duration: beepDurationMs,
-                        vibrateDuration: vibrateDurationMs,
-                    });
-
-                    if (typeof onScan === 'function') {
-                        onScan(scannedValue);
-                    }
-
-                    return true;
+                    return emit(buffer);
                 }
 
                 buffer = '';
+                fastStreak = 0;
                 isBursting = false;
+                clearFlushTimer();
+
                 return false;
             }
 
-            // Record standard printable characters
-            if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+            // Record standard printable characters only.
+            if (event.key.length === 1) {
+                if (timeDiff <= burstThresholdMs && buffer.length > 0) {
+                    fastStreak += 1;
+                    isBursting = fastStreak >= 1;
+                } else if (timeDiff > burstThresholdMs * 3) {
+                    buffer = '';
+                    fastStreak = 0;
+                    isBursting = false;
+                }
+                // Ambiguous middle zone (1x-3x threshold): keep buffering
+                // without growing the streak, so slow typists never qualify.
+
                 buffer += event.key;
+                scheduleFlush();
             }
 
             return false;
@@ -79,8 +173,10 @@ export function createHardwareScannerHandler({
 
         reset() {
             buffer = '';
+            fastStreak = 0;
             isBursting = false;
             lastKeyTime = 0;
+            clearFlushTimer();
         },
 
         getBuffer() {
@@ -103,6 +199,7 @@ export function qrHardwareScannerListenerComponent({
     vibrateDurationMs = 100,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
+    scanTimeoutMs = 150,
     autoFocusNext = true,
 } = {}) {
     // Filament text inputs plus numeric / textarea fallbacks for cashier forms.
@@ -114,11 +211,15 @@ export function qrHardwareScannerListenerComponent({
         boundKeyHandler: null,
 
         init() {
+            trackGlobalListener(1);
+
             this.hardwareScannerHandler = createHardwareScannerHandler({
                 burstThresholdMs,
                 minBarcodeLength,
                 preventFormSubmit: preventSubmit,
                 terminators,
+                scanTimeoutMs,
+                isGlobalListener: true,
                 sound,
                 vibrate,
                 beepFrequency,
@@ -136,6 +237,8 @@ export function qrHardwareScannerListenerComponent({
         },
 
         destroy() {
+            trackGlobalListener(-1);
+
             if (this.boundKeyHandler) {
                 window.removeEventListener('keydown', this.boundKeyHandler);
                 this.boundKeyHandler = null;
