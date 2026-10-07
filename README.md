@@ -289,6 +289,8 @@ $table->headerActions([
 
 Each scan dispatches a `qr-collector-item-added` window event (with `{ code }`). Forward it into server-side handling — e.g. `x-on:qr-collector-item-added.window` calling your Livewire method, which can then invoke `$action->handleScan($code)` to run the `onScan` callback. On the host, `$wire.handleCollectorScan($code)` is also honored when defined — but pick one channel, not both.
 
+Every `handleScan()` call (and every programmatic `triggerOnScan()`) also fires a `QrCodeScanned` event (`code`, `source`, `field`, `context`). Listen for it yourself, or flip `audit.enabled` to record scans through your log stack (`audit.channel`, default stack). Live camera/hardware scans stay client-side — they enter the audit trail once they reach the server.
+
 Custom terminators and minimum lengths are configurable via `->hardwareScanner(terminators: [...], minBarcodeLength: 3)` and feedback pitch/duration via `->beepFrequency(660)`, `->beepDuration(120)`, `->vibrateDuration(200)`. Server-side, `->distinctItems()` rejects duplicate codes on submit to match `->allowDuplicates(false)` in the browser.
 
 ### 6. QR Code Generator Components

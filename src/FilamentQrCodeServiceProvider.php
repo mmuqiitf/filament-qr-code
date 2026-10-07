@@ -7,9 +7,12 @@ namespace Mmuqiitf\FilamentQrCode;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Mmuqiitf\FilamentQrCode\Console\Commands;
+use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Http\Controllers\QrImageController;
+use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScan;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -67,6 +70,8 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
     public function packageBooted(): void
     {
         static::registerAssetsOnce();
+
+        Event::listen(QrCodeScanned::class, LogQrCodeScan::class);
 
         Route::middleware('web')->group(function (): void {
             Route::get('filament-qr-code/qr-image', QrImageController::class)

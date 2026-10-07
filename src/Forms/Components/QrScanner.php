@@ -12,6 +12,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
+use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 
 class QrScanner extends Field
 {
@@ -144,6 +145,12 @@ class QrScanner extends Field
 
     public function triggerOnScan(string $scannedValue): void
     {
+        event(new QrCodeScanned(
+            code: $scannedValue,
+            source: 'scanner-field',
+            field: $this->getName(),
+        ));
+
         if ($this->onScanCallback instanceof Closure) {
             $this->evaluate($this->onScanCallback, ['scannedValue' => $scannedValue, 'component' => $this]);
         }

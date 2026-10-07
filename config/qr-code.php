@@ -72,4 +72,20 @@ return [
         'cache_ttl' => 86400, // seconds; null = forever, false = disable persistent L2
         'cache_store' => null, // null = default cache store
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scan Audit
+    |--------------------------------------------------------------------------
+    |
+    | Every server-observed scan (collector action handling, programmatic
+    | triggers) dispatches a QrCodeScanned event. Enable the log listener
+    | to record them; live camera/hardware scans stay client-side and are
+    | not audited until they reach the server.
+    |
+    */
+    'audit' => [
+        'enabled' => false,
+        'channel' => null, // null = default log stack
+    ],
 ];

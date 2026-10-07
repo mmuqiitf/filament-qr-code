@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 
 class QrCollectAction extends Action
 {
@@ -86,6 +87,12 @@ class QrCollectAction extends Action
      */
     public function handleScan(string $code, mixed $livewire = null): mixed
     {
+        event(new QrCodeScanned(
+            code: $code,
+            source: 'collect-action',
+            context: ['livewire' => is_object($livewire) ? $livewire::class : null],
+        ));
+
         if ($this->onItemScanned === null) {
             return null;
         }
