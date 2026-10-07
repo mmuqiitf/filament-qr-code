@@ -80,7 +80,9 @@ Publish the configuration file (optional):
 php artisan vendor:publish --tag="filament-qr-code-config"
 ```
 
-Register the plugin in your Filament Panel Provider:
+Register the plugin in your Filament Panel Provider (optional — JS/CSS
+auto-register globally via the service provider, so existing installs that
+already call `->plugin()` keep working with no duplicate tags):
 
 ```php
 use Mmuqiitf\FilamentQrCode\FilamentQrCodePlugin;
@@ -92,6 +94,10 @@ public function panel(Panel $panel): Panel
         ->plugin(FilamentQrCodePlugin::make());
 }
 ```
+
+The camera decoder (`html5-qrcode`, ~375K) is split into a lazy chunk:
+the global bundle is ~20K and the decoder downloads once, on first camera
+use. Pages that only render QR images never fetch it.
 
 ### Symbologies
 
@@ -133,8 +139,14 @@ QrScanner::make('sku')
 
 Option reference:
 
-- `formats()` — symbologies the decoder attempts. Omit only when truly unknown.
-- `scanFormat()` / `onScan()` — programmatic-only hooks (used with `formatScannedValue()` / `triggerOnScan()` in custom flows). They do **not** run on live camera or hardware scans; normalize live values with Filament's `afterStateUpdated()` as above.
+- `formats()` — symbologies the decoder attempts. Omit only when truly unknown. With no filter the effective `fps` auto-degrades 25 → 12 against main-thread lag (explicit `fps()` always wins).
+- `scanFormat()` / `onScan()` — programmatic-only hooks (used with `formatScannedValue()` / `triggerOnScan()` in custom flows). They do **not** run on live camera or hardware scans; use `normalizeUsing()` for live values:
+```php
+QrScanner::make('sku')
+    ->normalizeUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
+```
+- `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning. Buffers are sanitized (STX/ETX/CR/LF stripped, mirroring `HasHardwareScanner::sanitizeScannedValue()`), IME compositions never count, and terminator-less guns flush after `scanTimeoutMs` (default 150).
+- Field burst handlers stand down while a page-global `QrHardwareScannerListener` is mounted (`->suppressWhenGlobalListener(false)` forces the field listener to stay active).
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
 - `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a _maximum_: the actual decode box scales to the viewfinder and the green reticle follows it.
 - `preferRearCamera()` — rear heuristic, but the operator's last camera choice (stored in `localStorage`) always wins.
@@ -191,15 +203,36 @@ QrScanSequence::make([
 
 One feed, one checklist: steps auto-advance, clicking a step re-targets it, and the camera dropdown matches the single-field scanner. It renders stacked on mobile and split-screen on desktop. When the last step lands, the feed stops by itself so the button never gets stuck on "Stop".
 
-`statePathPrefix()` (default `data`) is what keeps the container bound to your form — set it to whatever `statePath()` your schema uses. `scanFormat()` / `onStepScanned()` are programmatic-only hooks (they do not run on live scans); pair them with `formatScannedValue()` and `triggerOnStep()` in custom flows, and normalize live values with `afterStateUpdated()` on your fields.
+`statePathPrefix()` (default `data`) is what keeps the container bound to your form — set it to whatever `statePath()` your schema uses. `scanFormat()` / `onStepScanned()` are programmatic-only hooks (they do not run on live scans); pair them with `formatScannedValue()` and `triggerOnStep()` in custom flows, and normalize live values with `normalizeStepUsing()` (applied on read/merge).
+
+#### Reading sequence state (no more hand-rolled merges)
+
+Give the container its own state and read it back through helpers:
+
+```php
+QrScanSequence::make(['batch_number', 'serial_number'])
+    ->statePath('sequence')
+    ->normalizeStepUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
+
+// In your submit handler:
+$sequence = /* resolve the QrScanSequence component */;
+$state = $sequence->mergeSequenceState($this->form->getState());
+
+if (! $sequence->isSequenceComplete($state)) {
+    Notification::make()->title('Incomplete sequence')->warning()->send();
+    return;
+}
+```
+
+`getSequenceState()` prefers the component's own state and falls back to the legacy `statePathPrefix()` paths, so existing installs without `->statePath()` keep working. `getMissingSequenceKeys()` lists what's still empty.
 
 #### Correcting a scan (unedited vs edited values)
 
 Every step is a plain input: scans fill it, and operators can type or fix any value by hand — handy for unreadable labels. Every change syncs to the bound Livewire state and dispatches `qr-sequence-edited`. Pass `->editable(false)` to render locked read-only values instead. To flip modes live without a re-render wiping the running feed, dispatch `qr-sequence-editable` with `{ enabled }` on `window`; the component listens for it (its DOM is `wire:ignore`d so scans survive Livewire morphs).
 
-#### Caveat: `getState()` misses container writes
+#### Caveat: `getState()` and container writes
 
-The container writes via `$wire.set`, bypassing field components. Merge raw state in your submit handler, then validate the required keys yourself:
+The container writes via `$wire.set`. When it has its own `->statePath()`, every scan syncs both the legacy prefix paths and the component state, so prefer `mergeSequenceState($this->form->getState())` over raw `array_merge` and validate with `isSequenceComplete()`:
 
 ```php
 $state = array_merge($this->data ?? [], $this->form->getState());
@@ -284,7 +317,7 @@ QrColumn::make('sku')
     ->downloadable();
 ```
 
-Thumbnails and modal previews share a capped in-process render cache, and the modal honors the same `format`/`margin` as the thumbnail.
+Thumbnails and modal previews share a capped in-process render cache plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filament-qr-code.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs.
 
 #### In Infolists:
 
@@ -421,13 +454,14 @@ QrScanner::make('sku')
 
 ### `hardware_scanner`
 
-| Key                   | Default            | Meaning                                           |
-| --------------------- | ------------------ | ------------------------------------------------- |
-| `enabled`             | `true`             | master switch (components also gate individually) |
-| `burst_threshold_ms`  | `50`               | max gap between keystrokes counted as one burst   |
-| `min_barcode_length`  | `2`                | shorter bursts are treated as typing              |
-| `prevent_form_submit` | `true`             | swallow the terminator key during bursts          |
-| `default_terminators` | `['Enter', 'Tab']` | gun suffix keys ending a scan                     |
+| Key                   | Default            | Meaning                                                              |
+| --------------------- | ------------------ | -------------------------------------------------------------------- |
+| `enabled`             | `true`             | master switch (components also gate individually)                    |
+| `burst_threshold_ms`  | `50`               | max gap between keystrokes counted as one burst                      |
+| `min_barcode_length`  | `2`                | shorter bursts are treated as typing                                 |
+| `scan_timeout_ms`     | `150`              | flush window for terminator-less guns (0 disables)                   |
+| `prevent_form_submit` | `true`             | swallow the terminator key during bursts                             |
+| `default_terminators` | `['Enter', 'Tab']` | gun suffix keys ending a scan                                        |
 
 ### `feedback`
 
@@ -441,15 +475,15 @@ QrScanner::make('sku')
 
 ### `camera`
 
-| Key                  | Default | Meaning                                                                             |
-| -------------------- | ------- | ----------------------------------------------------------------------------------- |
-| `fps`                | `25`    | decode attempts per second                                                          |
-| `qrbox`              | `250`   | _maximum_ decode-box edge; the real box scales to the viewfinder (wide band for 1D) |
-| `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins                           |
+| Key                  | Default | Meaning                                                                                                  |
+| -------------------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| `fps`                | `25`    | decode attempts per second; auto-degrades to 12 when unrestricted and not explicitly set                  |
+| `qrbox`              | `250`   | _maximum_ decode-box edge; the real box scales to the viewfinder (wide band for 1D)                      |
+| `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins                                                |
 
 ### `generator`
 
-`size` (300), `margin` (2), `format` (`svg`), `foreground_color`, `background_color`, `error_correction` (`M`).
+`size` (300), `margin` (2), `format` (`svg`), `foreground_color`, `background_color`, `error_correction` (`M`), `cache_ttl` (86400; `null` = forever, `false` = L2 off), `cache_store` (`null` = default store).
 
 ---
 
