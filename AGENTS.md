@@ -22,6 +22,16 @@ Filament v5 + Laravel 11/12/13 QR package (`mmuqiitf/filament-qr-code`). PHP `^8
 ## Gotchas
 
 - PNG/text-overlay tests need GD + system fonts — CI installs `fonts-dejavu-core` and enables `gd, exif, imagick`. `QrCodeService::font('missing.ttf')` must gracefully fall back to GD bitmap fonts (covered by test); don't make missing fonts throw.
-- Committed `resources/dist/` is what Filament serves — rebuilding with `npm run build` is required, don't hand-edit dist output.
+- Committed `resources/dist/` is what Filament serves — rebuilding with `npm run build` is required, don't hand-edit dist output. Filament v5 serves `Js`/`Css` asset objects from the host app's `public/` (never from package `dist/`), so host apps must run `php artisan filament:assets` after every build or they smoke-test stale code.
+- Spatie PackageTools loads translations from `resources/lang/`, not `lang/`.
 - PHPStan analyzes only `src` + `config`; keep new PHP files under those paths typed to level 9 and add `declare(strict_types=1)` (Pint enforces it).
-- Preferred vocabulary is in `CONTEXT.md` (e.g. "Hardware Scanner / Hardware Scanner Interceptor / Station Listener", "Scan Sequence Container", "Batch Collector"); use those names for new APIs/docs.
+- Every `$wire.set` triggers a Livewire morph that destroys `<video>` elements and reverts Alpine-held results: any Blade hosting camera/decoder DOM (viewfinders, scan checklists, collector lists) must be `wire:ignore`d, and live toggles affecting those islands must sync via window events, not re-renders.
+- Preferred vocabulary is in `CONTEXT.md` (e.g. "Hardware Scanner / Hardware Scanner Interceptor / Station Listener", "Scan Sequence Container", "Batch Collector"); use those names for new APIs/docs. UI strings go under `filament-qr-code::ui.*` only.
+
+## Review rules (judgement calls; CI handles the mechanical)
+
+- One visible scan rectangle: the decoder library's own overlay (`#qr-shaded-region`) stays hidden in CSS; the custom reticle is sized by `syncReticleToQrbox()` against the shared viewfinder scope.
+- One scan funnel per surface: a single `$wire` method per scan source. Never register both `$wire.handleCollectorScan` and a `qr-collector-item-added` window listener for the same flow — scans double-count. `QrScanner`'s burst listener stays field-scoped; page-global capture belongs to `QrHardwareScannerListener` alone.
+- `scanFormat()`, `onScan()`, `onStepScanned()` are programmatic-only: they never run on live camera or hardware scans. Live normalization belongs in Filament's `afterStateUpdated()`; docs must say so, never imply otherwise.
+- `QrScanSequence` binds through `statePathPrefix()`, which must match the schema's `statePath()`. When mixing container writes with field visibility, submit handlers merge raw state (`$this->data`) instead of trusting `getState()` alone.
+- Filter `formats()` on every camera component; unrestricted symbologies need a low `fps` (10–15) to avoid main-thread decode lag. `qrbox` is a responsive maximum, never a fixed square.
