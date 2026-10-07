@@ -5,15 +5,13 @@ export default defineConfig({
     build: {
         outDir: 'resources/dist',
         emptyOutDir: true,
-        lib: {
-            entry: resolve(__dirname, 'resources/js/index.js'),
-            name: 'FilamentQrCode',
-            fileName: () => 'filament-qr-code.js',
-            formats: ['iife'],
-        },
         rollupOptions: {
+            input: resolve(__dirname, 'resources/js/index.js'),
             output: {
+                entryFileNames: 'filament-qr-code.js',
+                chunkFileNames: 'chunks/[name]-[hash].js',
                 assetFileNames: 'filament-qr-code.[ext]',
+                format: 'es',
             },
         },
     },

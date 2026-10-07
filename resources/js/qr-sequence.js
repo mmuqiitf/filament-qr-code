@@ -1,4 +1,3 @@
-import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createHardwareScannerHandler } from './qr-hardware-scanner.js';
 import {
@@ -6,6 +5,7 @@ import {
     ensureScannerInstance,
     loadCameraDevices,
     persistCameraId,
+    resolveDecoderModule,
     resolveQrboxFor,
     scannerFormatsConfigFor,
     stopCameraFeed,
@@ -26,11 +26,14 @@ export default function qrScanSequenceComponent({
     burstThresholdMs = 50,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
+    scanTimeoutMs = 150,
+    suppressWhenGlobalListenerActive = true,
     fps = 25,
     qrbox = 250,
     preferRearCamera = true,
     formats = [],
     statePrefix = 'data',
+    componentStatePath = null,
     editable = true,
     cameraStorageKey = null,
 } = {}) {
@@ -60,6 +63,8 @@ export default function qrScanSequenceComponent({
                     burstThresholdMs,
                     minBarcodeLength,
                     terminators,
+                    scanTimeoutMs,
+                    suppressWhenGlobalListenerActive,
                     sound,
                     vibrate,
                     beepFrequency,
@@ -98,8 +103,17 @@ export default function qrScanSequenceComponent({
         },
 
         async loadCameras() {
+            let decoder;
+            try {
+                decoder = await resolveDecoderModule();
+            } catch {
+                this.hasError = true;
+                this.errorMessage = 'Failed to load camera decoder.';
+                return;
+            }
+
             await loadCameraDevices(this, {
-                Html5QrcodeClass: Html5Qrcode,
+                Html5QrcodeClass: decoder.Html5Qrcode,
                 preferRearCamera,
                 storageKey,
                 deniedMessage: 'Camera access denied or unavailable.',
@@ -127,8 +141,18 @@ export default function qrScanSequenceComponent({
                 await this.stopScanner();
             }
 
+            let decoder;
+            try {
+                decoder = await resolveDecoderModule();
+            } catch {
+                this.hasError = true;
+                this.errorMessage = 'Failed to load camera decoder.';
+                return;
+            }
+
             if (!this.html5Qrcode) {
-                ensureScannerInstance(this, this.elementId, formats, Html5Qrcode);
+                const decoderFormats = decoder.Html5QrcodeSupportedFormats;
+                ensureScannerInstance(this, this.elementId, formats, decoder.Html5Qrcode, decoderFormats);
             }
 
             try {
@@ -169,8 +193,14 @@ export default function qrScanSequenceComponent({
             });
 
             // Sync with Livewire form state (bound by statePrefix, default `data.*`)
+            // plus the component's own state path when configured, so the
+            // sequence participates in getState()/dehydrate().
             if (this.$wire) {
                 this.$wire.set(this.statePathFor(currentField.key), trimmed);
+
+                if (componentStatePath) {
+                    this.$wire.set(componentStatePath, { ...this.results });
+                }
             }
 
             window.dispatchEvent(new CustomEvent('qr-sequence-step', {
@@ -207,6 +237,10 @@ export default function qrScanSequenceComponent({
 
             if (this.$wire) {
                 this.$wire.set(this.statePathFor(fieldKey), trimmed);
+
+                if (componentStatePath) {
+                    this.$wire.set(componentStatePath, { ...this.results });
+                }
             }
 
             window.dispatchEvent(new CustomEvent('qr-sequence-edited', {

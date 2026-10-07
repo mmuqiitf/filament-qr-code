@@ -1,4 +1,3 @@
-import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createHardwareScannerHandler } from './qr-hardware-scanner.js';
 import {
@@ -6,6 +5,7 @@ import {
     ensureScannerInstance,
     loadCameraDevices,
     persistCameraId,
+    resolveDecoderModule,
     resolveQrboxFor,
     scannerFormatsConfigFor,
     stopCameraFeed,
@@ -28,6 +28,8 @@ export default function qrScannerComponent({
     burstThresholdMs = 50,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
+    scanTimeoutMs = 150,
+    suppressWhenGlobalListenerActive = true,
     fps = 25,
     qrbox = 250,
     preferRearCamera = true,
@@ -60,6 +62,8 @@ export default function qrScannerComponent({
                     burstThresholdMs,
                     minBarcodeLength,
                     terminators,
+                    scanTimeoutMs,
+                    suppressWhenGlobalListenerActive,
                     sound,
                     vibrate,
                     beepFrequency,
@@ -123,8 +127,17 @@ export default function qrScannerComponent({
         },
 
         async loadCamerasAndStart() {
+            let decoder;
+            try {
+                decoder = await resolveDecoderModule();
+            } catch {
+                this.hasError = true;
+                this.errorMessage = 'Failed to load camera decoder.';
+                return;
+            }
+
             await loadCameraDevices(this, {
-                Html5QrcodeClass: Html5Qrcode,
+                Html5QrcodeClass: decoder.Html5Qrcode,
                 preferRearCamera,
                 storageKey,
                 requireDevices: true,
@@ -152,8 +165,24 @@ export default function qrScannerComponent({
                 await this.stopScan();
             }
 
+            let decoder;
+            try {
+                decoder = await resolveDecoderModule();
+            } catch {
+                this.hasError = true;
+                this.errorMessage = 'Failed to load camera decoder.';
+                return;
+            }
+
             if (!this.html5Qrcode) {
-                ensureScannerInstance(this, this.scannerElementId, formats, Html5Qrcode);
+                const decoderFormats = decoder.Html5QrcodeSupportedFormats;
+                ensureScannerInstance(
+                    this,
+                    this.scannerElementId,
+                    formats,
+                    decoder.Html5Qrcode,
+                    decoderFormats
+                );
             }
 
             const config = {
@@ -255,11 +284,20 @@ export default function qrScannerComponent({
             const file = event.target.files?.[0];
             if (!file) return;
 
-            if (!this.html5Qrcode) {
-                ensureScannerInstance(this, this.scannerElementId, formats, Html5Qrcode);
-            }
+            resolveDecoderModule().then((decoder) => {
+                if (!this.html5Qrcode) {
+                    const decoderFormats = decoder.Html5QrcodeSupportedFormats;
+                    ensureScannerInstance(
+                        this,
+                        this.scannerElementId,
+                        formats,
+                        decoder.Html5Qrcode,
+                        decoderFormats
+                    );
+                }
 
-            this.html5Qrcode.scanFile(file, true)
+                return this.html5Qrcode.scanFile(file, true);
+            })
                 .then((decodedText) => {
                     this.handleScanResult(decodedText);
                     this.closeScannerModal();

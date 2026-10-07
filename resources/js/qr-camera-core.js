@@ -1,11 +1,13 @@
-import { Html5QrcodeSupportedFormats } from 'html5-qrcode';
-
 /**
  * Shared camera helpers for all Filament QR Code Alpine components.
  *
  * Keeps the decoder crop (html5-qrcode `qrbox`) and the on-screen reticle
  * in sync, filters symbologies for faster decoding, and remembers the
  * operator's camera choice across visits.
+ *
+ * The heavy `html5-qrcode` decoder is never statically imported here: camera
+ * components resolve it via dynamic `import()` on first use so the global
+ * bundle stays light for pages that only render QR images.
  */
 
 const ONE_DIMENSIONAL_FORMATS = new Set([
@@ -25,8 +27,10 @@ const REAR_CAMERA_KEYWORDS = ['back', 'rear', 'environment', 'camera 0', 'facing
 /**
  * Map PHP BarcodeFormat values (or raw strings) to html5-qrcode format ids.
  * Unknown entries pass through untouched so future symbologies keep working.
+ * Pass the dynamically-imported Html5QrcodeSupportedFormats enum when
+ * available; without it values pass through as strings.
  */
-export function mapFormats(formats) {
+export function mapFormats(formats, formatsEnum = null) {
     if (!Array.isArray(formats) || formats.length === 0) {
         return [];
     }
@@ -36,9 +40,11 @@ export function mapFormats(formats) {
             return format;
         }
 
-        return Html5QrcodeSupportedFormats[format] !== undefined
-            ? Html5QrcodeSupportedFormats[format]
-            : format;
+        if (formatsEnum && formatsEnum[format] !== undefined) {
+            return formatsEnum[format];
+        }
+
+        return format;
     });
 }
 
@@ -184,8 +190,8 @@ export function triggerFeedback(feedback, { sound = true, vibrate = true, freque
  * (QR Scanner Field, Scan Sequence Container, Batch Collector Scanning)
  * previously each carried a verbatim `scannerFormatsConfig()` copy.
  */
-export function scannerFormatsConfigFor(formats) {
-    const mapped = mapFormats(formats);
+export function scannerFormatsConfigFor(formats, formatsEnum = null) {
+    const mapped = mapFormats(formats, formatsEnum);
     return mapped.length > 0 ? { formatsToSupport: mapped } : {};
 }
 
@@ -246,12 +252,28 @@ export async function loadCameraDevices(component, {
 /**
  * Lazily construct the Html5Qrcode instance for a viewfinder element.
  */
-export function ensureScannerInstance(component, elementId, formats, Html5QrcodeClass) {
+export function ensureScannerInstance(component, elementId, formats, Html5QrcodeClass, formatsEnum = null) {
     if (!component.html5Qrcode) {
-        component.html5Qrcode = new Html5QrcodeClass(elementId, scannerFormatsConfigFor(formats));
+        component.html5Qrcode = new Html5QrcodeClass(elementId, scannerFormatsConfigFor(formats, formatsEnum));
     }
 
     return component.html5Qrcode;
+}
+
+/**
+ * Resolve the heavy html5-qrcode module on demand. The result is cached per
+ * page load so the 300K+ decoder downloads exactly once, on first camera use.
+ */
+let cachedDecoderModule = null;
+
+export async function resolveDecoderModule() {
+    if (cachedDecoderModule) {
+        return cachedDecoderModule;
+    }
+
+    cachedDecoderModule = await import('html5-qrcode');
+
+    return cachedDecoderModule;
 }
 
 /**

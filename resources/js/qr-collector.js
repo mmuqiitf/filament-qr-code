@@ -1,4 +1,3 @@
-import { Html5Qrcode } from 'html5-qrcode';
 import { qrFeedback } from './audio-feedback.js';
 import { createHardwareScannerHandler } from './qr-hardware-scanner.js';
 import {
@@ -6,6 +5,7 @@ import {
     ensureScannerInstance,
     loadCameraDevices,
     persistCameraId,
+    resolveDecoderModule,
     resolveQrboxFor,
     scannerFormatsConfigFor,
     stopCameraFeed,
@@ -28,6 +28,8 @@ export default function qrCollectorComponent({
     burstThresholdMs = 50,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
+    scanTimeoutMs = 150,
+    suppressWhenGlobalListenerActive = true,
     fps = 25,
     qrbox = 250,
     preferRearCamera = true,
@@ -65,6 +67,8 @@ export default function qrCollectorComponent({
                     burstThresholdMs,
                     minBarcodeLength,
                     terminators,
+                    scanTimeoutMs,
+                    suppressWhenGlobalListenerActive,
                     sound,
                     vibrate,
                     beepFrequency,
@@ -100,8 +104,17 @@ export default function qrCollectorComponent({
         },
 
         async loadCameras() {
+            let decoder;
+            try {
+                decoder = await resolveDecoderModule();
+            } catch {
+                this.hasError = true;
+                this.errorMessage = 'Failed to load camera decoder.';
+                return;
+            }
+
             await loadCameraDevices(this, {
-                Html5QrcodeClass: Html5Qrcode,
+                Html5QrcodeClass: decoder.Html5Qrcode,
                 preferRearCamera,
                 storageKey,
                 deniedMessage: 'Camera access unavailable.',
@@ -124,8 +137,18 @@ export default function qrCollectorComponent({
                 await this.stopCollector();
             }
 
+            let decoder;
+            try {
+                decoder = await resolveDecoderModule();
+            } catch {
+                this.hasError = true;
+                this.errorMessage = 'Failed to load camera decoder.';
+                return;
+            }
+
             if (!this.html5Qrcode) {
-                ensureScannerInstance(this, this.elementId, formats, Html5Qrcode);
+                const decoderFormats = decoder.Html5QrcodeSupportedFormats;
+                ensureScannerInstance(this, this.elementId, formats, decoder.Html5Qrcode, decoderFormats);
             }
 
             try {
