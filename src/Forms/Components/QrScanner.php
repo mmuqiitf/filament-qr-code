@@ -37,6 +37,11 @@ class QrScanner extends Field
         return $this;
     }
 
+    /**
+     * Programmatic-only formatter. Runs only via formatScannedValue() in
+     * custom flows — never on live camera/hardware scans. For live values
+     * use normalizeUsing() (or afterStateUpdated() directly).
+     */
     public function scanFormat(?Closure $formatter): static
     {
         $this->scanFormatter = $formatter;
@@ -44,9 +49,35 @@ class QrScanner extends Field
         return $this;
     }
 
+    /**
+     * Programmatic-only callback. Invoke via triggerOnScan() in custom
+     * flows — live scans dispatch the `qr-scanned` window event and update
+     * Livewire state directly instead.
+     */
     public function onScan(?Closure $callback): static
     {
         $this->onScanCallback = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Live-scan normalizer (runs on every Livewire state update, including
+     * camera and hardware scans). Shorthand for afterStateUpdated() so the
+     * live hook is discoverable next to the programmatic-only scanFormat().
+     */
+    public function normalizeUsing(Closure $normalizer): static
+    {
+        $this->afterStateUpdated(function ($component, $state) use ($normalizer): void {
+            $normalized = $component->evaluate($normalizer, [
+                'rawValue' => $state,
+                'state' => $state,
+            ]);
+
+            if ($normalized !== $state) {
+                $component->state($normalized);
+            }
+        });
 
         return $this;
     }
