@@ -376,6 +376,18 @@ Rules that bite:
 - `logo($path, $size)` forces error-correction level H for scannability.
 - Identical payloads share the render cache, so tables with repeated values encode once.
 
+#### Common payloads without hand-escaping
+
+```php
+use Mmuqiitf\FilamentQrCode\Support\QrPayload;
+
+QrPayload::wifi('Shop Floor', 'secret-1');                    // WPA (nopass + hidden supported)
+QrPayload::vcard(['firstName' => 'Siti', 'phone' => '...']);   // escaped vCard 3.0
+QrPayload::mailto('ops@example.com', 'Stock alert', '...');   // mailto with subject/body
+QrPayload::sms('+621234567', 'Arrived');                     // SMSTO
+QrPayload::geo(-6.2, 106.8, 'Warehouse 7');                   // geo with query
+```
+
 ---
 
 ## Tutorial: Cashier POS with a Handheld Scanner
