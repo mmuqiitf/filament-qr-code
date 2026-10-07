@@ -36,6 +36,7 @@ export default function qrCollectorComponent({
     formats = [],
     delayBetweenScansMs = 1200,
     cameraStorageKey = null,
+    insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
 } = {}) {
     const initialItems = Array.isArray(state)
         ? state.map(item => typeof item === 'object' && item !== null && item.code ? item : { code: String(item), scanned_at: new Date().toLocaleTimeString() })
@@ -118,6 +119,7 @@ export default function qrCollectorComponent({
                 preferRearCamera,
                 storageKey,
                 deniedMessage: 'Camera access unavailable.',
+                insecureMessage,
                 fixedMessage: true,
             });
         },

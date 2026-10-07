@@ -17,6 +17,7 @@
     $minBarcodeLength = $getMinBarcodeLength();
     $scanTimeoutMs = $getScanTimeoutMs();
     $suppressWhenGlobal = $isSuppressedWhenGlobalListenerActive();
+    $insecureMessage = __('filament-qr-code::ui.camera_needs_secure_context');
 @endphp
 
 <x-dynamic-component
@@ -39,6 +40,7 @@
             minBarcodeLength: @js($minBarcodeLength),
             scanTimeoutMs: @js($scanTimeoutMs),
             suppressWhenGlobalListenerActive: @js($suppressWhenGlobal),
+            insecureMessage: @js($insecureMessage),
             fps: @js($fps),
             qrbox: @js($qrbox),
             preferRearCamera: @js($preferRear),

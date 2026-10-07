@@ -36,6 +36,7 @@ export default function qrScanSequenceComponent({
     componentStatePath = null,
     editable = true,
     cameraStorageKey = null,
+    insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
 } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('sequence');
 
@@ -117,6 +118,7 @@ export default function qrScanSequenceComponent({
                 preferRearCamera,
                 storageKey,
                 deniedMessage: 'Camera access denied or unavailable.',
+                insecureMessage,
                 fixedMessage: true,
             });
         },

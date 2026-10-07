@@ -221,8 +221,19 @@ export async function loadCameraDevices(component, {
     requireDevices = false,
     emptyMessage = 'No camera devices detected on this system.',
     deniedMessage = 'Camera access unavailable.',
+    insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
     fixedMessage = false,
 } = {}) {
+    // Browsers block getUserMedia outside secure contexts with a generic
+    // denial — explain the real requirement before the decoder even loads.
+    if (typeof window !== 'undefined' && window.isSecureContext === false) {
+        component.isLoading = false;
+        component.hasError = true;
+        component.errorMessage = insecureMessage;
+
+        return;
+    }
+
     component.isLoading = true;
     component.hasError = false;
 

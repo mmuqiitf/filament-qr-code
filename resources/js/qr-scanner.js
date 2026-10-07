@@ -35,6 +35,7 @@ export default function qrScannerComponent({
     preferRearCamera = true,
     formats = [],
     cameraStorageKey = null,
+    insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
 } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('scanner');
 
@@ -143,6 +144,7 @@ export default function qrScannerComponent({
                 requireDevices: true,
                 emptyMessage: 'No camera devices detected on this system.',
                 deniedMessage: 'Failed to access camera.',
+                insecureMessage,
             });
 
             if (!this.hasError) {

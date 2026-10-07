@@ -19,6 +19,7 @@
     $suppressWhenGlobal = $isSuppressedWhenGlobalListenerActive();
     $isEditable = $isEditable();
     $prefixWarning = $prefixMismatchWarning();
+    $insecureMessage = __('filament-qr-code::ui.camera_needs_secure_context');
 @endphp
 
 <div
@@ -41,6 +42,7 @@
         formats: @js($supportedFormats),
         statePrefix: @js($statePrefix),
         componentStatePath: @js($componentStatePath),
+        insecureMessage: @js($insecureMessage),
         editable: @js($isEditable)
     })"
     @qr-sequence-editable.window="editable = $event.detail.enabled"

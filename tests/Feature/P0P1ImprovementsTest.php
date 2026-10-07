@@ -103,3 +103,7 @@ it('registers package assets exactly once across provider and plugin', function 
     FilamentQrCodeServiceProvider::resetAssetsRegistration();
     FilamentQrCodeServiceProvider::registerAssetsOnce();
 });
+
+it('explains the secure-context requirement for cameras', function () {
+    expect(__('filament-qr-code::ui.camera_needs_secure_context'))->toContain('https');
+});

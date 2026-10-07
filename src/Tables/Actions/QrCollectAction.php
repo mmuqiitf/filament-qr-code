@@ -53,6 +53,7 @@ class QrCollectAction extends Action
                 'minBarcodeLength' => $this->getMinBarcodeLength(),
                 'scanTimeoutMs' => $this->getScanTimeoutMs(),
                 'suppressWhenGlobal' => $this->isSuppressedWhenGlobalListenerActive(),
+                'insecureMessage' => __('filament-qr-code::ui.camera_needs_secure_context'),
                 'fps' => $this->getEffectiveFps(),
                 'qrbox' => $this->getQrbox(),
                 'preferRearCamera' => $this->isPreferRearCamera(),

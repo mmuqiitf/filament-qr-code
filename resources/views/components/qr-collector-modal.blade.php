@@ -12,6 +12,7 @@
         minBarcodeLength: @js($minBarcodeLength ?? 2),
         scanTimeoutMs: @js($scanTimeoutMs ?? 150),
         suppressWhenGlobalListenerActive: @js($suppressWhenGlobal ?? true),
+        insecureMessage: @js($insecureMessage ?? __('filament-qr-code::ui.camera_needs_secure_context')),
         fps: @js($fps ?? 25),
         qrbox: @js($qrbox ?? 250),
         preferRearCamera: @js($preferRearCamera ?? true),

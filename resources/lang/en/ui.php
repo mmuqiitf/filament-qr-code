@@ -28,6 +28,7 @@ return [
     'scan_placeholder' => 'Scan or enter code...',
     'scan_qr_code' => 'Scan QR Code',
     'scan_qr_with_camera' => 'Scan QR with camera',
+    'camera_needs_secure_context' => 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
     'scanned_codes' => 'Scanned Codes',
     'scanned_items_list' => 'Scanned Items List',
     'sequence_scanner' => 'QR Sequence Scanner',
