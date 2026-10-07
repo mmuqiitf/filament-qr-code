@@ -11,6 +11,8 @@ trait HasCameraScanning
 {
     protected int|Closure $fps = 25;
 
+    protected bool $fpsCustomized = false;
+
     protected int|Closure $qrbox = 250;
 
     protected bool|Closure $preferRearCamera = true;
@@ -23,6 +25,7 @@ trait HasCameraScanning
     public function fps(int|Closure $fps): static
     {
         $this->fps = $fps;
+        $this->fpsCustomized = true;
 
         return $this;
     }
@@ -54,6 +57,28 @@ trait HasCameraScanning
     public function getFps(): int
     {
         return (int) $this->evaluate($this->fps);
+    }
+
+    /**
+     * Decode attempts per second actually sent to the camera decoder.
+     * Unrestricted symbologies (empty formats) at the default 25fps cause
+     * main-thread decode lag, so the effective rate auto-degrades to 12
+     * unless the developer explicitly called fps().
+     */
+    public function getEffectiveFps(): int
+    {
+        $fps = $this->getFps();
+
+        if (! $this->fpsCustomized && $this->getSupportedFormats() === [] && $fps >= 25) {
+            return 12;
+        }
+
+        return max(1, $fps);
+    }
+
+    public function shouldWarnUnrestrictedPerformance(): bool
+    {
+        return ! $this->fpsCustomized && $this->getSupportedFormats() === [] && $this->getFps() >= 25;
     }
 
     public function getQrbox(): int

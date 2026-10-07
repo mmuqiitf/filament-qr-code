@@ -6,6 +6,7 @@ namespace Mmuqiitf\FilamentQrCode\Tables\Columns;
 
 use Closure;
 use Filament\Tables\Columns\Column;
+use Illuminate\Support\Facades\URL;
 use Mmuqiitf\FilamentQrCode\Concerns\HasQrRendering;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
@@ -39,6 +40,8 @@ class QrColumn extends Column
     protected bool|Closure $canPreview = true;
 
     protected bool|Closure $canDownload = true;
+
+    protected bool|Closure $lazyModal = true;
 
     public function errorCorrection(string|Closure|null $level): static
     {
@@ -123,6 +126,23 @@ class QrColumn extends Column
         return $this;
     }
 
+    /**
+     * Load the large preview on demand via a signed image URL instead of
+     * inlining a second base64 data-URI per row. Disable with
+     * ->lazyModal(false) to restore the eager (BC) behavior.
+     */
+    public function lazyModal(bool|Closure $condition = true): static
+    {
+        $this->lazyModal = $condition;
+
+        return $this;
+    }
+
+    public function isLazyModal(): bool
+    {
+        return (bool) $this->evaluate($this->lazyModal);
+    }
+
     public function getQrData(): ?string
     {
         $data = $this->evaluate($this->qrData);
@@ -153,6 +173,44 @@ class QrColumn extends Column
         }
 
         return $this->buildDataUri($data, (int) $this->evaluate($this->modalSize), (int) $this->evaluate($this->margin));
+    }
+
+    /**
+     * Signed on-demand URL for the large preview. Tables render only the
+     * small thumbnail inline; the modal image downloads when opened, so a
+     * 25-row page encodes 25 small QRs instead of 50 mixed-size ones.
+     */
+    public function getModalUrl(): string
+    {
+        $data = $this->getQrData();
+        if ($data === null || $data === '') {
+            return '';
+        }
+
+        $format = $this->evaluate($this->format);
+        $formatValue = $format instanceof QrFormat
+            ? $format->value
+            : (is_string($format) ? strtolower($format) : 'svg');
+
+        $errorCorrection = $this->errorCorrectionLevel === null
+            ? null
+            : (string) $this->evaluate($this->errorCorrectionLevel);
+
+        $params = array_filter([
+            'data' => $data,
+            'size' => (int) $this->evaluate($this->modalSize),
+            'margin' => (int) $this->evaluate($this->margin),
+            'format' => $formatValue,
+            'foreground' => (string) $this->evaluate($this->foregroundColor),
+            'background' => (string) $this->evaluate($this->backgroundColor),
+            'ec' => $errorCorrection,
+        ], fn ($v) => $v !== null && $v !== '');
+
+        try {
+            return URL::signedRoute('filament-qr-code.image', $params);
+        } catch (\Throwable) {
+            return $this->getModalDataUri();
+        }
     }
 
     public static function flushDataUriCache(): void
@@ -190,5 +248,20 @@ class QrColumn extends Column
     public function getThumbnailSize(): int
     {
         return (int) $this->evaluate($this->thumbnailSize);
+    }
+
+    public function getModalExtension(): string
+    {
+        $format = $this->evaluate($this->format);
+
+        if ($format instanceof QrFormat) {
+            return $format->getExtension();
+        }
+
+        if (is_string($format)) {
+            return strtolower($format) === 'png' ? 'png' : 'svg';
+        }
+
+        return 'svg';
     }
 }

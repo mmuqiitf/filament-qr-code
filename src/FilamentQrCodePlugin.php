@@ -27,13 +27,20 @@ class FilamentQrCodePlugin implements Plugin
         return 'filament-qr-code';
     }
 
+    /**
+     * Intentionally a no-op: JS/CSS are registered once globally by
+     * FilamentQrCodeServiceProvider::registerAssetsOnce(), so every panel,
+     * table, and infolist gets them without per-panel wiring. Keeping this
+     * plugin class (and its README install step) preserves backwards
+     * compatibility for apps that already call ->plugin(...).
+     */
     public function register(Panel $panel): void
     {
-        // Panel registration hook
+        FilamentQrCodeServiceProvider::registerAssetsOnce();
     }
 
     public function boot(Panel $panel): void
     {
-        // Panel boot hook
+        // Panel boot hook (assets are handled in register()).
     }
 }

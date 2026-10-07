@@ -13,6 +13,7 @@ use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\Fill;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Response;
 use Imagick;
 use ImagickDraw;
@@ -55,9 +56,54 @@ class QrCodeService
     protected string $fileName = 'qrcode';
 
     /**
+     * L1: in-process render cache (per request).
+     *
      * @var array<string, string>
      */
     protected static array $renderCache = [];
+
+    protected static bool $persistentCacheEnabled = true;
+
+    protected static ?int $persistentCacheTtl = null;
+
+    protected static ?string $persistentCacheStore = null;
+
+    /**
+     * Toggle the persistent (Laravel Cache) L2 layer. The in-process L1
+     * stays active regardless so repeated renders in one request encode once.
+     */
+    public static function persistentCache(bool $enabled = true): void
+    {
+        static::$persistentCacheEnabled = $enabled;
+    }
+
+    public static function cacheTtl(?int $seconds): void
+    {
+        static::$persistentCacheTtl = $seconds;
+    }
+
+    public static function cacheStore(?string $store): void
+    {
+        static::$persistentCacheStore = $store;
+    }
+
+    public static function effectiveCacheTtl(): ?int
+    {
+        if (static::$persistentCacheTtl !== null) {
+            return static::$persistentCacheTtl;
+        }
+
+        if (function_exists('config')) {
+            $configured = config('qr-code.generator.cache_ttl');
+            if ($configured === null || $configured === false) {
+                return null;
+            }
+
+            return is_numeric($configured) ? max(0, (int) $configured) : 86400;
+        }
+
+        return 86400;
+    }
 
     public function __construct()
     {
@@ -198,6 +244,15 @@ class QrCodeService
             return $this;
         }
 
+        $persistentKey = 'filament-qr-code:render:'.$cacheKey;
+        $persistentHit = static::readPersistentCache($persistentKey);
+        if ($persistentHit !== null) {
+            static::$renderCache[$cacheKey] = $persistentHit;
+            $this->rawResult = $persistentHit;
+
+            return $this;
+        }
+
         $fgRgb = $this->hexToRgb($this->foregroundColor);
         $bgRgb = $this->hexToRgb($this->backgroundColor);
 
@@ -246,6 +301,7 @@ class QrCodeService
         }
 
         static::$renderCache[$cacheKey] = $this->rawResult;
+        static::writePersistentCache($persistentKey, $this->rawResult);
 
         return $this;
     }
@@ -253,6 +309,54 @@ class QrCodeService
     public static function flushRenderCache(): void
     {
         static::$renderCache = [];
+    }
+
+    public static function flushPersistentCache(): void
+    {
+        if (! static::$persistentCacheEnabled) {
+            return;
+        }
+
+        try {
+            Cache::store(static::$persistentCacheStore)->flush();
+        } catch (\Throwable) {
+            // Cache backend unavailable (e.g. array driver in tests) — L1 still works.
+        }
+    }
+
+    protected static function readPersistentCache(string $key): ?string
+    {
+        if (! static::$persistentCacheEnabled) {
+            return null;
+        }
+
+        try {
+            $value = Cache::store(static::$persistentCacheStore)->get($key);
+
+            return is_string($value) && $value !== '' ? $value : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    protected static function writePersistentCache(string $key, string $value): void
+    {
+        if (! static::$persistentCacheEnabled) {
+            return;
+        }
+
+        try {
+            $store = Cache::store(static::$persistentCacheStore);
+
+            $ttl = static::effectiveCacheTtl();
+            if ($ttl === null) {
+                $store->forever($key, $value);
+            } elseif ($ttl > 0) {
+                $store->put($key, $value, $ttl);
+            }
+        } catch (\Throwable) {
+            // Persistent caching is best-effort; rendering already succeeded.
+        }
     }
 
     public function getRaw(): string
