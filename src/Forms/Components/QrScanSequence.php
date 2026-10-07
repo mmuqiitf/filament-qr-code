@@ -186,6 +186,30 @@ class QrScanSequence extends Component
     }
 
     /**
+     * Loud mismatch warning: the legacy statePathPrefix() must equal the
+     * schema's statePath(), otherwise container writes land outside the form
+     * state. Returns the offending pair, or null when they agree (or when
+     * the component is not mounted yet).
+     *
+     * @return array{prefix: string, container: string}|null
+     */
+    public function prefixMismatchWarning(): ?array
+    {
+        try {
+            $prefix = trim($this->getStatePathPrefix(), '.');
+            $container = (string) $this->getContainer()->getStatePath();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($prefix === $container) {
+            return null;
+        }
+
+        return ['prefix' => $prefix, 'container' => $container];
+    }
+
+    /**
      * Absolute Livewire path of this component's own state (null when no
      * statePath is configured). Passed to Alpine as componentStatePath so
      * every scan syncs both the legacy prefix paths and this component.

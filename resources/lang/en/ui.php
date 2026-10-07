@@ -31,6 +31,7 @@ return [
     'scanned_codes' => 'Scanned Codes',
     'scanned_items_list' => 'Scanned Items List',
     'sequence_scanner' => 'QR Sequence Scanner',
+    'sequence_prefix_mismatch' => 'Scan writes go to ":prefix" but this form keeps state in ":container" — scans will be lost on submit.',
     'sequential_steps' => 'Sequential Steps',
     'start' => 'Start',
     'start_camera_scanner' => 'Start Camera Scanner',

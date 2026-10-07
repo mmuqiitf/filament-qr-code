@@ -18,6 +18,7 @@
     $scanTimeoutMs = $getScanTimeoutMs();
     $suppressWhenGlobal = $isSuppressedWhenGlobalListenerActive();
     $isEditable = $isEditable();
+    $prefixWarning = $prefixMismatchWarning();
 @endphp
 
 <div
@@ -46,6 +47,11 @@
     class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm"
     wire:ignore
 >
+    @if ($prefixWarning)
+        <div class="lg:col-span-12 rounded-xl border border-warning-300 bg-warning-50 px-3 py-2 text-xs font-medium text-warning-800 dark:border-warning-800 dark:bg-warning-950 dark:text-warning-200" role="alert">
+            {{ __('filament-qr-code::ui.sequence_prefix_mismatch', ['prefix' => $prefixWarning['prefix'], 'container' => $prefixWarning['container']]) }}
+        </div>
+    @endif
     {{-- Left: Scanner Viewfinder & Controls --}}
     <div class="lg:col-span-5 space-y-4">
         <div class="flex items-center justify-between">
