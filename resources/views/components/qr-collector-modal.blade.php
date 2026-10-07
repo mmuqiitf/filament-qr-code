@@ -10,6 +10,8 @@
         burstThresholdMs: @js($burstThresholdMs ?? 50),
         terminators: @js($terminators ?? ['Enter', 'Tab']),
         minBarcodeLength: @js($minBarcodeLength ?? 2),
+        scanTimeoutMs: @js($scanTimeoutMs ?? 150),
+        suppressWhenGlobalListenerActive: @js($suppressWhenGlobal ?? true),
         fps: @js($fps ?? 25),
         qrbox: @js($qrbox ?? 250),
         preferRearCamera: @js($preferRearCamera ?? true),

@@ -7,7 +7,7 @@
     $hasVibration = $hasVibration();
     $isHardwareScanner = $isHardwareScannerEnabled();
     $burstThresholdMs = $getBurstThresholdMs();
-    $fps = $getFps();
+    $fps = $getEffectiveFps();
     $qrbox = $getQrbox();
     $preferRear = $isPreferRearCamera();
     $allowUpload = $isUploadAllowed();
@@ -18,6 +18,8 @@
     $vibrateDuration = $getVibrateDurationMs();
     $terminators = $getTerminators();
     $minBarcodeLength = $getMinBarcodeLength();
+    $scanTimeoutMs = $getScanTimeoutMs();
+    $suppressWhenGlobal = $isSuppressedWhenGlobalListenerActive();
 @endphp
 
 <x-dynamic-component
@@ -38,6 +40,8 @@
             burstThresholdMs: @js($burstThresholdMs),
             terminators: @js($terminators),
             minBarcodeLength: @js($minBarcodeLength),
+            scanTimeoutMs: @js($scanTimeoutMs),
+            suppressWhenGlobalListenerActive: @js($suppressWhenGlobal),
             fps: @js($fps),
             qrbox: @js($qrbox),
             preferRearCamera: @js($preferRear),

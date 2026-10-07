@@ -1,9 +1,10 @@
 @php
     $thumbUri = $getThumbnailDataUri();
-    $modalUri = $getModalDataUri();
     $isPreviewable = $isPreviewable();
     $isDownloadable = $isDownloadable();
     $thumbSize = $getThumbnailSize();
+    $isLazyModal = $isLazyModal();
+    $modalUri = $isLazyModal ? $getModalUrl() : $getModalDataUri();
 @endphp
 
 @if ($thumbUri)
@@ -35,13 +36,17 @@
                     </div>
 
                     <div class="flex justify-center p-2 bg-white rounded-xl">
-                        <img src="{{ $modalUri }}" alt="QR Code Large" class="rounded-lg shadow-sm" />
+                        @if ($isLazyModal)
+                            <img src="{{ $modalUri }}" alt="QR Code Large" class="rounded-lg shadow-sm" loading="lazy" />
+                        @else
+                            <img src="{{ $modalUri }}" alt="QR Code Large" class="rounded-lg shadow-sm" />
+                        @endif
                     </div>
 
                     @if ($isDownloadable)
                         <a
                             href="{{ $modalUri }}"
-                            download="qrcode.{{ str_starts_with($modalUri, 'data:image/svg+xml') ? 'svg' : 'png' }}"
+                            download="qrcode.{{ $getModalExtension() }}"
                             class="inline-flex items-center justify-center gap-1.5 w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold shadow-sm transition"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">

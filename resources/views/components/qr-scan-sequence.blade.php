@@ -3,17 +3,20 @@
     $hasSound = $hasSound();
     $hasVibration = $hasVibration();
     $isHardwareScanner = $isHardwareScannerEnabled();
-    $fps = $getFps();
+    $fps = $getEffectiveFps();
     $qrbox = $getQrbox();
     $preferRear = $isPreferRearCamera();
     $supportedFormats = $getSupportedFormats();
     $statePrefix = $getStatePathPrefix();
+    $componentStatePath = $getComponentStatePath();
     $beepFrequency = $getBeepFrequencyHz();
     $beepDuration = $getBeepDurationMs();
     $vibrateDuration = $getVibrateDurationMs();
     $burstThresholdMs = $getBurstThresholdMs();
     $terminators = $getTerminators();
     $minBarcodeLength = $getMinBarcodeLength();
+    $scanTimeoutMs = $getScanTimeoutMs();
+    $suppressWhenGlobal = $isSuppressedWhenGlobalListenerActive();
     $isEditable = $isEditable();
 @endphp
 
@@ -29,11 +32,14 @@
         burstThresholdMs: @js($burstThresholdMs),
         terminators: @js($terminators),
         minBarcodeLength: @js($minBarcodeLength),
+        scanTimeoutMs: @js($scanTimeoutMs),
+        suppressWhenGlobalListenerActive: @js($suppressWhenGlobal),
         fps: @js($fps),
         qrbox: @js($qrbox),
         preferRearCamera: @js($preferRear),
         formats: @js($supportedFormats),
         statePrefix: @js($statePrefix),
+        componentStatePath: @js($componentStatePath),
         editable: @js($isEditable)
     })"
     @qr-sequence-editable.window="editable = $event.detail.enabled"

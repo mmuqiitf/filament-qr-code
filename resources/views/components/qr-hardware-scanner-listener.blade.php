@@ -10,6 +10,7 @@
     $vibrateDuration = $getVibrateDurationMs();
     $terminators = $getTerminators();
     $minBarcodeLength = $getMinBarcodeLength();
+    $scanTimeoutMs = $getScanTimeoutMs();
 @endphp
 
 <div
@@ -24,6 +25,7 @@
         vibrateDurationMs: @js($vibrateDuration),
         terminators: @js($terminators),
         minBarcodeLength: @js($minBarcodeLength),
+        scanTimeoutMs: @js($scanTimeoutMs),
         autoFocusNext: @js($autoFocusNext)
     })"
     class="hidden"
