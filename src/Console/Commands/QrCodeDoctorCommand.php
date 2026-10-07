@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use SplFileInfo;
 use Throwable;
 
 class QrCodeDoctorCommand extends Command
@@ -93,9 +94,11 @@ class QrCodeDoctorCommand extends Command
             }
 
             foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($full)) as $file) {
-                if ($file->isFile()) {
-                    $newestSource = max($newestSource, $file->getMTime());
+                if (! $file instanceof SplFileInfo || ! $file->isFile()) {
+                    continue;
                 }
+
+                $newestSource = max($newestSource, $file->getMTime());
             }
         }
 
@@ -124,7 +127,7 @@ class QrCodeDoctorCommand extends Command
             return 1;
         }
 
-        if (empty((string) config('app.key'))) {
+        if (empty($this->stringConfig('app.key'))) {
             $this->error('  [FAIL] APP_KEY is empty: signed preview URLs cannot be generated.');
 
             return 1;
@@ -139,19 +142,19 @@ class QrCodeDoctorCommand extends Command
     {
         $problems = 0;
 
-        $burst = (int) config('qr-code.hardware_scanner.burst_threshold_ms', 50);
+        $burst = $this->intConfig('qr-code.hardware_scanner.burst_threshold_ms', 50);
         if ($burst <= 0) {
             $this->warn('  [WARN] qr-code.hardware_scanner.burst_threshold_ms should be positive.');
             $problems++;
         }
 
-        $fps = (int) config('qr-code.camera.fps', 25);
+        $fps = $this->intConfig('qr-code.camera.fps', 25);
         if ($fps < 1 || $fps > 120) {
             $this->warn('  [WARN] qr-code.camera.fps should be between 1 and 120.');
             $problems++;
         }
 
-        $beep = (int) config('qr-code.feedback.beep_frequency', 880);
+        $beep = $this->intConfig('qr-code.feedback.beep_frequency', 880);
         if ($beep < 100) {
             $this->warn('  [WARN] qr-code.feedback.beep_frequency below 100Hz is inaudible on most devices.');
             $problems++;
@@ -166,7 +169,7 @@ class QrCodeDoctorCommand extends Command
 
     private function checkSecureContext(): int
     {
-        $url = (string) config('app.url', '');
+        $url = $this->stringConfig('app.url');
 
         if (str_starts_with($url, 'https://') || str_contains($url, 'localhost') || str_contains($url, '127.0.0.1')) {
             $this->line('  [PASS] APP_URL looks camera-capable (https or localhost).');
@@ -182,7 +185,7 @@ class QrCodeDoctorCommand extends Command
     private function checkCacheStore(): int
     {
         try {
-            Cache::store(config('qr-code.generator.cache_store'))->get('filament-qr-code:doctor-probe');
+            Cache::store($this->cacheStoreName())->get('filament-qr-code:doctor-probe');
             $this->line('  [PASS] Persistent QR cache store is reachable.');
 
             return 0;
@@ -191,5 +194,26 @@ class QrCodeDoctorCommand extends Command
 
             return 0;
         }
+    }
+
+    private function stringConfig(string $key): string
+    {
+        $value = config($key);
+
+        return is_string($value) ? $value : '';
+    }
+
+    private function intConfig(string $key, int $default): int
+    {
+        $value = config($key);
+
+        return is_numeric($value) ? (int) $value : $default;
+    }
+
+    private function cacheStoreName(): ?string
+    {
+        $value = config('qr-code.generator.cache_store');
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 }

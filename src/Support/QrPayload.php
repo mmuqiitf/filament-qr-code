@@ -87,7 +87,7 @@ class QrPayload
             'BEGIN:VCARD',
             'VERSION:3.0',
             "N:{$last};{$first};;;",
-            "FN:".trim("{$first} {$last}"),
+            'FN:'.trim("{$first} {$last}"),
         ];
 
         foreach (['ORG' => $contact['organization'] ?? null, 'TITLE' => $contact['title'] ?? null] as $field => $value) {
