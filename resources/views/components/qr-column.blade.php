@@ -23,6 +23,9 @@
             <div
                 x-show="isModalOpen"
                 x-cloak
+                role="dialog"
+                aria-modal="true"
+                aria-label="{{ __('filament-qr-code::ui.qr_preview') }}"
                 class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/70 backdrop-blur-sm"
                 @keydown.escape.window="isModalOpen = false"
                 @click.outside="isModalOpen = false"

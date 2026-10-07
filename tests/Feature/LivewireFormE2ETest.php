@@ -86,6 +86,14 @@ it('renders QrScanner form fields in Livewire end-to-end', function () {
         ->assertSeeHtml('data-field-name="employee"');
 });
 
+it('labels the scanner modal for assistive tech', function () {
+    Livewire::test(TestLivewireFormComponent::class)
+        ->assertSuccessful()
+        ->assertSeeHtml('role="dialog"')
+        ->assertSeeHtml('aria-modal="true"')
+        ->assertSeeHtml('aria-hidden="true"');
+});
+
 it('validates and submits scanned values end-to-end in Livewire form', function () {
     Livewire::test(TestLivewireFormComponent::class)
         // Try submitting empty required fields -> errors

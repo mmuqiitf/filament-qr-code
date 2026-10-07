@@ -81,6 +81,9 @@
         <div
             x-show="isModalOpen"
             x-cloak
+            role="dialog"
+            aria-modal="true"
+            aria-label="{{ __('filament-qr-code::ui.scan_qr_code') }}"
             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/70 backdrop-blur-sm"
             @keydown.escape.window="closeScannerModal()"
         >
@@ -115,9 +118,9 @@
 
                 {{-- Camera Feed Container (Livewire-ignored: morphs would kill the video element mid-scan) --}}
                 <div class="p-4 space-y-3" wire:ignore>
-                    {{-- Camera device selector --}}
+                    {{-- Camera device selector (implicit label associates text without duplicating ids) --}}
                     <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
-                        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.camera') }}</label>
+                        <label class="flex items-center gap-2 text-gray-500 dark:text-gray-400 shrink-0 w-full">{{ __('filament-qr-code::ui.camera') }}
                         <select
                             x-model="selectedDeviceId"
                             @change="startScan()"
@@ -127,14 +130,15 @@
                                 <option :value="dev.id" x-text="dev.label || ('Camera ' + dev.id)"></option>
                             </template>
                         </select>
+                        </label>
                     </div>
 
                     {{-- Viewfinder --}}
                     <div class="filament-qr-viewfinder">
                         <div :id="scannerElementId" class="w-full h-full"></div>
 
-                        {{-- Reticle Box & Laser --}}
-                        <div x-show="isScanning" class="filament-qr-reticle">
+                        {{-- Reticle Box & Laser (decorative: the decoder crop is announced via the modal label) --}}
+                        <div x-show="isScanning" class="filament-qr-reticle" aria-hidden="true">
                             <div class="filament-qr-reticle-box">
                                 <div class="filament-qr-reticle-corner top-left"></div>
                                 <div class="filament-qr-reticle-corner top-right"></div>

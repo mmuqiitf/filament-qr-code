@@ -23,7 +23,7 @@
     wire:ignore
 >
     <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
-        <label class="text-gray-500 dark:text-gray-400 shrink-0">{{ __('filament-qr-code::ui.camera') }}</label>
+        <label class="flex items-center gap-2 text-gray-500 dark:text-gray-400 shrink-0 w-full">{{ __('filament-qr-code::ui.camera') }}
         <select
             x-model="selectedDeviceId"
             @change="isScanning ? startCollector() : null"
@@ -33,11 +33,12 @@
                 <option :value="dev.id" x-text="dev.label || ('Camera ' + dev.id)"></option>
             </template>
         </select>
+        </label>
     </div>
 
     <div class="filament-qr-viewfinder">
         <div :id="elementId" class="w-full h-full"></div>
-        <div x-show="isScanning" class="filament-qr-reticle">
+        <div x-show="isScanning" class="filament-qr-reticle" aria-hidden="true">
             <div class="filament-qr-reticle-box">
                 <div class="filament-qr-reticle-corner top-left"></div>
                 <div class="filament-qr-reticle-corner top-right"></div>

@@ -77,3 +77,10 @@ it('renders QrColumn and DownloadQrAction in Livewire table end-to-end', functio
         ->assertSee('Scanner Unit B')
         ->assertSeeHtml('data:image/svg+xml;base64,');
 });
+
+it('labels the column preview modal for assistive tech', function (): void {
+    Livewire::test(TestLivewireTableComponent::class)
+        ->assertSuccessful()
+        ->assertSeeHtml('role="dialog"')
+        ->assertSeeHtml('aria-modal="true"');
+});
