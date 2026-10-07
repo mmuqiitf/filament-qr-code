@@ -9,6 +9,7 @@ use Filament\Forms\Components\Field;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Validation\DistinctCodes;
 
 class QrCollector extends Field
 {
@@ -32,6 +33,21 @@ class QrCollector extends Field
     public function delayBetweenScans(int|Closure $ms): static
     {
         $this->delayBetweenScansMs = $ms;
+
+        return $this;
+    }
+
+    /**
+     * Server-side duplicate guard to match the client-side
+     * allowDuplicates(false): identical codes fail submit-time validation.
+     */
+    public function distinctItems(bool|Closure $condition = true): static
+    {
+        if (! (bool) $this->evaluate($condition)) {
+            return $this;
+        }
+
+        $this->rules(['array', new DistinctCodes]);
 
         return $this;
     }

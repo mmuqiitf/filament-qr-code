@@ -11,6 +11,7 @@ return [
     'clear_all' => 'Clear All',
     'collect_description' => 'Continuously scan QR codes to add items.',
     'done' => 'Done',
+    'duplicate_codes' => 'Duplicate codes are not allowed.',
     'download' => 'Download',
     'download_image' => 'Download Image',
     'download_qr_code' => 'Download QR Code',

@@ -146,6 +146,7 @@ QrScanner::make('sku')
     ->normalizeUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
 ```
 - `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning. Buffers are sanitized (STX/ETX/CR/LF stripped, mirroring `HasHardwareScanner::sanitizeScannedValue()`), IME compositions never count, and terminator-less guns flush after `scanTimeoutMs` (default 150).
+- `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify.
 - Field burst handlers stand down while a page-global `QrHardwareScannerListener` is mounted (`->suppressWhenGlobalListener(false)` forces the field listener to stay active).
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
 - `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a _maximum_: the actual decode box scales to the viewfinder and the green reticle follows it.
@@ -288,7 +289,7 @@ $table->headerActions([
 
 Each scan dispatches a `qr-collector-item-added` window event (with `{ code }`). Forward it into server-side handling — e.g. `x-on:qr-collector-item-added.window` calling your Livewire method, which can then invoke `$action->handleScan($code)` to run the `onScan` callback. On the host, `$wire.handleCollectorScan($code)` is also honored when defined — but pick one channel, not both.
 
-Custom terminators and minimum lengths are configurable via `->hardwareScanner(terminators: [...], minBarcodeLength: 3)` and feedback pitch/duration via `->beepFrequency(660)`, `->beepDuration(120)`, `->vibrateDuration(200)`.
+Custom terminators and minimum lengths are configurable via `->hardwareScanner(terminators: [...], minBarcodeLength: 3)` and feedback pitch/duration via `->beepFrequency(660)`, `->beepDuration(120)`, `->vibrateDuration(200)`. Server-side, `->distinctItems()` rejects duplicate codes on submit to match `->allowDuplicates(false)` in the browser.
 
 ### 6. QR Code Generator Components
 
@@ -492,6 +493,7 @@ QrScanner::make('sku')
 | Event                     | Detail                        | Fired when                |
 | ------------------------- | ----------------------------- | ------------------------- |
 | `qr-scanned`              | `{ value, field, nextField }` | any `QrScanner` scan      |
+| `qr-scan-rejected`        | `{ message }`                 | a `rejectWhen()` predicate matched |
 | `qr-hardware-scanned`        | `{ value, field }`            | page-global hardware burst   |
 | `qr-sequence-step`        | `{ field, value, index }`     | each container step       |
 | `qr-sequence-completed`   | `{ results }`                 | last container step       |

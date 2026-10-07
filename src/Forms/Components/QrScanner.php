@@ -62,6 +62,52 @@ class QrScanner extends Field
     }
 
     /**
+     * Submit-time validation rules for scanned values. Live scans write
+     * state directly, so these run on submit like any other field rules —
+     * pair with rejectWhen() for immediate feedback.
+     *
+     * @param  array<int, string>|Closure  $rules
+     */
+    public function scanRules(array|Closure $rules): static
+    {
+        $this->rules($rules);
+
+        return $this;
+    }
+
+    /**
+     * Immediately reject a live scan matching $predicate: the state is
+     * cleared and a `qr-scan-rejected` browser event (with message) is
+     * dispatched so the app can notify the operator.
+     */
+    public function rejectWhen(Closure $predicate, string|Closure $message): static
+    {
+        $this->afterStateUpdated(function ($component, $state, $livewire) use ($predicate, $message): void {
+            if (blank($state)) {
+                return;
+            }
+
+            $rejected = (bool) $component->evaluate($predicate, [
+                'rawValue' => $state,
+                'state' => $state,
+            ]);
+
+            if (! $rejected) {
+                return;
+            }
+
+            $component->state(null);
+
+            $livewire->dispatch('qr-scan-rejected', message: (string) $component->evaluate($message, [
+                'rawValue' => $state,
+                'state' => $state,
+            ]));
+        });
+
+        return $this;
+    }
+
+    /**
      * Live-scan normalizer (runs on every Livewire state update, including
      * camera and hardware scans). Shorthand for afterStateUpdated() so the
      * live hook is discoverable next to the programmatic-only scanFormat().
