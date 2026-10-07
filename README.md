@@ -534,7 +534,7 @@ QrScanner::make('sku')
 
 ## Translations
 
-All UI strings live under the `filament-qr-code::ui` translation namespace (`resources/lang/en/ui.php`). Publish with:
+All UI strings live under the `filament-qr-code::ui` translation namespace (`resources/lang/en/ui.php`, plus Indonesian in `resources/lang/id/ui.php`). Publish with:
 
 ```bash
 php artisan vendor:publish --tag="filament-qr-code-translations"
