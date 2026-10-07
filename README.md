@@ -107,6 +107,18 @@ Pass `BarcodeFormat` cases (or raw strings) via `->formats([...])` on every came
 
 ## Usage
 
+### Which component do I need?
+
+| Job | Use | Why not the others |
+| --- | --- | --- |
+| One input scanned by camera, upload, typing, or gun | `QrScanner` | Sequence/collector add moving parts a single field doesn't need. |
+| Cashier/POS gun, no camera UI | `QrHardwareScannerListener` + one funnel method | `QrScanner`'s field listener would double-handle the same burst. |
+| One camera walking many fields in order | `QrScanSequence` | Chained `nextField()` hops between separate cameras; the sequence shares one feed. |
+| Two fields, hand focus from one to the next | `QrScanner::nextField()` | A sequence is overkill without a shared checklist. |
+| Many scans into one list (stocktake, receiving) | `QrCollector` / `QrCollectAction` | Sequences map one scan to one field; collectors append. |
+| Show a QR (form, table, infolist, download) | `QrCodeDisplay` / `QrColumn` / `QrEntry` / `DownloadQrAction` | Scanner components capture; these only render. |
+| Many QRs out at once (labels, handover) | `DownloadQrBulkAction` + print sheet | Single downloads don't scale past a handful of rows. |
+
 ### 1. Individual QR Scanner Field
 
 Add a QR scanner field to your form schema with camera modal and hardware scanner integration:
