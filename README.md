@@ -7,7 +7,7 @@
 [![PHPStan Level 9](https://img.shields.io/badge/PHPStan-level%209-brightgreen.svg?style=flat-square)](https://phpstan.org/)
 [![Total Downloads](https://img.shields.io/packagist/dt/mmuqiitf/filament-qr-code.svg?style=flat-square)](https://packagist.org/packages/mmuqiitf/filament-qr-code)
 
-A powerful, modern QR code package designed exclusively for **Filament v5** and **Laravel 11 / 12**.
+A powerful, modern QR code package designed exclusively for **Filament v5** and **Laravel 11 / 12 / 13**.
 
 Features:
 
@@ -22,36 +22,18 @@ Features:
 
 - [Filament QR Code](#filament-qr-code)
   - [Requirements](#requirements)
+  - [How it works](#how-it-works)
   - [Installation](#installation)
     - [Symbologies](#symbologies)
+  - [Quick start](#quick-start)
   - [Usage](#usage)
-    - [1. Individual QR Scanner Field](#1-individual-qr-scanner-field)
-    - [2. Hands-Free Station Mode (`QrHardwareScannerListener`)](#2-hands-free-station-mode)
-    - [3. Sequential Scanning — One Scanner, Many Fields](#3-sequential-scanning--one-scanner-many-fields)
-      - [Correcting a scan (unedited vs edited values)](#correcting-a-scan-unedited-vs-edited-values)
-      - [Caveat: `getState()` misses container writes](#caveat-getstate-misses-container-writes)
-    - [4. Focus Handoff Between Fields](#4-focus-handoff-between-fields)
-    - [5. Batch Collector Scanning (Repeaters \& Tables)](#5-batch-collector-scanning-repeaters--tables)
-      - [In Form Repeaters:](#in-form-repeaters)
-      - [As a Table / Repeater Action:](#as-a-table--repeater-action)
-    - [6. QR Code Generator Components](#6-qr-code-generator-components)
-      - [In Form Schemas:](#in-form-schemas)
-      - [In Table Columns:](#in-table-columns)
-      - [In Infolists:](#in-infolists)
-      - [As a Download Action:](#as-a-download-action)
-      - [Programmatic Standalone Generation:](#programmatic-standalone-generation)
-  - [Tutorial: Cashier POS with a Handheld Scanner](#tutorial-cashier-pos-with-a-handheld-scanner)
-    - [Step 1 — mount the hardware scanner listener](#step-1--mount-the-hardware-scanner-listener)
-    - [Step 2 — funnel every scan into one method](#step-2--funnel-every-scan-into-one-method)
-  - [Configuration](#configuration)
-    - [`hardware_scanner`](#hardware_scanner)
-    - [`feedback`](#feedback)
-    - [`camera`](#camera)
-    - [`generator`](#generator)
-  - [Browser Events](#browser-events)
-  - [Translations](#translations)
-  - [Testing](#testing)
-  - [Static Analysis](#static-analysis)
+    - [Which component do I need?](#which-component-do-i-need)
+    - [Basic implementation](#basic-implementation)
+    - [Advanced implementation](#advanced-implementation)
+    - [Full guides](#full-guides)
+  - [Troubleshooting](#troubleshooting)
+  - [Reporting issues](#reporting-issues)
+  - [Contributing](#contributing)
   - [Changelog](#changelog)
   - [Security Vulnerabilities](#security-vulnerabilities)
   - [Credits](#credits)
@@ -65,6 +47,15 @@ Features:
 - PNG generation needs `gd` or `imagick` plus system fonts (`fonts-dejavu-core` on Debian).
 - Camera scanning needs a secure context (`https` or `localhost`).
 - The camera bundle (`html5-qrcode`) is compiled into `resources/dist/` — no CDN. After changing anything under `resources/js` or `resources/css`, rebuild with `npm run build` (CI fails when committed `dist/` is stale).
+
+---
+
+## How it works
+
+- **Camera scanning** runs fully in the browser: a modal viewfinder streams the camera through the bundled decoder. The decoder chunk lazy-loads on first camera use; pages that only render QR images never fetch it.
+- **Hardware scanners** emulate keyboards: they burst keystrokes in a few dozen milliseconds and end with a terminator key (`Enter`/`Tab`). The interceptor buffers bursts, swallows the terminator so forms don't submit, and routes the value to the active field.
+- **Sequences and collectors** write through `$wire.set` into your Livewire form state, so scanned values behave like typed input (validation and reactivity included). Camera DOM lives under `wire:ignore` so Livewire morphs never kill a running feed.
+- **Generation** is server-side: renders are cached in-process plus in the Laravel cache, so repeated values encode once. Table modal previews load lazily through a signed image route instead of embedding a data-URI per row.
 
 ---
 
@@ -107,454 +98,140 @@ Pass `BarcodeFormat` cases (or raw strings) via `->formats([...])` on every came
 
 ---
 
+## Quick start
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
+QrScanner::make('sku')->label('SKU'),
+```
+
+Camera modal, upload fallback, and hardware-scanner capture all work out of the box. Add `->formats([...])` when you know the symbology — the guides below are upgrades to this.
+
+---
+
 ## Usage
 
 ### Which component do I need?
 
-| Job | Use | Why not the others |
-| --- | --- | --- |
-| One input scanned by camera, upload, typing, or gun | `QrScanner` | Sequence/collector add moving parts a single field doesn't need. |
-| Cashier/POS gun, no camera UI | `QrHardwareScannerListener` + one funnel method | `QrScanner`'s field listener would double-handle the same burst. |
-| One camera walking many fields in order | `QrScanSequence` | Chained `nextField()` hops between separate cameras; the sequence shares one feed. |
-| Two fields, hand focus from one to the next | `QrScanner::nextField()` | A sequence is overkill without a shared checklist. |
-| Many scans into one list (stocktake, receiving) | `QrCollector` / `QrCollectAction` | Sequences map one scan to one field; collectors append. |
-| Show a QR (form, table, infolist, download) | `QrCodeDisplay` / `QrColumn` / `QrEntry` / `DownloadQrAction` | Scanner components capture; these only render. |
-| Many QRs out at once (labels, handover) | `DownloadQrBulkAction` + print sheet | Single downloads don't scale past a handful of rows. |
+| Job                                                 | Use                                                                                                                                                                                                                      | Why not the others                                                                 |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| One input scanned by camera, upload, typing, or gun | [`QrScanner`](docs/scanning.md#1-individual-qr-scanner-field)                                                                                                                                                            | Sequence/collector add moving parts a single field doesn't need.                   |
+| Cashier/POS gun, no camera UI                       | [`QrHardwareScannerListener`](docs/scanning.md#2-hands-free-station-mode-qrhardwarescannerlistener) + [one funnel method](docs/scanning.md#step-2--funnel-every-scan-into-one-method)                                    | `QrScanner`'s field listener would double-handle the same burst.                   |
+| One camera walking many fields in order             | [`QrScanSequence`](docs/scanning.md#3-sequential-scanning--one-scanner-many-fields)                                                                                                                                      | Chained `nextField()` hops between separate cameras; the sequence shares one feed. |
+| Two fields, hand focus from one to the next         | [`QrScanner::nextField()`](docs/scanning.md#4-focus-handoff-between-fields)                                                                                                                                              | A sequence is overkill without a shared checklist.                                 |
+| Many scans into one list (stocktake, receiving)     | [`QrCollector` / `QrCollectAction`](docs/collecting.md#5-batch-collector-scanning-repeaters--tables)                                                                                                                     | Sequences map one scan to one field; collectors append.                            |
+| Show a QR (form, table, infolist, download)         | [`QrCodeDisplay`](docs/generating.md#in-form-schemas) / [`QrColumn`](docs/generating.md#in-table-columns) / [`QrEntry`](docs/generating.md#in-infolists) / [`DownloadQrAction`](docs/generating.md#as-a-download-action) | Scanner components capture; these only render.                                     |
+| Many QRs out at once (labels, handover)             | [`DownloadQrBulkAction`](docs/generating.md#as-a-bulk-zip-export) + print sheet                                                                                                                                          | Single downloads don't scale past a handful of rows.                               |
 
-### 1. Individual QR Scanner Field
+### Basic implementation
 
-Add a QR scanner field to your form schema with camera modal and hardware scanner integration:
+Single field with camera, upload fallback, and hardware-scanner capture:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 
 QrScanner::make('sku')
-    ->label('Product SKU / Barcode')
-    ->formats([
-        BarcodeFormat::QrCode,
-        BarcodeFormat::Code128,
-        BarcodeFormat::Code39,
-        BarcodeFormat::Ean13,
-    ])
-    ->sound(true)
-    ->vibrate(true)
-    ->hardwareScanner(enabled: true, burstThresholdMs: 50)
-    ->afterStateUpdated(function ($component, ?string $state): void {
-        // Live-scan normalization belongs here: scanFormat() below never
-        // runs on live camera/hardware scans (server-side hook only).
-        $normalized = filled($state) ? strtoupper(trim($state)) : $state;
-
-        if ($normalized !== $state) {
-            $component->state($normalized);
-        }
-    });
+    ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
+    ->sound(true);
 ```
 
-Option reference:
-
-- `formats()` — symbologies the decoder attempts. Omit only when truly unknown. With no filter the effective `fps` auto-degrades 25 → 12 against main-thread lag (explicit `fps()` always wins).
-- `scanFormat()` / `onScan()` — programmatic-only hooks (used with `formatScannedValue()` / `triggerOnScan()` in custom flows). They do **not** run on live camera or hardware scans; use `normalizeUsing()` for live values:
-```php
-QrScanner::make('sku')
-    ->normalizeUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
-```
-- `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning. Buffers are sanitized (STX/ETX/CR/LF stripped, mirroring `HasHardwareScanner::sanitizeScannedValue()`), IME compositions never count, and terminator-less guns flush after `scanTimeoutMs` (default 150).
-- `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify.
-- Field burst handlers stand down while a page-global `QrHardwareScannerListener` is mounted (`->suppressWhenGlobalListener(false)` forces the field listener to stay active).
-- `nextField('other')` — focuses that field after a scan (field handoff, see §4).
-- `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a _maximum_: the actual decode box scales to the viewfinder and the green reticle follows it.
-- `preferRearCamera()` — rear heuristic, but the operator's last camera choice (stored in `localStorage`) always wins.
-- `allowUpload(false)` — hides the image-file fallback.
-- `beepFrequency()` / `beepDuration()` / `vibrateDuration()` — feedback tuning.
-- `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning.
-
-The modal lists every detected camera (switching restarts the feed and is remembered) and closes automatically after a successful camera scan. Upload scans reuse the same decoder instance.
-
-> Hardware scanner note: `QrScanner`'s burst listener is field-scoped on purpose. Mount `QrHardwareScannerListener` on the page for global capture, otherwise both listeners will double-handle the same burst.
-
-### 2. Hands-Free Station Mode (`QrHardwareScannerListener`)
-
-For manufacturing stations and warehouse counters where operators shoot barcodes without touching the mouse:
+Hands-free station — one gun driving the whole page, no camera UI:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
 
-QrHardwareScannerListener::make([
-    'step',
-    'employee',
-    'document',
-    'equipment',
-])
-    ->autoFocusNext(true)
-    ->sound(true);
+QrHardwareScannerListener::make(['sku', 'quantity'])
+    ->autoFocusNext(true);
 ```
 
-Add `QrHardwareScannerListener` anywhere in your schema. It intercepts hardware scanner bursts across the entire page, populates the active or first empty field (covering `text`, `search`, `number` inputs and textareas), syncs Livewire state, and auto-advances focus.
-
-The interceptor buffers keystrokes and treats gaps under `burstThresholdMs` (default 50) as a scanner burst. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), beeps, and routes the value. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
-
-### 3. Sequential Scanning — One Scanner, Many Fields
-
-Sequential scanning means **one scanner driving multiple fields**: a single shared camera feed (or one handheld gun) walks through a checklist. That is `QrScanSequence`:
+One camera walking many fields in order:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 
-QrScanSequence::make([
-    'step' => 'Operation Step',
-    'employee' => 'Employee ID',
-    'document' => 'Document Number',
-    'equipment' => 'Equipment Code',
-])
-    ->fps(25)
-    ->qrbox(250)
-    ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
-    ->preferRearCamera()
-    ->statePathPrefix('data') // Livewire form state prefix scans are written to
-    ->sound(true)
-    ->vibrate(true);
-```
-
-One feed, one checklist: steps auto-advance, clicking a step re-targets it, and the camera dropdown matches the single-field scanner. It renders stacked on mobile and split-screen on desktop. When the last step lands, the feed stops by itself so the button never gets stuck on "Stop".
-
-`statePathPrefix()` (default `data`) is what keeps the container bound to your form — set it to whatever `statePath()` your schema uses. `scanFormat()` / `onStepScanned()` are programmatic-only hooks (they do not run on live scans); pair them with `formatScannedValue()` and `triggerOnStep()` in custom flows, and normalize live values with `normalizeStepUsing()` (applied on read/merge).
-
-#### Reading sequence state (no more hand-rolled merges)
-
-Give the container its own state and read it back through helpers:
-
-```php
 QrScanSequence::make(['batch_number', 'serial_number'])
     ->statePath('sequence')
-    ->normalizeStepUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
-
-// In your submit handler:
-$sequence = /* resolve the QrScanSequence component */;
-$state = $sequence->mergeSequenceState($this->form->getState());
-
-if (! $sequence->isSequenceComplete($state)) {
-    Notification::make()->title('Incomplete sequence')->warning()->send();
-    return;
-}
+    ->formats([BarcodeFormat::QrCode]);
 ```
 
-`getSequenceState()` prefers the component's own state and falls back to the legacy `statePathPrefix()` paths, so existing installs without `->statePath()` keep working. `getMissingSequenceKeys()` lists what's still empty.
-
-#### Correcting a scan (unedited vs edited values)
-
-Every step is a plain input: scans fill it, and operators can type or fix any value by hand — handy for unreadable labels. Every change syncs to the bound Livewire state and dispatches `qr-sequence-edited`. Pass `->editable(false)` to render locked read-only values instead. To flip modes live without a re-render wiping the running feed, dispatch `qr-sequence-editable` with `{ enabled }` on `window`; the component listens for it (its DOM is `wire:ignore`d so scans survive Livewire morphs).
-
-#### Caveat: `getState()` and container writes
-
-The container writes via `$wire.set`. When it has its own `->statePath()`, every scan syncs both the legacy prefix paths and the component state, so prefer `mergeSequenceState($this->form->getState())` over raw `array_merge` and validate with `isSequenceComplete()`:
-
-```php
-$state = array_merge($this->data ?? [], $this->form->getState());
-
-if (blank($state['batch_number'] ?? null)) {
-    Notification::make()->title('Incomplete sequence')->warning()->send();
-    return;
-}
-```
-
-### 4. Focus Handoff Between Fields
-
-Move focus to the next field after each scan (a two-field handoff — distinct from sequential scanning above):
-
-```php
-QrScanner::make('batch_number')
-    ->nextField('serial_number'),
-
-QrScanner::make('serial_number')
-    ->nextField('location_code'),
-
-QrScanner::make('location_code'),
-```
-
-### 5. Batch Collector Scanning (Repeaters & Tables)
-
-Continuous camera multi-scan for inventory and repeater flows (not the register — cashiers use a gun, see the tutorial below).
-
-#### In Form Repeaters:
+Continuous batch scanning into a list:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 
 QrCollector::make('scanned_items')
-    ->allowDuplicates(false)
-    ->delayBetweenScans(1200)
-    ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
-    ->preferRearCamera();
+    ->allowDuplicates(false);
 ```
 
-#### As a Table / Repeater Action:
-
-```php
-use Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction;
-
-$table->headerActions([
-    QrCollectAction::make()
-        ->allowDuplicates(false)
-        ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
-        ->onScan(fn ($code) => logger()->info("Collected {$code}")),
-]);
-```
-
-Each scan dispatches a `qr-collector-item-added` window event (with `{ code }`). Forward it into server-side handling — e.g. `x-on:qr-collector-item-added.window` calling your Livewire method, which can then invoke `$action->handleScan($code)` to run the `onScan` callback. On the host, `$wire.handleCollectorScan($code)` is also honored when defined — but pick one channel, not both.
-
-Every `handleScan()` call (and every programmatic `triggerOnScan()`) also fires a `QrCodeScanned` event (`code`, `source`, `field`, `context`). Listen for it yourself, or flip `audit.enabled` to record scans through your log stack (`audit.channel`, default stack). Live camera/hardware scans stay client-side — they enter the audit trail once they reach the server.
-
-Custom terminators and minimum lengths are configurable via `->hardwareScanner(terminators: [...], minBarcodeLength: 3)` and feedback pitch/duration via `->beepFrequency(660)`, `->beepDuration(120)`, `->vibrateDuration(200)`. Server-side, `->distinctItems()` rejects duplicate codes on submit to match `->allowDuplicates(false)` in the browser.
-
-### 6. QR Code Generator Components
-
-#### In Form Schemas:
+Render a QR from record data:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCodeDisplay;
+use Mmuqiitf\FilamentQrCode\Tables\Columns\QrColumn;
 
 QrCodeDisplay::make('qr')
     ->data(fn ($record) => $record?->uuid)
-    ->size(200)
-    ->color('#1e293b')
-    ->caption('Scan to verify')
-    ->downloadable();
-```
-
-#### In Table Columns:
-
-```php
-use Mmuqiitf\FilamentQrCode\Tables\Columns\QrColumn;
+    ->size(200);
 
 QrColumn::make('sku')
     ->thumbnailSize(48)
-    ->modalSize(300)
-    ->previewable()
-    ->downloadable();
+    ->previewable();
 ```
 
-Thumbnails and modal previews share a capped in-process render cache plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filament-qr-code.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs.
+Cashier/POS flow with a handheld gun: see the [POS tutorial](docs/scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
 
-#### In Infolists:
+### Advanced implementation
 
-```php
-use Mmuqiitf\FilamentQrCode\Infolists\Components\QrEntry;
-
-QrEntry::make('verification_code')
-    ->size(200)
-    ->caption('Official Verification QR');
-```
-
-#### As a Download Action:
-
-```php
-use Mmuqiitf\FilamentQrCode\Tables\Actions\DownloadQrAction;
-
-$table->actions([
-    DownloadQrAction::make()
-        ->qrData(fn ($record) => $record->verification_url)
-        ->qrFileName(fn ($record) => "qr-{$record->id}")
-        ->qrFormat(QrFormat::Png)
-        ->qrImageSize(400)
-        ->qrMargin(2),
-]);
-```
-
-#### As a Bulk ZIP Export:
-
-```php
-use Mmuqiitf\FilamentQrCode\Tables\Actions\DownloadQrBulkAction;
-
-$table->bulkActions([
-    DownloadQrBulkAction::make()
-        ->qrData('sku') // attribute name, or fn ($record) => ...
-        ->qrFileName(fn ($record) => $record->sku)
-        ->qrFormat(QrFormat::Png)
-        ->zipName('shelf-labels.zip'),
-]);
-```
-
-Rows without data are skipped; the archive downloads as one ZIP (needs the PHP `zip` extension). For printed shelf labels, wrap any QR images in `.filament-qr-label-sheet` / `.filament-qr-label` — the print stylesheet hides camera UI and tiles three labels per row.
-
-#### Programmatic Standalone Generation:
-
-```php
-use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
-use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
-
-// Generate data URI
-$dataUri = FilamentQrCode::make()
-    ->format(QrFormat::Svg)
-    ->size(300)
-    ->margin(2)
-    ->color('#0f172a')
-    ->backgroundColor('#ffffff')
-    ->errorCorrection('M') // L, M, Q, H
-    ->generate('https://example.com')
-    ->toDataUri();
-
-// Generate PNG with Text Overlay & Download
-return FilamentQrCode::make()
-    ->withText('BATCH #1024', 16, '#000000')
-    ->generate('BATCH-1024')
-    ->download('batch-1024'); // StreamedResponse download; stream() inlines
-```
-
-Rules that bite:
-
-- `withText()` and `logo()` need raster output, so the service always returns PNG when either is set — regardless of whether `format()` was called before or after. Request PNG explicitly when overlaying.
-- Invalid hex colors throw `InvalidArgumentException` instead of silently rendering black.
-- `logo($path, $size)` forces error-correction level H for scannability.
-- Identical payloads share the render cache, so tables with repeated values encode once.
-
-#### Common payloads without hand-escaping
-
-```php
-use Mmuqiitf\FilamentQrCode\Support\QrPayload;
-
-QrPayload::wifi('Shop Floor', 'secret-1');                    // WPA (nopass + hidden supported)
-QrPayload::vcard(['firstName' => 'Siti', 'phone' => '...']);   // escaped vCard 3.0
-QrPayload::mailto('ops@example.com', 'Stock alert', '...');   // mailto with subject/body
-QrPayload::sms('+621234567', 'Arrived');                     // SMSTO
-QrPayload::geo(-6.2, 106.8, 'Warehouse 7');                   // geo with query
-```
-
----
-
-## Tutorial: Cashier POS with a Handheld Scanner
-
-Cashiers scan with a physical gun, so there is **no camera UI** — just an input box and the invisible hardware scanner interceptor catching bursts anywhere on the page.
-
-### Step 1 — mount the hardware scanner listener
-
-A Filament page needs a schema to host the component:
-
-```php
-use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
-
-public ?array $data = [];
-
-public function form(Schema $schema): Schema
-{
-    return $schema->statePath('data')->components([
-        QrHardwareScannerListener::make(['scanInput'])
-            ->autoFocusNext(false) // stay on the SKU box for rapid scans
-            ->sound(true)
-            ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2),
-    ]);
-}
-```
-
-Render `{{ $this->form }}` — it outputs nothing visible.
-
-### Step 2 — funnel every scan into one method
-
-Gun bursts and typed input must converge, or quantities double-count:
-
-```blade
-<div x-on:qr-hardware-scanned.window="$wire.scanProduct($event.detail.value)">
-```
-
-```php
-public function scanProduct(string $code): void
-{
-    $product = Product::where('sku', trim($code))
-        ->orWhere('barcode', trim($code))->first();
-
-    if (! $product) {
-        Notification::make()->title('Product Not Found')->danger()->send();
-        return;
-    }
-
-    // bump quantity if already in cart, else push a new line
-}
-```
-
-Keep the manual input's Enter handler: scanner bursts swallow their terminator (`preventFormSubmit`), so Enter only fires for typed input — no double-adds.
-
----
-
-## Configuration
-
-Publish the config to tune defaults (`config/qr-code.php`):
-
-```bash
-php artisan vendor:publish --tag="filament-qr-code-config"
-```
-
-Per-component options override these defaults:
+Tune defaults globally (`php artisan vendor:publish --tag="filament-qr-code-config"` → `config/qr-code.php`), or per component — component options always win:
 
 ```php
 QrScanner::make('sku')
     ->fps(25)
-    ->qrbox(250) // responsive max; the decode box scales to the viewfinder
-    ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
-    ->preferRearCamera()
+    ->qrbox(250)
     ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2)
     ->beepFrequency(880)
-    ->beepDuration(80)
-    ->vibrateDuration(100);
+    ->beepDuration(80);
 ```
 
-### `hardware_scanner`
+Normalize and reject live scans (`scanFormat()` / `onScan()` never run on live scans — they are programmatic-only):
 
-| Key                   | Default            | Meaning                                                              |
-| --------------------- | ------------------ | -------------------------------------------------------------------- |
-| `enabled`             | `true`             | master switch (components also gate individually)                    |
-| `burst_threshold_ms`  | `50`               | max gap between keystrokes counted as one burst                      |
-| `min_barcode_length`  | `2`                | shorter bursts are treated as typing                                 |
-| `scan_timeout_ms`     | `150`              | flush window for terminator-less guns (0 disables)                   |
-| `prevent_form_submit` | `true`             | swallow the terminator key during bursts                             |
-| `default_terminators` | `['Enter', 'Tab']` | gun suffix keys ending a scan                                        |
-
-### `feedback`
-
-| Key                   | Default  |
-| --------------------- | -------- |
-| `sound`               | `true`   |
-| `beep_frequency`      | `880` Hz |
-| `beep_duration_ms`    | `80`     |
-| `vibrate`             | `true`   |
-| `vibrate_duration_ms` | `100`    |
-
-### `camera`
-
-| Key                  | Default | Meaning                                                                                                  |
-| -------------------- | ------- | -------------------------------------------------------------------------------------------------------- |
-| `fps`                | `25`    | decode attempts per second; auto-degrades to 12 when unrestricted and not explicitly set                  |
-| `qrbox`              | `250`   | _maximum_ decode-box edge; the real box scales to the viewfinder (wide band for 1D)                      |
-| `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins                                                |
-
-### `generator`
-
-`size` (300), `margin` (2), `format` (`svg`), `foreground_color`, `background_color`, `error_correction` (`M`), `cache_ttl` (86400; `null` = forever, `false` = L2 off), `cache_store` (`null` = default store).
-
----
-
-## Browser Events
-
-| Event                     | Detail                        | Fired when                |
-| ------------------------- | ----------------------------- | ------------------------- |
-| `qr-scanned`              | `{ value, field, nextField }` | any `QrScanner` scan      |
-| `qr-scan-rejected`        | `{ message }`                 | a `rejectWhen()` predicate matched |
-| `qr-hardware-scanned`        | `{ value, field }`            | page-global hardware burst   |
-| `qr-sequence-step`        | `{ field, value, index }`     | each container step       |
-| `qr-sequence-completed`   | `{ results }`                 | last container step       |
-| `qr-sequence-edited`      | `{ field, value }`            | operator edits a step     |
-| `qr-collector-item-added` | `{ code }`                    | each batch-collector scan |
-
----
-
-## Translations
-
-All UI strings live under the `filament-qr-code::ui` translation namespace (`resources/lang/en/ui.php`, plus Indonesian in `resources/lang/id/ui.php`). Publish with:
-
-```bash
-php artisan vendor:publish --tag="filament-qr-code-translations"
+```php
+QrScanner::make('sku')
+    ->normalizeUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)))
+    ->rejectWhen(fn ($state) => strlen((string) $state) < 3, 'Barcode too short.');
 ```
 
-and translate per locale.
+Audit server-observed scans (live scans stay client-side until they reach the server):
+
+```php
+use Illuminate\Support\Facades\Event;
+use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
+
+// config/qr-code.php
+'audit' => ['enabled' => true, 'channel' => null],
+
+// or listen yourself:
+Event::listen(QrCodeScanned::class, fn ($event) => logger()->info("Scanned {$event->code}"));
+```
+
+Build payloads without hand-escaping:
+
+```php
+use Mmuqiitf\FilamentQrCode\Support\QrPayload;
+
+QrPayload::wifi('Shop Floor', 'secret-1');
+```
+
+UI strings live under `filament-qr-code::ui` (publish with `--tag="filament-qr-code-translations"`); wrap QR images in `.filament-qr-label-sheet` / `.filament-qr-label` for printable shelf labels. Full tables, events, and extension hooks: [Reference](docs/reference.md).
+
+### Full guides
+
+- [Scanning](docs/scanning.md) — camera field, station listener, sequences, focus handoff, POS tutorial.
+- [Batch collecting](docs/collecting.md) — continuous inventory scanning in repeaters and tables.
+- [Generating](docs/generating.md) — display components, download actions, facade, payloads.
+- [Reference](docs/reference.md) — configuration, events, customizing, extending.
 
 ---
 
@@ -566,30 +243,28 @@ Run the built-in checks first:
 php artisan qr-code:doctor
 ```
 
-| Symptom | Likely cause | Fix |
-| --- | --- | --- |
-| Camera modal says no devices / access denied | Page served over plain `http` (not `localhost`) | Serve via `https` or test on `localhost`; browsers block cameras in insecure contexts. |
-| Camera modal empty on first open | Permission not granted yet, labels unavailable | Grant permission, reopen; the remembered `localStorage` choice wins afterwards. |
-| Stale scanner UI after updating the package | Committed `dist/` rebuilt but host serving old assets | `npm run build` in the package, then `php artisan filament:assets` in the host app. |
-| PNG looks wrong / text overlay is blocky | Missing GD/Imagick or system fonts | Install `gd` or `imagick` plus `fonts-dejavu-core`; the service falls back to GD bitmap fonts otherwise. |
-| Sequence submit misses scanned values | `statePathPrefix()` doesn't match the schema `statePath()` | Set both to the same prefix, or give the sequence `->statePath()` and read via `mergeSequenceState()`. A banner warns in the UI when they differ. |
-| Same burst handled twice | Field `QrScanner` listener + page `QrHardwareScannerListener` both active | Keep the global listener; field handlers stand down automatically (or `->suppressWhenGlobalListener(false)`). |
-| Typed text becomes a "scan" | `minBarcodeLength` too low for a keyboard-heavy form | Raise `minBarcodeLength` to 4–6 on that component. |
-| Table page is slow with many QRs | Eager modal data-URIs per row | Keep `->lazyModal()` (default) and the persistent cache enabled; tune `generator.cache_ttl`. |
+| Symptom                                      | Likely cause                                                              | Fix                                                                                                                                               |
+| -------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Camera modal says no devices / access denied | Page served over plain `http` (not `localhost`)                           | Serve via `https` or test on `localhost`; browsers block cameras in insecure contexts.                                                            |
+| Camera modal empty on first open             | Permission not granted yet, labels unavailable                            | Grant permission, reopen; the remembered `localStorage` choice wins afterwards.                                                                   |
+| Stale scanner UI after updating the package  | Committed `dist/` rebuilt but host serving old assets                     | `npm run build` in the package, then `php artisan filament:assets` in the host app.                                                               |
+| PNG looks wrong / text overlay is blocky     | Missing GD/Imagick or system fonts                                        | Install `gd` or `imagick` plus `fonts-dejavu-core`; the service falls back to GD bitmap fonts otherwise.                                          |
+| Sequence submit misses scanned values        | `statePathPrefix()` doesn't match the schema `statePath()`                | Set both to the same prefix, or give the sequence `->statePath()` and read via `mergeSequenceState()`. A banner warns in the UI when they differ. |
+| Same burst handled twice                     | Field `QrScanner` listener + page `QrHardwareScannerListener` both active | Keep the global listener; field handlers stand down automatically (or `->suppressWhenGlobalListener(false)`).                                     |
+| Typed text becomes a "scan"                  | `minBarcodeLength` too low for a keyboard-heavy form                      | Raise `minBarcodeLength` to 4–6 on that component.                                                                                                |
+| Table page is slow with many QRs             | Eager modal data-URIs per row                                             | Keep `->lazyModal()` (default) and the persistent cache enabled; tune `generator.cache_ttl`.                                                      |
 
-## Testing
+## Reporting issues
 
-```bash
-composer test
-```
+1. Run `php artisan qr-code:doctor` and include its output.
+2. Include your PHP / Laravel / Filament versions (`php -v`, `composer show laravel/framework filament/filament`), plus for camera issues the browser and whether the page is served over `https`/`localhost`, and for gun issues the scanner model and its suffix keys.
+3. Describe expected vs actual, with a minimal schema snippet that reproduces it.
 
-Run a single file or test with `vendor/bin/pest tests/Unit/QrCodeServiceTest.php` or `vendor/bin/pest --filter="can generate a PNG QR code"`.
+Security vulnerabilities are handled privately — see [Security Vulnerabilities](#security-vulnerabilities), not public issues.
 
-## Static Analysis
+## Contributing
 
-```bash
-composer analyse
-```
+PRs welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the test suite, static analysis, code style, and frontend build workflow.
 
 ---
 
