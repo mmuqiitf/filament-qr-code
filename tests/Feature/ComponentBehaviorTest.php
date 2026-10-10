@@ -107,3 +107,19 @@ it('registers package assets exactly once across provider and plugin', function 
 it('explains the secure-context requirement for cameras', function () {
     expect(__('filament-qr-code::ui.camera_needs_secure_context'))->toContain('https');
 });
+
+it('re-registers assets on every application boot', function () {
+    FilamentQrCodeServiceProvider::registerAssetsOnce();
+
+    $countScripts = fn (): int => count(FilamentAsset::getScripts(['mmuqiitf/filament-qr-code']));
+    $before = $countScripts();
+
+    // Simulate a fresh app boot (feature suites reboot providers per test,
+    // Octane per worker): the process-static once-guard must not stick
+    // across boots, or later boots serve pages without the package bundle.
+    app()->register(FilamentQrCodeServiceProvider::class, true);
+
+    FilamentQrCodeServiceProvider::registerAssetsOnce();
+
+    expect($countScripts())->toBeGreaterThan($before);
+});

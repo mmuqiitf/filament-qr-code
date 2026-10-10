@@ -62,6 +62,12 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
 
     public function packageRegistered(): void
     {
+        // The once-guard is process-static, but providers reboot for every
+        // app instance (feature suites, Octane): reset it here so each boot
+        // registers assets onto its own fresh AssetManager instead of
+        // silently serving later boots without the package bundle.
+        static::$assetsRegistered = false;
+
         $this->app->bind(QrCodeService::class, function () {
             return new QrCodeService;
         });
