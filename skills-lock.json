@@ -18,12 +18,6 @@
       "sourceType": "github",
       "skillPath": "resources/boost/skills/spatie-security/SKILL.md",
       "computedHash": "d9b081cdb568fef6027ee740ea8718d0af10cc001cc08ef7abe75a73906c713b"
-    },
-    "spatie-version-control": {
-      "source": "spatie/guidelines-skills",
-      "sourceType": "github",
-      "skillPath": "resources/boost/skills/spatie-version-control/SKILL.md",
-      "computedHash": "47219215138dbe0c883fd7f8b7751bf9f533b56666a9cc6a568e9951bd01c7d2"
     }
   }
 }
