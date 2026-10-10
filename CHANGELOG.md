@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-10
+
+### Fixed
+- README banner is wrapped in an `<img class="filament-hidden">` tag so the
+  filamentphp.com plugin page no longer duplicates the uploaded cover image,
+  while GitHub still renders it.
+
+### Security
+- Bumped npm dev dependencies flagged by Dependabot: `vite` 6.4.4,
+  `esbuild` 0.25.12, and `source-map-js` 1.2.2. Rebuilt `resources/dist`
+  assets.
+
 ## [0.1.0] - 2026-10-10
 
 First tagged release for Filament v5. Previous `1.0.0` heading was never
@@ -54,5 +66,6 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mmuqiitf/filament-qr-code/releases/tag/v0.1.0
