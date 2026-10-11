@@ -7,7 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
-use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
+use Mmuqiitf\FilamentQrCode\Support\QrRenderSpec;
 
 class QrImageController
 {
@@ -21,21 +21,20 @@ class QrImageController
             'foreground' => ['sometimes', 'string', 'max:7'],
             'background' => ['sometimes', 'string', 'max:7'],
             'ec' => ['sometimes', 'nullable', 'string', 'in:L,M,Q,H'],
+            'logo' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'logoSize' => ['sometimes', 'integer', 'min:10', 'max:200'],
+            'caption' => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
 
-        $format = QrFormat::tryFrom(strtolower($validated['format'] ?? 'svg')) ?? QrFormat::Svg;
+        $spec = QrRenderSpec::fromSignedParams($validated);
 
-        $service = QrCodeService::make()
-            ->size((int) ($validated['size'] ?? 300))
-            ->margin((int) ($validated['margin'] ?? 2))
-            ->color((string) ($validated['foreground'] ?? '#000000'))
-            ->backgroundColor((string) ($validated['background'] ?? '#ffffff'))
-            ->format($format);
+        // A logo or caption forces PNG rasterization inside the service,
+        // matching the inline data-URI renders exactly.
+        $format = ($spec->logoPath !== null && $spec->logoPath !== '') || ($spec->caption !== null && $spec->caption !== '')
+            ? QrFormat::Png
+            : (QrFormat::tryFrom($spec->formatValue() ?? 'svg') ?? QrFormat::Svg);
 
-        if (! empty($validated['ec'])) {
-            $service->errorCorrection((string) $validated['ec']);
-        }
-
+        $service = $spec->toService();
         $service->generate((string) $validated['data']);
 
         return new Response(

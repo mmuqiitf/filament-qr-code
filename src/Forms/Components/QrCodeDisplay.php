@@ -8,6 +8,7 @@ use Closure;
 use Filament\Forms\Components\Field;
 use Mmuqiitf\FilamentQrCode\Concerns\HasQrRendering;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
+use Mmuqiitf\FilamentQrCode\Support\QrRenderSpec;
 
 class QrCodeDisplay extends Field
 {
@@ -125,17 +126,11 @@ class QrCodeDisplay extends Field
         return is_scalar($state) ? (string) $state : null;
     }
 
-    public function getQrDataUri(): string
+    public function getRenderSpec(): QrRenderSpec
     {
-        $data = $this->getQrData();
-        if ($data === null || $data === '') {
-            return '';
-        }
-
         $format = $this->evaluate($this->format);
 
-        return $this->renderQrDataUri(
-            data: $data,
+        return new QrRenderSpec(
             size: (int) $this->evaluate($this->size),
             margin: (int) $this->evaluate($this->margin),
             foreground: (string) $this->evaluate($this->foregroundColor),
@@ -146,6 +141,16 @@ class QrCodeDisplay extends Field
             logoSize: (int) $this->evaluate($this->logoSize),
             caption: $this->captionText,
         );
+    }
+
+    public function getQrDataUri(): string
+    {
+        $data = $this->getQrData();
+        if ($data === null || $data === '') {
+            return '';
+        }
+
+        return $this->getRenderSpec()->toDataUri($data);
     }
 
     /**

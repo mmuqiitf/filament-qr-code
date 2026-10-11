@@ -6,6 +6,7 @@ namespace Mmuqiitf\FilamentQrCode\Concerns;
 
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
+use Mmuqiitf\FilamentQrCode\Support\QrRenderSpec;
 
 trait HasQrRendering
 {
@@ -20,29 +21,17 @@ trait HasQrRendering
         int $logoSize = 50,
         ?string $caption = null,
     ): QrCodeService {
-        $service = QrCodeService::make()
-            ->size($size)
-            ->margin($margin)
-            ->color($foreground)
-            ->backgroundColor($background);
-
-        if ($format instanceof QrFormat || is_string($format)) {
-            $service->format($format);
-        }
-
-        if ($errorCorrection !== null && $errorCorrection !== '') {
-            $service->errorCorrection($errorCorrection);
-        }
-
-        if ($logoPath !== null && $logoPath !== '') {
-            $service->logo($logoPath, $logoSize);
-        }
-
-        if ($caption !== null && $caption !== '') {
-            $service->withText($caption);
-        }
-
-        return $service;
+        return (new QrRenderSpec(
+            size: $size,
+            margin: $margin,
+            foreground: $foreground,
+            background: $background,
+            format: $format,
+            errorCorrection: $errorCorrection,
+            logoPath: $logoPath,
+            logoSize: $logoSize,
+            caption: $caption,
+        ))->toService();
     }
 
     protected function renderQrDataUri(
