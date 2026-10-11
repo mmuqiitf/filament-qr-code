@@ -11,6 +11,7 @@ use Filament\Forms\Components\Field;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 
@@ -21,6 +22,7 @@ class QrScanner extends Field
     use HasFeedback;
     use HasHardwareScanner;
     use HasPlaceholder;
+    use HasScanPayload;
     use HasSequentialScan;
 
     protected string $view = 'filament-qr-code::components.qr-scanner';

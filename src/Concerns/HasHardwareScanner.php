@@ -8,20 +8,20 @@ use Closure;
 
 trait HasHardwareScanner
 {
-    protected bool|Closure $isHardwareScannerEnabled = true;
+    protected bool|Closure|null $isHardwareScannerEnabled = null;
 
-    protected int|Closure $burstThresholdMs = 50;
+    protected int|Closure|null $burstThresholdMs = null;
 
-    protected bool|Closure $preventFormSubmit = true;
+    protected bool|Closure|null $preventFormSubmit = null;
 
     /**
-     * @var array<int, string>|Closure
+     * @var array<int, string>|Closure|null
      */
-    protected array|Closure $terminators = ['Enter', 'Tab'];
+    protected array|Closure|null $terminators = null;
 
-    protected int|Closure $minBarcodeLength = 2;
+    protected int|Closure|null $minBarcodeLength = null;
 
-    protected int|Closure $scanTimeoutMs = 150;
+    protected int|Closure|null $scanTimeoutMs = null;
 
     protected bool|Closure $suppressWhenGlobalListenerActive = true;
 
@@ -50,16 +50,34 @@ trait HasHardwareScanner
 
     public function isHardwareScannerEnabled(): bool
     {
+        if ($this->isHardwareScannerEnabled === null) {
+            $configured = function_exists('config') ? config('qr-code.hardware_scanner.enabled', true) : true;
+
+            return is_bool($configured) ? $configured : (bool) $configured;
+        }
+
         return (bool) $this->evaluate($this->isHardwareScannerEnabled);
     }
 
     public function getBurstThresholdMs(): int
     {
-        return (int) $this->evaluate($this->burstThresholdMs);
+        if ($this->burstThresholdMs === null) {
+            $configured = function_exists('config') ? config('qr-code.hardware_scanner.burst_threshold_ms', 50) : 50;
+
+            return is_numeric($configured) ? max(1, (int) $configured) : 50;
+        }
+
+        return max(1, (int) $this->evaluate($this->burstThresholdMs));
     }
 
     public function shouldPreventFormSubmit(): bool
     {
+        if ($this->preventFormSubmit === null) {
+            $configured = function_exists('config') ? config('qr-code.hardware_scanner.prevent_form_submit', true) : true;
+
+            return is_bool($configured) ? $configured : (bool) $configured;
+        }
+
         return (bool) $this->evaluate($this->preventFormSubmit);
     }
 
@@ -68,7 +86,9 @@ trait HasHardwareScanner
      */
     public function getTerminators(): array
     {
-        $terminators = $this->evaluate($this->terminators);
+        $terminators = $this->terminators === null
+            ? (function_exists('config') ? config('qr-code.hardware_scanner.default_terminators', ['Enter', 'Tab']) : ['Enter', 'Tab'])
+            : $this->evaluate($this->terminators);
 
         if (! is_array($terminators)) {
             return ['Enter', 'Tab'];
@@ -79,6 +99,12 @@ trait HasHardwareScanner
 
     public function getMinBarcodeLength(): int
     {
+        if ($this->minBarcodeLength === null) {
+            $configured = function_exists('config') ? config('qr-code.hardware_scanner.min_barcode_length', 2) : 2;
+
+            return max(1, is_numeric($configured) ? (int) $configured : 2);
+        }
+
         return max(1, (int) $this->evaluate($this->minBarcodeLength));
     }
 
@@ -91,6 +117,12 @@ trait HasHardwareScanner
 
     public function getScanTimeoutMs(): int
     {
+        if ($this->scanTimeoutMs === null) {
+            $configured = function_exists('config') ? config('qr-code.hardware_scanner.scan_timeout_ms', 150) : 150;
+
+            return max(0, is_numeric($configured) ? (int) $configured : 150);
+        }
+
         return max(0, (int) $this->evaluate($this->scanTimeoutMs));
     }
 

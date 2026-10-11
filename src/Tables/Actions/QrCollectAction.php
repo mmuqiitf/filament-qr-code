@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 
 class QrCollectAction extends Action
@@ -17,6 +18,7 @@ class QrCollectAction extends Action
     use HasCameraScanning;
     use HasFeedback;
     use HasHardwareScanner;
+    use HasScanPayload;
 
     protected bool|Closure $allowDuplicates = false;
 
@@ -42,6 +44,7 @@ class QrCollectAction extends Action
 
             return view($viewName, [
                 'actionName' => $this->getName(),
+                'scanPayload' => $this->getScanPayload(),
                 'allowDuplicates' => $this->isDuplicatesAllowed(),
                 'sound' => $this->hasSound(),
                 'vibrate' => $this->hasVibration(),

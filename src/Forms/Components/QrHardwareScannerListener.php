@@ -8,11 +8,13 @@ use Closure;
 use Filament\Schemas\Components\Component;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 
 class QrHardwareScannerListener extends Component
 {
     use HasFeedback;
     use HasHardwareScanner;
+    use HasScanPayload;
 
     protected string $view = 'filament-qr-code::components.qr-hardware-scanner-listener';
 

@@ -1,22 +1,6 @@
 <div
     x-data="qrCollector({
-        allowDuplicates: @js($allowDuplicates ?? false),
-        sound: @js($sound ?? true),
-        vibrate: @js($vibrate ?? true),
-        beepFrequency: @js($beepFrequency ?? 880),
-        beepDurationMs: @js($beepDuration ?? 80),
-        vibrateDurationMs: @js($vibrateDuration ?? 100),
-        hardwareScanner: @js($hardwareScanner ?? true),
-        burstThresholdMs: @js($burstThresholdMs ?? 50),
-        terminators: @js($terminators ?? ['Enter', 'Tab']),
-        minBarcodeLength: @js($minBarcodeLength ?? 2),
-        scanTimeoutMs: @js($scanTimeoutMs ?? 150),
-        suppressWhenGlobalListenerActive: @js($suppressWhenGlobal ?? true),
-        insecureMessage: @js($insecureMessage ?? __('filament-qr-code::ui.camera_needs_secure_context')),
-        fps: @js($fps ?? 25),
-        qrbox: @js($qrbox ?? 250),
-        preferRearCamera: @js($preferRearCamera ?? true),
-        formats: @js($formats ?? []),
+        ...@js($scanPayload ?? []),
         cameraStorageKey: @js('filament-qr-code:camera:collect-action:' . ($actionName ?? 'default'))
     })"
     class="space-y-4"

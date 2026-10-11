@@ -2,25 +2,9 @@
     $statePath = $getStatePath();
     $id = $getId();
     $isDisabled = $isDisabled();
-    $nextField = $getNextField();
-    $hasSound = $hasSound();
-    $hasVibration = $hasVibration();
-    $isHardwareScanner = $isHardwareScannerEnabled();
-    $burstThresholdMs = $getBurstThresholdMs();
-    $fps = $getEffectiveFps();
-    $qrbox = $getQrbox();
-    $preferRear = $isPreferRearCamera();
     $allowUpload = $isUploadAllowed();
-    $supportedFormats = $getSupportedFormats();
     $placeholder = $getPlaceholder();
-    $beepFrequency = $getBeepFrequencyHz();
-    $beepDuration = $getBeepDurationMs();
-    $vibrateDuration = $getVibrateDurationMs();
-    $terminators = $getTerminators();
-    $minBarcodeLength = $getMinBarcodeLength();
-    $scanTimeoutMs = $getScanTimeoutMs();
-    $suppressWhenGlobal = $isSuppressedWhenGlobalListenerActive();
-    $insecureMessage = __('filament-qr-code::ui.camera_needs_secure_context');
+    $scanPayload = $getScanPayload();
 @endphp
 
 <x-dynamic-component
@@ -30,24 +14,7 @@
     <div
         x-data="qrScanner({
             state: $wire.entangle('{{ $statePath }}'),
-            statePath: @js($statePath),
-            nextField: @js($nextField),
-            sound: @js($hasSound),
-            vibrate: @js($hasVibration),
-            beepFrequency: @js($beepFrequency),
-            beepDurationMs: @js($beepDuration),
-            vibrateDurationMs: @js($vibrateDuration),
-            hardwareScanner: @js($isHardwareScanner),
-            burstThresholdMs: @js($burstThresholdMs),
-            terminators: @js($terminators),
-            minBarcodeLength: @js($minBarcodeLength),
-            scanTimeoutMs: @js($scanTimeoutMs),
-            suppressWhenGlobalListenerActive: @js($suppressWhenGlobal),
-            insecureMessage: @js($insecureMessage),
-            fps: @js($fps),
-            qrbox: @js($qrbox),
-            preferRearCamera: @js($preferRear),
-            formats: @js($supportedFormats)
+            ...@js($scanPayload)
         })"
         data-field-name="{{ $getName() }}"
         class="relative"

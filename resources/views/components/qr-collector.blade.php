@@ -1,23 +1,6 @@
 @php
     $statePath = $getStatePath();
-    $hasSound = $hasSound();
-    $hasVibration = $hasVibration();
-    $isHardwareScanner = $isHardwareScannerEnabled();
-    $fps = $getEffectiveFps();
-    $qrbox = $getQrbox();
-    $allowDuplicates = $isDuplicatesAllowed();
-    $delayMs = $getDelayBetweenScansMs();
-    $preferRear = $isPreferRearCamera();
-    $supportedFormats = $getSupportedFormats();
-    $beepFrequency = $getBeepFrequencyHz();
-    $beepDuration = $getBeepDurationMs();
-    $vibrateDuration = $getVibrateDurationMs();
-    $burstThresholdMs = $getBurstThresholdMs();
-    $terminators = $getTerminators();
-    $minBarcodeLength = $getMinBarcodeLength();
-    $scanTimeoutMs = $getScanTimeoutMs();
-    $suppressWhenGlobal = $isSuppressedWhenGlobalListenerActive();
-    $insecureMessage = __('filament-qr-code::ui.camera_needs_secure_context');
+    $scanPayload = $getScanPayload();
 @endphp
 
 <x-dynamic-component
@@ -27,25 +10,7 @@
     <div
         x-data="qrCollector({
             state: $wire.entangle('{{ $statePath }}'),
-            statePath: @js($statePath),
-            allowDuplicates: @js($allowDuplicates),
-            sound: @js($hasSound),
-            vibrate: @js($hasVibration),
-            beepFrequency: @js($beepFrequency),
-            beepDurationMs: @js($beepDuration),
-            vibrateDurationMs: @js($vibrateDuration),
-            hardwareScanner: @js($isHardwareScanner),
-            burstThresholdMs: @js($burstThresholdMs),
-            terminators: @js($terminators),
-            minBarcodeLength: @js($minBarcodeLength),
-            scanTimeoutMs: @js($scanTimeoutMs),
-            suppressWhenGlobalListenerActive: @js($suppressWhenGlobal),
-            insecureMessage: @js($insecureMessage),
-            fps: @js($fps),
-            qrbox: @js($qrbox),
-            preferRearCamera: @js($preferRear),
-            formats: @js($supportedFormats),
-            delayBetweenScansMs: @js($delayMs)
+            ...@js($scanPayload)
         })"
         class="space-y-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
         wire:ignore

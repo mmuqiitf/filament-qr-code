@@ -9,13 +9,13 @@ use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 
 trait HasCameraScanning
 {
-    protected int|Closure $fps = 25;
+    protected int|Closure|null $fps = null;
 
     protected bool $fpsCustomized = false;
 
-    protected int|Closure $qrbox = 250;
+    protected int|Closure|null $qrbox = null;
 
-    protected bool|Closure $preferRearCamera = true;
+    protected bool|Closure|null $preferRearCamera = null;
 
     /**
      * @var array<int, BarcodeFormat|string>|Closure
@@ -56,7 +56,13 @@ trait HasCameraScanning
 
     public function getFps(): int
     {
-        return (int) $this->evaluate($this->fps);
+        if ($this->fps === null) {
+            $configured = function_exists('config') ? config('qr-code.camera.fps', 25) : 25;
+
+            return is_numeric($configured) ? max(1, (int) $configured) : 25;
+        }
+
+        return max(1, (int) $this->evaluate($this->fps));
     }
 
     /**
@@ -83,11 +89,23 @@ trait HasCameraScanning
 
     public function getQrbox(): int
     {
-        return (int) $this->evaluate($this->qrbox);
+        if ($this->qrbox === null) {
+            $configured = function_exists('config') ? config('qr-code.camera.qrbox', 250) : 250;
+
+            return is_numeric($configured) ? max(1, (int) $configured) : 250;
+        }
+
+        return max(1, (int) $this->evaluate($this->qrbox));
     }
 
     public function isPreferRearCamera(): bool
     {
+        if ($this->preferRearCamera === null) {
+            $configured = function_exists('config') ? config('qr-code.camera.prefer_rear_camera', true) : true;
+
+            return is_bool($configured) ? $configured : (bool) $configured;
+        }
+
         return (bool) $this->evaluate($this->preferRearCamera);
     }
 
