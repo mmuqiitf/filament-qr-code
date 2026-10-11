@@ -24,6 +24,12 @@ vendor/bin/pest tests/Unit/QrCodeServiceTest.php
 vendor/bin/pest --filter="can generate a PNG QR code"
 ```
 
+Frontend (Vitest over `resources/js/**/*.test.js` — interceptor routing, sanitize, and the single-beep ownership):
+
+```bash
+npm test
+```
+
 ## Static analysis
 
 PHPStan level 9 over `src/` + `config/` only:
