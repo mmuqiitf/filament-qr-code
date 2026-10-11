@@ -70,7 +70,7 @@ QrHardwareScannerListener::make([
 
 Add `QrHardwareScannerListener` anywhere in your schema. It intercepts hardware scanner bursts across the entire page, populates the active or first empty field (covering `text`, `search`, `number` inputs and textareas), syncs Livewire state, and auto-advances focus.
 
-The interceptor buffers keystrokes and treats gaps under `burstThresholdMs` (default 50) as a scanner burst. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), beeps, and routes the value. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
+The interceptor buffers keystrokes and treats gaps under `burstThresholdMs` (default 50) as a scanner burst. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), sanitizes, and routes the value — the delivery point (field, sequence, collector, or this listener) then plays the single confirmation beep, so one burst always yields one beep. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
 
 ### 3. Sequential Scanning — One Scanner, Many Fields
 

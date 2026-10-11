@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `HasScanPayload::getScanPayload()`: one browser payload behind every scan
+  surface (`QrScanner`, `QrScanSequence`, `QrCollector`,
+  `QrHardwareScannerListener`, `QrCollectAction`).
+- `Support\QrRenderSpec`: one render spec behind Display, Entry, table
+  column (thumbnail, eager and lazy signed preview), and both download
+  actions — signed previews now reproduce logo and caption exactly.
+- Download options `qrColor()`, `qrBackgroundColor()`,
+  `qrErrorCorrection()`, `qrLogo()`, `qrCaption()` on single and bulk
+  actions (defaults stay black on white).
+- Vitest suite (`npm test`) for interceptor routing, sanitize parity, the
+  single-beep invariant, and the single collector notify channel.
+
+### Fixed
+- `config/qr-code.php` `camera.*`, `hardware_scanner.*`, and
+  `feedback.sound`/`feedback.vibrate` values now reach the browser;
+  explicit component setters still win.
+- A handheld-scanner hit on a field no longer beeps twice: the
+  interceptor routes without feedback and each delivery point beeps once
+  (the Station Listener beeps only when a target field is filled).
+- Batch Collector scans notify through exactly one channel (Livewire hook
+  when defined, else the `qr-collector-item-added` event) instead of both.
+- Bulk ZIP filenames use `.png` when a logo or caption forces
+  rasterization, matching the file bytes.
+
+### Changed
+- Upgraded Vite 6 to 7 (Vitest stays at the registry-newest 5.0.3).
+
 ## [0.1.1] - 2026-10-10
 
 ### Fixed

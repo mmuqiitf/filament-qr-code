@@ -31,7 +31,7 @@ QrColumn::make('sku')
     ->downloadable();
 ```
 
-Thumbnails and modal previews share a capped in-process render cache plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filament-qr-code.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs.
+Thumbnails and modal previews share a capped in-process render cache plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filament-qr-code.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
 
 #### In Infolists:
 
@@ -57,6 +57,8 @@ $table->actions([
         ->qrMargin(2),
 ]);
 ```
+
+Both download actions share one render spec and default to black on white. Opt into the full surface to match a styled display — `->qrColor()`, `->qrBackgroundColor()`, `->qrErrorCorrection()`, `->qrLogo($path)`, `->qrCaption()` — and bulk filenames follow forced-PNG output (a logo or caption rasterizes) in their extension.
 
 #### As a Bulk ZIP Export:
 
