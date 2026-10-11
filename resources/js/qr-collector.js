@@ -192,16 +192,17 @@ export default function qrCollectorComponent({
                 vibrateDurationMs,
             });
 
-            // Notify Livewire if action handler or state binding exists
-            if (this.$wire) {
-                if (typeof this.$wire.handleCollectorScan === 'function') {
-                    this.$wire.handleCollectorScan(trimmed);
-                }
+            // Single server-notify channel: prefer the Livewire hook when the
+            // host defines it, otherwise fall back to the window event.
+            // Never both — emitting both double-handles every scan on hosts
+            // that wired both channels.
+            if (this.$wire && typeof this.$wire.handleCollectorScan === 'function') {
+                this.$wire.handleCollectorScan(trimmed);
+            } else {
+                window.dispatchEvent(new CustomEvent('qr-collector-item-added', {
+                    detail: { code: trimmed },
+                }));
             }
-
-            window.dispatchEvent(new CustomEvent('qr-collector-item-added', {
-                detail: { code: trimmed },
-            }));
 
             this.syncState();
 
