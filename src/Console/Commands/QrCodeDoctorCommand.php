@@ -98,6 +98,11 @@ class QrCodeDoctorCommand extends Command
                     continue;
                 }
 
+                // Vitest co-locates with sources but never ships in the bundle.
+                if (str_ends_with($file->getFilename(), '.test.js')) {
+                    continue;
+                }
+
                 $newestSource = max($newestSource, $file->getMTime());
             }
         }

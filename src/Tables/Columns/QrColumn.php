@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\URL;
 use Mmuqiitf\FilamentQrCode\Concerns\HasQrRendering;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
+use Mmuqiitf\FilamentQrCode\Support\QrRenderSpec;
 
 class QrColumn extends Column
 {
@@ -179,6 +180,9 @@ class QrColumn extends Column
      * Signed on-demand URL for the large preview. Tables render only the
      * small thumbnail inline; the modal image downloads when opened, so a
      * 25-row page encodes 25 small QRs instead of 50 mixed-size ones.
+     *
+     * The signed params carry the full render spec (logo included), so the
+     * lazy preview matches the eager render exactly.
      */
     public function getModalUrl(): string
     {
@@ -187,27 +191,11 @@ class QrColumn extends Column
             return '';
         }
 
-        $format = $this->evaluate($this->format);
-        $formatValue = $format instanceof QrFormat
-            ? $format->value
-            : (is_string($format) ? strtolower($format) : 'svg');
-
-        $errorCorrection = $this->errorCorrectionLevel === null
-            ? null
-            : (string) $this->evaluate($this->errorCorrectionLevel);
-
-        $params = array_filter([
-            'data' => $data,
-            'size' => (int) $this->evaluate($this->modalSize),
-            'margin' => (int) $this->evaluate($this->margin),
-            'format' => $formatValue,
-            'foreground' => (string) $this->evaluate($this->foregroundColor),
-            'background' => (string) $this->evaluate($this->backgroundColor),
-            'ec' => $errorCorrection,
-        ], fn ($v) => $v !== null && $v !== '');
-
         try {
-            return URL::signedRoute('filament-qr-code.image', $params);
+            return URL::signedRoute(
+                'filament-qr-code.image',
+                $this->getRenderSpec((int) $this->evaluate($this->modalSize))->toSignedParams($data),
+            );
         } catch (\Throwable) {
             return $this->getModalDataUri();
         }
@@ -218,14 +206,13 @@ class QrColumn extends Column
         QrCodeService::flushRenderCache();
     }
 
-    protected function buildDataUri(string $data, int $size, int $margin): string
+    public function getRenderSpec(int $size): QrRenderSpec
     {
         $format = $this->evaluate($this->format);
 
-        return $this->renderQrDataUri(
-            data: $data,
+        return new QrRenderSpec(
             size: $size,
-            margin: $margin,
+            margin: (int) $this->evaluate($this->margin),
             foreground: (string) $this->evaluate($this->foregroundColor),
             background: (string) $this->evaluate($this->backgroundColor),
             format: $format instanceof QrFormat || is_string($format) ? $format : null,
@@ -233,6 +220,11 @@ class QrColumn extends Column
             logoPath: $this->logoPath === null ? null : (string) $this->evaluate($this->logoPath),
             logoSize: (int) $this->evaluate($this->logoSize),
         );
+    }
+
+    protected function buildDataUri(string $data, int $size, int $margin): string
+    {
+        return $this->getRenderSpec($size)->toDataUri($data);
     }
 
     public function isPreviewable(): bool

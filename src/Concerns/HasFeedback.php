@@ -8,9 +8,9 @@ use Closure;
 
 trait HasFeedback
 {
-    protected bool|Closure $hasSound = true;
+    protected bool|Closure|null $hasSound = null;
 
-    protected bool|Closure $hasVibration = true;
+    protected bool|Closure|null $hasVibration = null;
 
     protected int|Closure|null $beepFrequencyHz = null;
 
@@ -55,11 +55,23 @@ trait HasFeedback
 
     public function hasSound(): bool
     {
+        if ($this->hasSound === null) {
+            $configured = function_exists('config') ? config('qr-code.feedback.sound', true) : true;
+
+            return is_bool($configured) ? $configured : (bool) $configured;
+        }
+
         return (bool) $this->evaluate($this->hasSound);
     }
 
     public function hasVibration(): bool
     {
+        if ($this->hasVibration === null) {
+            $configured = function_exists('config') ? config('qr-code.feedback.vibrate', true) : true;
+
+            return is_bool($configured) ? $configured : (bool) $configured;
+        }
+
         return (bool) $this->evaluate($this->hasVibration);
     }
 

@@ -31,7 +31,7 @@ $table->headerActions([
 ]);
 ```
 
-Each scan dispatches a `qr-collector-item-added` window event (with `{ code }`). Forward it into server-side handling — e.g. `x-on:qr-collector-item-added.window` calling your Livewire method, which can then invoke `$action->handleScan($code)` to run the `onScan` callback. On the host, `$wire.handleCollectorScan($code)` is also honored when defined — but pick one channel, not both.
+Each scan notifies the server through exactly one channel: `$wire.handleCollectorScan($code)` when the host Livewire component defines it, otherwise a `qr-collector-item-added` window event (with `{ code }`) that the host forwards — e.g. `x-on:qr-collector-item-added.window` calling your Livewire method, which can then invoke `$action->handleScan($code)` to run the `onScan` callback. The component picks deterministically, so a scan is never handled twice.
 
 Every `handleScan()` call also fires a `QrCodeScanned` event — see [Audit scans](reference.md#audit-scans).
 

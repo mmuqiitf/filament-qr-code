@@ -1,49 +1,11 @@
 @php
-    $fields = $getScanFields();
-    $hasSound = $hasSound();
-    $hasVibration = $hasVibration();
-    $isHardwareScanner = $isHardwareScannerEnabled();
-    $fps = $getEffectiveFps();
-    $qrbox = $getQrbox();
-    $preferRear = $isPreferRearCamera();
-    $supportedFormats = $getSupportedFormats();
-    $statePrefix = $getStatePathPrefix();
-    $componentStatePath = $getComponentStatePath();
-    $beepFrequency = $getBeepFrequencyHz();
-    $beepDuration = $getBeepDurationMs();
-    $vibrateDuration = $getVibrateDurationMs();
-    $burstThresholdMs = $getBurstThresholdMs();
-    $terminators = $getTerminators();
-    $minBarcodeLength = $getMinBarcodeLength();
-    $scanTimeoutMs = $getScanTimeoutMs();
-    $suppressWhenGlobal = $isSuppressedWhenGlobalListenerActive();
-    $isEditable = $isEditable();
     $prefixWarning = $prefixMismatchWarning();
-    $insecureMessage = __('filament-qr-code::ui.camera_needs_secure_context');
+    $scanPayload = $getScanPayload();
 @endphp
 
 <div
     x-data="qrScanSequence({
-        fields: @js($fields),
-        sound: @js($hasSound),
-        vibrate: @js($hasVibration),
-        beepFrequency: @js($beepFrequency),
-        beepDurationMs: @js($beepDuration),
-        vibrateDurationMs: @js($vibrateDuration),
-        hardwareScanner: @js($isHardwareScanner),
-        burstThresholdMs: @js($burstThresholdMs),
-        terminators: @js($terminators),
-        minBarcodeLength: @js($minBarcodeLength),
-        scanTimeoutMs: @js($scanTimeoutMs),
-        suppressWhenGlobalListenerActive: @js($suppressWhenGlobal),
-        fps: @js($fps),
-        qrbox: @js($qrbox),
-        preferRearCamera: @js($preferRear),
-        formats: @js($supportedFormats),
-        statePrefix: @js($statePrefix),
-        componentStatePath: @js($componentStatePath),
-        insecureMessage: @js($insecureMessage),
-        editable: @js($isEditable)
+        ...@js($scanPayload)
     })"
     @qr-sequence-editable.window="editable = $event.detail.enabled"
     class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm"

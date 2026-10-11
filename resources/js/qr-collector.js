@@ -1,5 +1,5 @@
 import { qrFeedback } from './audio-feedback.js';
-import { createHardwareScannerHandler } from './qr-hardware-scanner.js';
+import { createHardwareScannerHandler, sanitizeScannedValue } from './qr-hardware-scanner.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -70,11 +70,6 @@ export default function qrCollectorComponent({
                     terminators,
                     scanTimeoutMs,
                     suppressWhenGlobalListenerActive,
-                    sound,
-                    vibrate,
-                    beepFrequency,
-                    beepDurationMs,
-                    vibrateDurationMs,
                     onScan: (scannedValue) => {
                         this.handleDetectedCode(scannedValue);
                     },
@@ -175,7 +170,7 @@ export default function qrCollectorComponent({
         },
 
         handleDetectedCode(code) {
-            const trimmed = (code || '').trim();
+            const trimmed = sanitizeScannedValue(code);
             if (!trimmed || this.isProcessing) return;
 
             if (!allowDuplicates && this.scannedSet.has(trimmed)) {
@@ -197,16 +192,17 @@ export default function qrCollectorComponent({
                 vibrateDurationMs,
             });
 
-            // Notify Livewire if action handler or state binding exists
-            if (this.$wire) {
-                if (typeof this.$wire.handleCollectorScan === 'function') {
-                    this.$wire.handleCollectorScan(trimmed);
-                }
+            // Single server-notify channel: prefer the Livewire hook when the
+            // host defines it, otherwise fall back to the window event.
+            // Never both — emitting both double-handles every scan on hosts
+            // that wired both channels.
+            if (this.$wire && typeof this.$wire.handleCollectorScan === 'function') {
+                this.$wire.handleCollectorScan(trimmed);
+            } else {
+                window.dispatchEvent(new CustomEvent('qr-collector-item-added', {
+                    detail: { code: trimmed },
+                }));
             }
-
-            window.dispatchEvent(new CustomEvent('qr-collector-item-added', {
-                detail: { code: trimmed },
-            }));
 
             this.syncState();
 

@@ -9,12 +9,14 @@ use Filament\Schemas\Components\Component;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 
 class QrScanSequence extends Component
 {
     use HasCameraScanning;
     use HasFeedback;
     use HasHardwareScanner;
+    use HasScanPayload;
 
     protected string $view = 'filament-qr-code::components.qr-scan-sequence';
 

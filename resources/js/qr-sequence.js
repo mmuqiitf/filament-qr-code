@@ -1,5 +1,5 @@
 import { qrFeedback } from './audio-feedback.js';
-import { createHardwareScannerHandler } from './qr-hardware-scanner.js';
+import { createHardwareScannerHandler, sanitizeScannedValue } from './qr-hardware-scanner.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -66,11 +66,6 @@ export default function qrScanSequenceComponent({
                     terminators,
                     scanTimeoutMs,
                     suppressWhenGlobalListenerActive,
-                    sound,
-                    vibrate,
-                    beepFrequency,
-                    beepDurationMs,
-                    vibrateDurationMs,
                     onScan: (scannedValue) => {
                         this.processScan(scannedValue);
                     },
@@ -182,10 +177,12 @@ export default function qrScanSequenceComponent({
             const currentField = this.getCurrentField();
             if (!currentField) return;
 
-            const trimmed = decodedText.trim();
+            const trimmed = sanitizeScannedValue(decodedText);
             if (!trimmed) return;
 
             this.results[currentField.key] = trimmed;
+            // The single beep for this delivery (camera or hardware): the
+            // interceptor that routed hardware bursts never beeps.
             emitScanFeedback(qrFeedback, {
                 sound,
                 vibrate,

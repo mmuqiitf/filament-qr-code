@@ -37,6 +37,8 @@ QrScanner::make('sku')
 | `prevent_form_submit` | `true`             | swallow the terminator key during bursts           |
 | `default_terminators` | `['Enter', 'Tab']` | gun suffix keys ending a scan                      |
 
+These values are the defaults behind every scan surface (`QrScanner`, `QrScanSequence`, `QrCollector`, `QrHardwareScannerListener`, `QrCollectAction`): each component ships them to the browser as one payload (`getScanPayload()`), and any explicit setter (`->fps()`, `->sound()`, `->hardwareScanner()`, …) wins over config.
+
 ### `feedback`
 
 | Key                   | Default  |
