@@ -1,5 +1,5 @@
 import { qrFeedback } from './audio-feedback.js';
-import { createHardwareScannerHandler } from './qr-hardware-scanner.js';
+import { createHardwareScannerHandler, sanitizeScannedValue } from './qr-hardware-scanner.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -70,11 +70,6 @@ export default function qrCollectorComponent({
                     terminators,
                     scanTimeoutMs,
                     suppressWhenGlobalListenerActive,
-                    sound,
-                    vibrate,
-                    beepFrequency,
-                    beepDurationMs,
-                    vibrateDurationMs,
                     onScan: (scannedValue) => {
                         this.handleDetectedCode(scannedValue);
                     },
@@ -175,7 +170,7 @@ export default function qrCollectorComponent({
         },
 
         handleDetectedCode(code) {
-            const trimmed = (code || '').trim();
+            const trimmed = sanitizeScannedValue(code);
             if (!trimmed || this.isProcessing) return;
 
             if (!allowDuplicates && this.scannedSet.has(trimmed)) {

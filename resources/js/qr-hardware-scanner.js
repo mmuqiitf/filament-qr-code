@@ -1,4 +1,5 @@
 import { qrFeedback } from './audio-feedback.js';
+import { emitScanFeedback } from './qr-camera-core.js';
 
 const GLOBAL_LISTENER_KEY = '__filamentQrCodeGlobalHardwareListeners';
 
@@ -38,6 +39,10 @@ export function isGlobalHardwareListenerActive() {
  * Detects rapid burst keystrokes typical of USB/Bluetooth barcode guns,
  * suppresses default submit action on terminating Enter/Tab, and coordinates field updates.
  *
+ * Seam discipline: this Module only detects, sanitizes, and routes. It never
+ * beeps. Each delivery point (field, sequence, collector, Station Listener)
+ * owns exactly one feedback call, so one gun burst always yields one beep.
+ *
  * Guards: IME compositions and modifier-held keys are never buffered, a
  * burst requires consecutive fast gaps (a single fast pair amid slow typing
  * is not enough), and terminator-less guns flush via scanTimeoutMs.
@@ -51,11 +56,6 @@ export function createHardwareScannerHandler({
     suppressWhenGlobalListenerActive = false,
     isGlobalListener = false,
     onScan = null,
-    sound = true,
-    vibrate = true,
-    beepFrequency = 880,
-    beepDurationMs = 80,
-    vibrateDurationMs = 100,
 } = {}) {
     let buffer = '';
     let lastKeyTime = 0;
@@ -81,14 +81,7 @@ export function createHardwareScannerHandler({
             return false;
         }
 
-        qrFeedback.trigger({
-            sound,
-            vibrate,
-            frequency: beepFrequency,
-            duration: beepDurationMs,
-            vibrateDuration: vibrateDurationMs,
-        });
-
+        // No feedback here: the onScan delivery point owns the single beep.
         if (typeof onScan === 'function') {
             onScan(scannedValue);
         }
@@ -220,11 +213,6 @@ export function qrHardwareScannerListenerComponent({
                 terminators,
                 scanTimeoutMs,
                 isGlobalListener: true,
-                sound,
-                vibrate,
-                beepFrequency,
-                beepDurationMs,
-                vibrateDurationMs,
                 onScan: (scannedValue) => {
                     this.handleGlobalScan(scannedValue);
                 },
@@ -305,6 +293,16 @@ export function qrHardwareScannerListenerComponent({
                 targetInput.value = scannedValue;
                 targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                 targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+                // The single beep for this delivery: the interceptor that
+                // routed the burst never beeps, so one burst yields one beep.
+                emitScanFeedback(qrFeedback, {
+                    sound,
+                    vibrate,
+                    beepFrequency,
+                    beepDurationMs,
+                    vibrateDurationMs,
+                });
 
                 // Keep Livewire / entangled Alpine state in sync when the DOM
                 // event alone is not enough (e.g. x-model bound scanner fields).
