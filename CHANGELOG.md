@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-15
+
+### Upgrading from 0.2
+- Run `php artisan filament:assets` after updating: the camera decoder is
+  now a separate published file (`filament-qr-code-decoder.js`).
+- `QrScanner` no longer sends a Livewire request per keystroke. If you rely
+  on `rejectWhen()` / `normalizeUsing()` for typed (not scanned) input, add
+  `->live(onBlur: true)` to the field.
+
 ### Security
 - Add `SECURITY.md` with private reporting through GitHub Security Advisories.
 - Add Dependabot for Composer, npm, and GitHub Actions (weekly, 7-day
@@ -26,38 +35,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `QrHardwareScannerListener::fallbackToAnyInput()` (default `true`).
 - `qr-scan-unrouted` window event when a page-global burst finds no target.
 - `getComponentScanPayload()` extension point and `Support\ConfigValue`.
+- `QrCodeDisplay::caption()` accepts a Closure.
+- `getDownloadDataUri()` on QrCodeDisplay/QrEntry (download with caption).
+
+### Changed
+- Vite 8: the camera decoder is built as a self-contained sibling
+  (`filament-qr-code-decoder.js`) and registered with Filament as
+  `loadedOnRequest`, so `filament:assets` publishes it next to the main
+  script.
+- QrCodeDisplay/QrEntry show the caption once, as HTML under the preview:
+  `getQrDataUri()` no longer draws it into the image (an SVG preview stays
+  SVG). The download link uses `getDownloadDataUri()`, which still
+  includes the caption.
+- Field lookup is now exact (name, id, `data-field-name`, or a
+  `wire:model` path equal to / ending in `.<name>`); substring fallbacks
+  and Livewire 2 `wire:model.defer` lookups were removed.
+- Keyboard auto-repeat (held-down keys) is always ignored by hardware-scanner
+  detection.
 
 ### Fixed
+- `filament:assets` did not publish the lazy decoder chunk, so camera
+  scanning and image upload could fail with "Failed to load camera decoder"
+  (404) on fresh installs.
 - Scan from image file failed on every device with a camera: html5-qrcode
   refuses a file scan while the camera streams. The camera now pauses for
   the decode and resumes if the image has no code; the same file can be
   picked again, and the failure message is translated (`ui.file_scan_failed`).
 - Long QrCodeDisplay/QrEntry captions were cut off in the rendered image
   (GD and Imagick); the canvas now widens to fit and centres the code.
-
-### Changed
-- Vite 8: the camera decoder is built as a self-contained sibling
-  (`filament-qr-code-decoder.js`) and registered with Filament as
-  `loadedOnRequest`, so `filament:assets` publishes it next to the main
-  script. Vite 8/Rolldown's default lazy chunks import helpers from the
-  entry by its build name, which Filament renames on publish and would 404.
-- QrCodeDisplay/QrEntry show the caption once, as HTML under the preview:
-  `getQrDataUri()` no longer draws it into the image (an SVG preview stays
-  SVG). The download link uses the new `getDownloadDataUri()`, which still
-  includes the caption.
 - `QrScanner` sent a Livewire request on every typed character and wrote
   each scan twice; it now writes once per scan and leaves typing to
   `wire:model`.
 - Held-down keys (auto-repeat) followed by Enter were routed as scans.
 - Field lookup matched substrings (`sku` focused `parent_sku`), failed on
   nested paths (`items.0.sku`), and ignored `wire:model.blur` /
-  `.live.debounce.*`; Livewire 2 `wire:model.defer` lookups removed.
+  `.live.debounce.*` modifiers.
 - `QrCollector::distinctItems()` evaluated its Closure before the form was
   mounted; it is now evaluated at validation time.
-- `QrCodeDisplay::caption()` accepts a Closure.
-- Field lookup is now exact (name, id, `data-field-name`, or a
-  `wire:model` path equal to / ending in `.<name>`); substring fallbacks
-  were removed.
 
 ## [0.2.0] - 2026-10-11
 
@@ -148,6 +162,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mmuqiitf/filament-qr-code/releases/tag/v0.1.0
