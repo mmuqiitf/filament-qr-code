@@ -124,3 +124,34 @@ it('shares renders for identical payloads through the render cache', function ()
 
     QrCodeService::flushRenderCache();
 });
+
+it('widens the caption canvas so long captions are not cut off', function () {
+    $png = QrCodeService::make()
+        ->size(180)
+        ->withText('Official Product SKU Verification QR')
+        ->generate('PRD-1001')
+        ->getRaw();
+
+    $image = imagecreatefromstring($png);
+    $width = imagesx($image);
+    $height = imagesy($image);
+
+    // Clipped text touches the canvas edges; fitted text leaves them blank.
+    $inkOnEdges = 0;
+    for ($y = 180; $y < $height; $y++) {
+        foreach ([0, $width - 1] as $x) {
+            $pixel = imagecolorsforindex($image, imagecolorat($image, $x, $y));
+            $inkOnEdges += $pixel['red'] < 200 ? 1 : 0;
+        }
+    }
+
+    expect($width)->toBeGreaterThan(180)
+        ->and($inkOnEdges)->toBe(0)
+        ->and(imagecolorsforindex($image, imagecolorat($image, 0, 0)))->toMatchArray(['red' => 255, 'green' => 255, 'blue' => 255]);
+});
+
+it('keeps short-caption canvases at the QR width', function () {
+    $png = QrCodeService::make()->size(180)->withText('OK')->generate('PRD-1001')->getRaw();
+
+    expect(imagesx(imagecreatefromstring($png)))->toBe(180);
+});
