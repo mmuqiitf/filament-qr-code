@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Pin every third-party GitHub Action in CI to a full commit SHA
+  (`actions/checkout` v4.4.0, `actions/setup-node` v4.4.0,
+  `shivammathur/setup-php` 2.40.0), so a moved tag cannot change what
+  runs in CI. A test now fails on any unpinned `uses:` reference.
+
 ### Added
 - `hardware_scanner.min_fast_keys` config, `->minFastKeys()` and
   `hardwareScanner(minFastKeys:)`: consecutive fast gaps required before a
