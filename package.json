@@ -3,12 +3,12 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
+        "build": "vite build && vite build --config vite.decoder.config.js",
         "test": "vitest run"
     },
     "devDependencies": {
         "happy-dom": "^20.14.6",
-        "vite": "^7.3.7",
+        "vite": "^8.3.4",
         "vitest": "^5.0.3"
     },
     "dependencies": {
