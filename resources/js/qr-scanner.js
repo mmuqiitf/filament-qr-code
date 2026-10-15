@@ -37,6 +37,7 @@ export default function qrScannerComponent({
     preferRearCamera = true,
     formats = [],
     cameraStorageKey = null,
+    fileScanFailedMessage = 'No barcode or QR code found in selected image.',
     insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
 } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('scanner');
@@ -258,32 +259,59 @@ export default function qrScannerComponent({
             }
         },
 
-        scanFile(event) {
-            const file = event.target.files?.[0];
+        async scanFile(event) {
+            const input = event.target;
+            const file = input.files?.[0];
+
+            // Reset so picking the same file again still fires `change`.
+            input.value = '';
+
             if (!file) return;
 
-            resolveDecoderModule().then((decoder) => {
-                if (!this.html5Qrcode) {
-                    const decoderFormats = decoder.Html5QrcodeSupportedFormats;
-                    ensureScannerInstance(
-                        this,
-                        this.scannerElementId,
-                        formats,
-                        decoder.Html5Qrcode,
-                        decoderFormats
-                    );
+            this.hasError = false;
+            this.errorMessage = '';
+
+            let decoder;
+            try {
+                decoder = await resolveDecoderModule();
+            } catch {
+                this.hasError = true;
+                this.errorMessage = 'Failed to load camera decoder.';
+                return;
+            }
+
+            if (!this.html5Qrcode) {
+                ensureScannerInstance(
+                    this,
+                    this.scannerElementId,
+                    formats,
+                    decoder.Html5Qrcode,
+                    decoder.Html5QrcodeSupportedFormats
+                );
+            }
+
+            // html5-qrcode refuses a file scan on an instance that is
+            // streaming the camera, so pause the feed for the decode.
+            const resumeCamera = this.isScanning;
+            await this.stopScan();
+
+            let decodedText;
+            try {
+                decodedText = await this.html5Qrcode.scanFile(file, false);
+            } catch (error) {
+                console.debug('QR file scan failed:', error);
+                this.hasError = true;
+                this.errorMessage = fileScanFailedMessage;
+
+                if (resumeCamera && this.isModalOpen) {
+                    await this.startScan();
                 }
 
-                return this.html5Qrcode.scanFile(file, true);
-            })
-                .then((decodedText) => {
-                    this.handleScanResult(decodedText);
-                    this.closeScannerModal();
-                })
-                .catch(() => {
-                    this.hasError = true;
-                    this.errorMessage = 'No barcode or QR code found in selected image.';
-                });
+                return;
+            }
+
+            this.handleScanResult(decodedText);
+            this.closeScannerModal();
         },
     };
 }

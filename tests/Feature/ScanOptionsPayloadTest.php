@@ -131,3 +131,11 @@ it('merges component-contributed extras into the payload', function () {
         ->toHaveKey('stationId', 'line-3')
         ->toHaveKey('burstThresholdMs', 50);
 });
+
+it('sends a translated message for images without a readable code', function () {
+    app()->setLocale('id');
+
+    $payload = QrScanner::make('sku')->getScanPayload();
+
+    expect($payload['fileScanFailedMessage'])->toBe('Tidak ada barcode atau kode QR pada gambar yang dipilih.');
+});
