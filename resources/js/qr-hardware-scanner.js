@@ -50,6 +50,7 @@ export function isGlobalHardwareListenerActive() {
 export function createHardwareScannerHandler({
     burstThresholdMs = 50,
     minBarcodeLength = 2,
+    minFastKeys = 1,
     preventFormSubmit = true,
     terminators = ['Enter', 'Tab'],
     scanTimeoutMs = 150,
@@ -98,7 +99,7 @@ export function createHardwareScannerHandler({
         flushTimer = setTimeout(() => {
             // Terminator-less gun: a completed burst with no suffix key.
             // Only flush when the burst actually looked like a scan.
-            if (isBursting && fastStreak >= 2 && buffer.length >= minBarcodeLength) {
+            if (isBursting && fastStreak >= Math.max(2, minFastKeys) && buffer.length >= minBarcodeLength) {
                 emit(buffer);
             } else if (!isBursting) {
                 buffer = '';
@@ -120,6 +121,11 @@ export function createHardwareScannerHandler({
                 return false;
             }
 
+            // Auto-repeat comes from a held-down key; scanners never emit it.
+            if (event.repeat) {
+                return false;
+            }
+
             const now = Date.now();
             const timeDiff = now - lastKeyTime;
             lastKeyTime = now;
@@ -127,7 +133,7 @@ export function createHardwareScannerHandler({
             const isTerminator = terminators.includes(event.key);
 
             if (isTerminator) {
-                if (isBursting && fastStreak >= 1 && buffer.length >= minBarcodeLength) {
+                if (isBursting && fastStreak >= minFastKeys && buffer.length >= minBarcodeLength) {
                     if (preventFormSubmit) {
                         event.preventDefault();
                         event.stopPropagation();
@@ -192,6 +198,7 @@ export function qrHardwareScannerListenerComponent({
     vibrateDurationMs = 100,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
+    minFastKeys = 1,
     scanTimeoutMs = 150,
     autoFocusNext = true,
 } = {}) {
@@ -209,6 +216,7 @@ export function qrHardwareScannerListenerComponent({
             this.hardwareScannerHandler = createHardwareScannerHandler({
                 burstThresholdMs,
                 minBarcodeLength,
+                minFastKeys,
                 preventFormSubmit: preventSubmit,
                 terminators,
                 scanTimeoutMs,

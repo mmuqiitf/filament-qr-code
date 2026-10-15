@@ -21,6 +21,8 @@ trait HasHardwareScanner
 
     protected int|Closure|null $minBarcodeLength = null;
 
+    protected int|Closure|null $minFastKeys = null;
+
     protected int|Closure|null $scanTimeoutMs = null;
 
     protected bool|Closure $suppressWhenGlobalListenerActive = true;
@@ -36,6 +38,7 @@ trait HasHardwareScanner
         int|Closure $minBarcodeLength = 2,
         int|Closure $scanTimeoutMs = 150,
         bool|Closure $suppressWhenGlobalListenerActive = true,
+        int|Closure|null $minFastKeys = null,
     ): static {
         $this->isHardwareScannerEnabled = $enabled;
         $this->burstThresholdMs = $burstThresholdMs;
@@ -44,8 +47,27 @@ trait HasHardwareScanner
         $this->minBarcodeLength = $minBarcodeLength;
         $this->scanTimeoutMs = $scanTimeoutMs;
         $this->suppressWhenGlobalListenerActive = $suppressWhenGlobalListenerActive;
+        $this->minFastKeys = $minFastKeys;
 
         return $this;
+    }
+
+    public function minFastKeys(int|Closure $count): static
+    {
+        $this->minFastKeys = $count;
+
+        return $this;
+    }
+
+    public function getMinFastKeys(): int
+    {
+        if ($this->minFastKeys === null) {
+            $configured = function_exists('config') ? config('qr-code.hardware_scanner.min_fast_keys', 1) : 1;
+
+            return max(1, is_numeric($configured) ? (int) $configured : 1);
+        }
+
+        return max(1, (int) $this->evaluate($this->minFastKeys));
     }
 
     public function isHardwareScannerEnabled(): bool

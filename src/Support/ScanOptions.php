@@ -71,6 +71,10 @@ final class ScanOptions
             $payload['minBarcodeLength'] = $component->getMinBarcodeLength();
         }
 
+        if (method_exists($component, 'getMinFastKeys')) {
+            $payload['minFastKeys'] = $component->getMinFastKeys();
+        }
+
         if (method_exists($component, 'getScanTimeoutMs')) {
             $payload['scanTimeoutMs'] = $component->getScanTimeoutMs();
         }

@@ -13,12 +13,16 @@ return [
     | - burst_threshold_ms: Max milliseconds between keystrokes to identify a burst.
     | - default_terminators: Suffix keys that finish a scan (Enter, Tab).
     | - prevent_form_submit: Whether to swallow Enter events during scanner bursts.
+    | - min_fast_keys: Consecutive fast keystroke gaps required before a
+    |   terminator counts as a scan. 1 keeps v0.2 behaviour; 3 is stricter
+    |   and rejects fast human typing (planned default for 1.0).
     |
     */
     'hardware_scanner' => [
         'enabled' => true,
         'burst_threshold_ms' => 50,
         'min_barcode_length' => 2,
+        'min_fast_keys' => 1,
         'scan_timeout_ms' => 150,
         'prevent_form_submit' => true,
         'default_terminators' => ['Enter', 'Tab'],
