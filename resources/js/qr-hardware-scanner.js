@@ -1,5 +1,6 @@
 import { qrFeedback } from './audio-feedback.js';
 import { emitScanFeedback } from './qr-camera-core.js';
+import { readWireModelPath, findFieldInput } from './field-locator.js';
 
 const GLOBAL_LISTENER_KEY = '__filamentQrCodeGlobalHardwareListeners';
 
@@ -243,26 +244,7 @@ export function qrHardwareScannerListenerComponent({
         },
 
         findFieldElement(fieldName) {
-            const selectors = [
-                `[data-field-name="${fieldName}"] input`,
-                `[data-field-name="${fieldName}"] textarea`,
-                `input[name="${fieldName}"]`,
-                `textarea[name="${fieldName}"]`,
-                `#${fieldName}`,
-            ];
-
-            for (const selector of selectors) {
-                try {
-                    const el = document.querySelector(selector);
-                    if (el) {
-                        return el;
-                    }
-                } catch {
-                    // Ignore invalid selector characters in dynamic field names.
-                }
-            }
-
-            return null;
+            return findFieldInput(fieldName);
         },
 
         handleGlobalScan(scannedValue) {
@@ -324,9 +306,7 @@ export function qrHardwareScannerListenerComponent({
                 // Keep Livewire / entangled Alpine state in sync when the DOM
                 // event alone is not enough (e.g. x-model bound scanner fields).
                 try {
-                    const livewirePath = targetInput.getAttribute('wire:model')
-                        || targetInput.getAttribute('wire:model.defer')
-                        || targetInput.getAttribute('wire:model.live');
+                    const livewirePath = readWireModelPath(targetInput);
                     if (livewirePath && this.$wire) {
                         this.$wire.set(livewirePath, scannedValue);
                     }
