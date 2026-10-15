@@ -201,6 +201,7 @@ export function qrHardwareScannerListenerComponent({
     minFastKeys = 1,
     scanTimeoutMs = 150,
     autoFocusNext = true,
+    fallbackToAnyInput = true,
 } = {}) {
     // Filament text inputs plus numeric / textarea fallbacks for cashier forms.
     const SCANNABLE_SELECTOR = 'input[type="text"], input[type="search"], input[type="number"], textarea';
@@ -285,7 +286,7 @@ export function qrHardwareScannerListenerComponent({
                 }
             }
 
-            if (!targetInput) {
+            if (!targetInput && fallbackToAnyInput) {
                 const inputs = document.querySelectorAll(`form ${SCANNABLE_SELECTOR}:not([disabled]):not([readonly])`);
                 for (const input of inputs) {
                     if (!input.value) {
@@ -294,6 +295,14 @@ export function qrHardwareScannerListenerComponent({
                         break;
                     }
                 }
+            }
+
+            if (!targetInput) {
+                window.dispatchEvent(new CustomEvent('qr-scan-unrouted', {
+                    detail: { value: scannedValue },
+                }));
+
+                return;
             }
 
             if (targetInput) {

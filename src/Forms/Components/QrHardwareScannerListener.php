@@ -25,6 +25,8 @@ class QrHardwareScannerListener extends Component
 
     protected bool|Closure $autoFocusNext = true;
 
+    protected bool|Closure|null $fallbackToAnyInput = null;
+
     /**
      * @param  array<int, string>|Closure  $fields
      */
@@ -71,6 +73,22 @@ class QrHardwareScannerListener extends Component
         }
 
         return $result;
+    }
+
+    public function fallbackToAnyInput(bool|Closure $condition = true): static
+    {
+        $this->fallbackToAnyInput = $condition;
+
+        return $this;
+    }
+
+    public function shouldFallbackToAnyInput(): bool
+    {
+        if ($this->fallbackToAnyInput === null) {
+            return (bool) config('qr-code.hardware_scanner.fallback_to_any_input', true);
+        }
+
+        return (bool) $this->evaluate($this->fallbackToAnyInput);
     }
 
     public function isAutoFocusNext(): bool

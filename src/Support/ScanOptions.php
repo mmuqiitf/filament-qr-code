@@ -153,6 +153,10 @@ final class ScanOptions
             $payload['delayBetweenScansMs'] = $component->getDelayBetweenScansMs();
         }
 
+        if (method_exists($component, 'shouldFallbackToAnyInput')) {
+            $payload['fallbackToAnyInput'] = $component->shouldFallbackToAnyInput();
+        }
+
         if (method_exists($component, 'isAutoFocusNext')) {
             $payload['autoFocusNext'] = $component->isAutoFocusNext();
         }

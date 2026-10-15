@@ -108,3 +108,12 @@ it('exposes min fast keys from config with a v0.2-compatible default', function 
     expect(QrScanner::make('sku')->getScanPayload()['minFastKeys'])->toBe(3)
         ->and(QrScanner::make('sku')->hardwareScanner(minFastKeys: 4)->getScanPayload()['minFastKeys'])->toBe(4);
 });
+
+it('exposes the listener any-input fallback flag', function () {
+    expect(QrHardwareScannerListener::make(['sku'])->getScanPayload()['fallbackToAnyInput'])->toBeTrue()
+        ->and(QrHardwareScannerListener::make(['sku'])->fallbackToAnyInput(false)->getScanPayload()['fallbackToAnyInput'])->toBeFalse();
+
+    config()->set('qr-code.hardware_scanner.fallback_to_any_input', false);
+
+    expect(QrHardwareScannerListener::make(['sku'])->getScanPayload()['fallbackToAnyInput'])->toBeFalse();
+});

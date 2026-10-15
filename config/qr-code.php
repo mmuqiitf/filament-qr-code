@@ -16,6 +16,9 @@ return [
     | - min_fast_keys: Consecutive fast keystroke gaps required before a
     |   terminator counts as a scan. 1 keeps v0.2 behaviour; 3 is stricter
     |   and rejects fast human typing (planned default for 1.0).
+    | - fallback_to_any_input: When the page-global listener finds no focused
+    |   or registered empty field, write into the first empty form input
+    |   (v0.2 behaviour). Set false to dispatch `qr-scan-unrouted` instead.
     |
     */
     'hardware_scanner' => [
@@ -23,6 +26,7 @@ return [
         'burst_threshold_ms' => 50,
         'min_barcode_length' => 2,
         'min_fast_keys' => 1,
+        'fallback_to_any_input' => true,
         'scan_timeout_ms' => 150,
         'prevent_form_submit' => true,
         'default_terminators' => ['Enter', 'Tab'],
