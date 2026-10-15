@@ -2,20 +2,23 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Only the latest release line receives security fixes.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| Version | Supported |
+| ------- | --------- |
+| 0.2.x   | ✅        |
+| < 0.2   | ❌        |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Please do **not** report security vulnerabilities through public GitHub issues, discussions, or pull requests.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Report them privately through GitHub Security Advisories instead: open the repository's [Security tab](https://github.com/mmuqiitf/filament-qr-code/security) and click **Report a vulnerability** (direct link: <https://github.com/mmuqiitf/filament-qr-code/security/advisories/new>).
+
+Include as much of the following as you can:
+
+- the affected version(s) and component (e.g. `QrScanner`, the signed image route, the JS bundle),
+- a description of the issue and its impact,
+- steps to reproduce or a minimal proof of concept.
+
+You will receive an acknowledgement as soon as possible. Once the issue is confirmed, a fix is prepared in a private advisory and released, and the advisory is published with credit to the reporter unless you prefer to stay anonymous.
