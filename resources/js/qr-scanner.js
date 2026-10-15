@@ -77,14 +77,6 @@ export default function qrScannerComponent({
                 };
                 this.$el.addEventListener('keydown', this.boundHardwareScannerHandler);
             }
-
-            // Sync with Livewire state binding
-            this.$watch('value', (newVal) => {
-                const path = this.getStatePath();
-                if (this.$wire && path) {
-                    this.$wire.set(path, newVal);
-                }
-            });
         },
 
         destroy() {
@@ -218,6 +210,9 @@ export default function qrScannerComponent({
 
             this.value = trimmed;
 
+            // Typed input syncs through entangle + wire:model; a scan is a
+            // discrete event, so it is pushed live exactly once to run
+            // afterStateUpdated hooks (rejectWhen, normalizeUsing).
             const path = this.getStatePath();
             if (this.$wire && path) {
                 this.$wire.set(path, trimmed);
