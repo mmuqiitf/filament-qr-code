@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- Add `SECURITY.md` with private reporting through GitHub Security Advisories.
+- Add Dependabot for Composer, npm, and GitHub Actions (weekly, 7-day
+  cooldown); it also keeps the SHA-pinned actions current.
+- Exclude development-only files (tests, CI, tooling configs, agent files)
+  from the Composer dist archive via `.gitattributes`.
 - Pin every third-party GitHub Action in CI to a full commit SHA
   (`actions/checkout` v4.4.0, `actions/setup-node` v4.4.0,
   `shivammathur/setup-php` 2.40.0), so a moved tag cannot change what
