@@ -20,6 +20,8 @@
 /skills-lock.json            export-ignore
 /tests                       export-ignore
 /vite.config.js              export-ignore
+/vite.decoder.config.js         export-ignore
 /vitest.config.js            export-ignore
 /resources/js/*.test.js      export-ignore
+/resources/js/decoder-entry.js export-ignore
 /resources/js/alpine-test-harness.js export-ignore

@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (GD and Imagick); the canvas now widens to fit and centres the code.
 
 ### Changed
+- Vite 8: the camera decoder is built as a self-contained sibling
+  (`filament-qr-code-decoder.js`) and registered with Filament as
+  `loadedOnRequest`, so `filament:assets` publishes it next to the main
+  script. Vite 8/Rolldown's default lazy chunks import helpers from the
+  entry by its build name, which Filament renames on publish and would 404.
 - QrCodeDisplay/QrEntry show the caption once, as HTML under the preview:
   `getQrDataUri()` no longer draws it into the image (an SVG preview stays
   SVG). The download link uses the new `getDownloadDataUri()`, which still

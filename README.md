@@ -88,9 +88,10 @@ public function panel(Panel $panel): Panel
 }
 ```
 
-The camera decoder (`html5-qrcode`, ~375K) is split into a lazy chunk:
-the global bundle is ~20K and the decoder downloads once, on first camera
-use. Pages that only render QR images never fetch it.
+The camera decoder (`html5-qrcode`) is a separate ES module next to the
+global bundle (~21K). It downloads once on first camera use; pages that
+only render QR images never fetch it. Both files are published by
+`php artisan filament:assets` (the decoder is registered `loadedOnRequest`).
 
 ### Symbologies
 

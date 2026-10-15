@@ -49,9 +49,18 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
      */
     public static function assets(): array
     {
+        $dist = __DIR__.'/../resources/dist';
+
         return [
-            Js::make('filament-qr-code-scripts', __DIR__.'/../resources/dist/filament-qr-code.js')->module(),
-            Css::make('filament-qr-code-styles', __DIR__.'/../resources/dist/filament-qr-code.css'),
+            Js::make('filament-qr-code-scripts', $dist.'/filament-qr-code.js')->module(),
+            // Sibling of the main script: Vite 8/Rolldown lazy chunks import
+            // helpers from the entry by its build name, which Filament renames
+            // on publish. A self-contained decoder next to the scripts file
+            // keeps camera pages lazy and `filament:assets`-friendly.
+            Js::make('filament-qr-code-decoder', $dist.'/filament-qr-code-decoder.js')
+                ->module()
+                ->loadedOnRequest(),
+            Css::make('filament-qr-code-styles', $dist.'/filament-qr-code.css'),
         ];
     }
 
