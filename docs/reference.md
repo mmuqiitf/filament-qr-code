@@ -21,6 +21,7 @@ QrScanner::make('sku')
     ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
     ->preferRearCamera()
     ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2)
+    ->minFastKeys(3) // consecutive fast keystrokes before a terminator counts
     ->beepFrequency(880)
     ->beepDuration(80)
     ->vibrateDuration(100);
@@ -42,6 +43,13 @@ QrScanner::make('sku')
 Auto-repeat keystrokes (a held-down key) never count toward a burst.
 
 These values are the defaults behind every scan surface (`QrScanner`, `QrScanSequence`, `QrCollector`, `QrHardwareScannerListener`, `QrCollectAction`): each component ships them to the browser as one payload (`getScanPayload()`), and any explicit setter (`->fps()`, `->sound()`, `->hardwareScanner()`, …) wins over config.
+
+The Station Listener adds its own routing switch:
+
+```php
+QrHardwareScannerListener::make(['sku'])
+    ->fallbackToAnyInput(false); // no first-empty-input fallback; dispatch qr-scan-unrouted instead
+```
 
 ### `feedback`
 
