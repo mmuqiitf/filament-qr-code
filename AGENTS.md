@@ -16,7 +16,6 @@ Filament v5 QR package (`mmuqiitf/filament-qr-code`): camera / hardware scanning
 - Tuning (config, events, customizing, extending) → `docs/reference.md`; stuck users → `README.md` Troubleshooting.
 - Contributing (tests, style, frontend builds) → `CONTRIBUTING.md`.
 - Vocabulary (Station Listener, Scan Sequence Container, Batch Collector, …) → `CONTEXT.md`; use those names for APIs/docs, UI strings under `filament-qr-code::ui.*`.
-- Decisions (Filament exclusivity, bundled decoder, interceptor, symbologies) → `docs/adr/`.
 
 ## Invariants (survive refactors; CI handles the mechanical)
 
