@@ -78,7 +78,7 @@ class QrScanSequence extends Component
             if (is_string($item)) {
                 $formatted[] = [
                     'key' => is_string($key) ? $key : $item,
-                    'label' => ucwords(str_replace(['_', '-'], ' ', is_string($key) ? $item : $item)),
+                    'label' => ucwords(str_replace(['_', '-'], ' ', $item)),
                 ];
             } elseif (is_array($item)) {
                 $itemKey = isset($item['key']) && is_string($item['key']) ? $item['key'] : (string) $key;
