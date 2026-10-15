@@ -30,6 +30,20 @@ final class QrRenderSpec
         public readonly ?string $caption = null,
     ) {}
 
+    public function withoutCaption(): self
+    {
+        return new self(
+            size: $this->size,
+            margin: $this->margin,
+            foreground: $this->foreground,
+            background: $this->background,
+            format: $this->format,
+            errorCorrection: $this->errorCorrection,
+            logoPath: $this->logoPath,
+            logoSize: $this->logoSize,
+        );
+    }
+
     public function toService(): QrCodeService
     {
         $service = QrCodeService::make()
