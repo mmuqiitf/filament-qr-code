@@ -68,9 +68,41 @@ QrHardwareScannerListener::make([
     ->sound(true);
 ```
 
-Add `QrHardwareScannerListener` anywhere in your schema. It intercepts hardware scanner bursts across the entire page, populates the active or first empty field (covering `text`, `search`, `number` inputs and textareas), syncs Livewire state, and auto-advances focus.
+Add `QrHardwareScannerListener` anywhere in your schema. It intercepts hardware scanner bursts across the entire page, syncs Livewire state, and auto-advances focus. Each burst is routed to:
+
+1. the focused input or textarea, otherwise
+2. the first empty registered field (in the order passed to `make([...])`), otherwise
+3. the first empty `text`, `search`, `number` input or textarea in any form on the page — only while `fallbackToAnyInput()` is enabled (default `true`, config `hardware_scanner.fallback_to_any_input`).
+
+Step 3 can catch a search or filter box. Turn it off so scans only land in the focused or registered fields:
+
+```php
+QrHardwareScannerListener::make(['sku', 'quantity'])
+    ->fallbackToAnyInput(false);
+```
+
+When no target is found, nothing is written and the listener dispatches a `qr-scan-unrouted` window event with `{ value }`, so the app can warn the operator:
+
+```blade
+<div x-on:qr-scan-unrouted.window="alert(`No field for ${$event.detail.value}`)"></div>
+```
+
+Fields are matched by their exact name — `data-field-name`, `name`, `id`, or a `wire:model` path equal to the name or ending in `.<name>` — so `sku` never matches `parent_sku`, and nested names such as `items.0.sku` work in `make([...])` and `nextField()`.
 
 The interceptor buffers keystrokes and treats gaps under `burstThresholdMs` (default 50) as a scanner burst. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), sanitizes, and routes the value — the delivery point (field, sequence, collector, or this listener) then plays the single confirmation beep, so one burst always yields one beep. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
+
+Held-down keys (keyboard auto-repeat) never count toward a burst, so holding a key and pressing Enter is not a scan. For keyboard-heavy forms, require more consecutive fast keystrokes before a terminator counts with `minFastKeys()` (default `1`, config `hardware_scanner.min_fast_keys`; `3` rejects fast human typing):
+
+```php
+QrScanner::make('sku')
+    ->minFastKeys(3);
+
+// or together with the other interceptor options
+QrScanner::make('sku')
+    ->hardwareScanner(terminators: ['Enter'], minBarcodeLength: 4, minFastKeys: 3);
+```
+
+`hardwareScanner(...)` resets every interceptor option to its signature default, so pass all the options you care about in one call (or use the dedicated setters such as `minFastKeys()` and `scanTimeout()`).
 
 ### 3. Sequential Scanning — One Scanner, Many Fields
 
@@ -158,12 +190,15 @@ public function form(Schema $schema): Schema
         QrHardwareScannerListener::make(['scanInput'])
             ->autoFocusNext(false) // stay on the SKU box for rapid scans
             ->sound(true)
-            ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2),
+            ->fallbackToAnyInput(false) // never drop scans into search or filter boxes
+            ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2, minFastKeys: 3),
     ]);
 }
 ```
 
 Render `{{ $this->form }}` — it outputs nothing visible.
+
+`fallbackToAnyInput(false)` is recommended for a till: a scan goes to the focused input or `scanInput`, and anything else raises `qr-scan-unrouted` instead of landing in an unrelated box. `minFastKeys: 3` keeps a cashier's fast typing from being taken for a scan.
 
 ### Step 2 — funnel every scan into one method
 
