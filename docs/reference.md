@@ -33,9 +33,13 @@ QrScanner::make('sku')
 | `enabled`             | `true`             | master switch (components also gate individually)  |
 | `burst_threshold_ms`  | `50`               | max gap between keystrokes counted as one burst    |
 | `min_barcode_length`  | `2`                | shorter bursts are treated as typing               |
+| `min_fast_keys`       | `1`                | consecutive fast gaps required before a terminator counts; `3` rejects fast typists (planned 1.0 default) |
+| `fallback_to_any_input` | `true`           | page-global listener may fill the first empty form input when no focused or registered field is free; `false` dispatches `qr-scan-unrouted` instead |
 | `scan_timeout_ms`     | `150`              | flush window for terminator-less guns (0 disables) |
 | `prevent_form_submit` | `true`             | swallow the terminator key during bursts           |
 | `default_terminators` | `['Enter', 'Tab']` | gun suffix keys ending a scan                      |
+
+Auto-repeat keystrokes (a held-down key) never count toward a burst.
 
 These values are the defaults behind every scan surface (`QrScanner`, `QrScanSequence`, `QrCollector`, `QrHardwareScannerListener`, `QrCollectAction`): each component ships them to the browser as one payload (`getScanPayload()`), and any explicit setter (`->fps()`, `->sound()`, `->hardwareScanner()`, …) wins over config.
 
@@ -70,6 +74,7 @@ These values are the defaults behind every scan surface (`QrScanner`, `QrScanSeq
 | `qr-scanned`              | `{ value, field, nextField }` | any `QrScanner` scan               |
 | `qr-scan-rejected`        | `{ message }`                 | a `rejectWhen()` predicate matched |
 | `qr-hardware-scanned`     | `{ value, field }`            | page-global hardware burst         |
+| `qr-scan-unrouted`        | `{ value }`                   | page-global burst found no target field |
 | `qr-sequence-step`        | `{ field, value, index }`     | each container step                |
 | `qr-sequence-completed`   | `{ results }`                 | last container step                |
 | `qr-sequence-edited`      | `{ field, value }`            | operator edits a step              |

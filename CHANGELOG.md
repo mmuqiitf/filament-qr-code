@@ -5,6 +5,34 @@ All notable changes to `filament-qr-code` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `hardware_scanner.min_fast_keys` config, `->minFastKeys()` and
+  `hardwareScanner(minFastKeys:)`: consecutive fast gaps required before a
+  terminator counts as a scan (default `1` keeps 0.2 behaviour).
+- `hardware_scanner.fallback_to_any_input` config and
+  `QrHardwareScannerListener::fallbackToAnyInput()` (default `true`).
+- `qr-scan-unrouted` window event when a page-global burst finds no target.
+- `getComponentScanPayload()` extension point and `Support\ConfigValue`.
+
+### Fixed
+- `QrScanner` sent a Livewire request on every typed character and wrote
+  each scan twice; it now writes once per scan and leaves typing to
+  `wire:model`.
+- Held-down keys (auto-repeat) followed by Enter were routed as scans.
+- Field lookup matched substrings (`sku` focused `parent_sku`), failed on
+  nested paths (`items.0.sku`), and ignored `wire:model.blur` /
+  `.live.debounce.*`; Livewire 2 `wire:model.defer` lookups removed.
+- `QrCollector::distinctItems()` evaluated its Closure before the form was
+  mounted; it is now evaluated at validation time.
+- `QrCodeDisplay::caption()` accepts a Closure.
+
+### Changed
+- Field lookup is now exact (name, id, `data-field-name`, or a
+  `wire:model` path equal to / ending in `.<name>`); substring fallbacks
+  were removed.
+
 ## [0.2.0] - 2026-10-11
 
 ### Added
