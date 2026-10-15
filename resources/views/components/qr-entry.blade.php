@@ -1,6 +1,7 @@
 @php
     $qrDataUri = $getQrDataUri();
     $isDownloadable = $isDownloadable();
+    $downloadDataUri = $isDownloadable ? $getDownloadDataUri() : null;
 @endphp
 
 <x-dynamic-component
@@ -17,8 +18,8 @@
 
             @if ($isDownloadable)
                 <a
-                    href="{{ $qrDataUri }}"
-                    download="qrcode.{{ str_starts_with($qrDataUri, 'data:image/svg+xml') ? 'svg' : 'png' }}"
+                    href="{{ $downloadDataUri }}"
+                    download="qrcode.{{ str_starts_with($downloadDataUri, 'data:image/svg+xml') ? 'svg' : 'png' }}"
                     class="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 mt-1"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">

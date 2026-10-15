@@ -150,6 +150,21 @@ class QrEntry extends Entry
             return '';
         }
 
+        // The caption is shown as HTML under the preview, so it is not also
+        // drawn into the image (which would force PNG and duplicate it).
+        return $this->getRenderSpec()->withoutCaption()->toDataUri($data);
+    }
+
+    /**
+     * The downloaded file keeps the caption drawn under the code, ready to print.
+     */
+    public function getDownloadDataUri(): string
+    {
+        $data = $this->getQrData();
+        if ($data === null || $data === '') {
+            return '';
+        }
+
         return $this->getRenderSpec()->toDataUri($data);
     }
 

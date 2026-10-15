@@ -135,6 +135,7 @@ trait HasCameraScanning
             'preferRearCamera' => $this->isPreferRearCamera(),
             'formats' => $this->getSupportedFormats(),
             'insecureMessage' => __('filament-qr-code::ui.camera_needs_secure_context'),
+            'fileScanFailedMessage' => __('filament-qr-code::ui.file_scan_failed'),
         ];
     }
 }

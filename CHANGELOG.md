@@ -28,6 +28,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `getComponentScanPayload()` extension point and `Support\ConfigValue`.
 
 ### Fixed
+- Scan from image file failed on every device with a camera: html5-qrcode
+  refuses a file scan while the camera streams. The camera now pauses for
+  the decode and resumes if the image has no code; the same file can be
+  picked again, and the failure message is translated (`ui.file_scan_failed`).
+- Long QrCodeDisplay/QrEntry captions were cut off in the rendered image
+  (GD and Imagick); the canvas now widens to fit and centres the code.
+
+### Changed
+- QrCodeDisplay/QrEntry show the caption once, as HTML under the preview:
+  `getQrDataUri()` no longer draws it into the image (an SVG preview stays
+  SVG). The download link uses the new `getDownloadDataUri()`, which still
+  includes the caption.
 - `QrScanner` sent a Livewire request on every typed character and wrote
   each scan twice; it now writes once per scan and leaves typing to
   `wire:model`.
@@ -38,8 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `QrCollector::distinctItems()` evaluated its Closure before the form was
   mounted; it is now evaluated at validation time.
 - `QrCodeDisplay::caption()` accepts a Closure.
-
-### Changed
 - Field lookup is now exact (name, id, `data-field-name`, or a
   `wire:model` path equal to / ending in `.<name>`); substring fallbacks
   were removed.
