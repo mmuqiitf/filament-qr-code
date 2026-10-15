@@ -6,7 +6,7 @@ export default defineConfig({
         outDir: 'resources/dist',
         emptyOutDir: true,
         rollupOptions: {
-            input: resolve(__dirname, 'resources/js/index.js'),
+            input: resolve(import.meta.dirname, 'resources/js/index.js'),
             output: {
                 entryFileNames: 'filament-qr-code.js',
                 chunkFileNames: 'chunks/[name]-[hash].js',
