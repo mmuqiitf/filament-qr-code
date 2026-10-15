@@ -31,6 +31,7 @@ return [
     'scan_qr_code' => 'Pindai Kode QR',
     'scan_qr_with_camera' => 'Pindai QR dengan kamera',
     'camera_needs_secure_context' => 'Kamera membutuhkan konteks aman: sajikan halaman ini melalui https atau buka di localhost, lalu izinkan akses kamera.',
+    'file_scan_failed' => 'Tidak ada barcode atau kode QR pada gambar yang dipilih.',
     'scanned_codes' => 'Kode Terpindai',
     'scanned_items_list' => 'Daftar Item Terpindai',
     'sequence_scanner' => 'Pemindai Urutan QR',

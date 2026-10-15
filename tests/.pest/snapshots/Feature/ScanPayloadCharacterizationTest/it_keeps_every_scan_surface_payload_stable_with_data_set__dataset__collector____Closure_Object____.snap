@@ -4,6 +4,7 @@
     "beepFrequency": 880,
     "burstThresholdMs": 50,
     "delayBetweenScansMs": 900,
+    "fileScanFailedMessage": "No barcode or QR code found in the selected image.",
     "formats": [],
     "fps": 12,
     "hardwareScanner": true,

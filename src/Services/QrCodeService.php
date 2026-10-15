@@ -507,15 +507,17 @@ class QrCodeService
 
                 $padding = 12;
                 $newHeight = $qrHeight + $textHeight + $padding;
+                // Widen the canvas for captions longer than the QR is wide.
+                $newWidth = max($qrWidth, (int) ceil($metrics['textWidth']) + 2 * $padding);
 
                 $canvas = new Imagick;
-                $canvas->newImage($qrWidth, $newHeight, new ImagickPixel($this->backgroundColor));
+                $canvas->newImage($newWidth, $newHeight, new ImagickPixel($this->backgroundColor));
                 $canvas->setImageFormat('png');
 
-                $canvas->compositeImage($imagick, Imagick::COMPOSITE_OVER, 0, 0);
+                $canvas->compositeImage($imagick, Imagick::COMPOSITE_OVER, intdiv($newWidth - $qrWidth, 2), 0);
 
                 $textY = $qrHeight + (int) ($textHeight * 0.8);
-                $canvas->annotateImage($draw, (float) ($qrWidth / 2), (float) $textY, 0.0, $this->overlayText);
+                $canvas->annotateImage($draw, $newWidth / 2, (float) $textY, 0.0, $this->overlayText);
 
                 $imagick->destroy();
                 $result = $canvas->getImageBlob();
@@ -542,7 +544,9 @@ class QrCodeService
         $padding = 10;
 
         $newHeight = max(1, $qrHeight + $textHeight + $padding);
-        $canvas = imagecreatetruecolor(max(1, $qrWidth), $newHeight);
+        // Widen the canvas for captions longer than the QR is wide.
+        $newWidth = max(1, max($qrWidth, $textWidth + 2 * $padding));
+        $canvas = imagecreatetruecolor($newWidth, $newHeight);
         if ($canvas === false) {
             return $qrPngData;
         }
@@ -553,12 +557,12 @@ class QrCodeService
             imagefill($canvas, 0, 0, $bg);
         }
 
-        imagecopy($canvas, $qrImage, 0, 0, 0, 0, $qrWidth, $qrHeight);
+        imagecopy($canvas, $qrImage, intdiv($newWidth - $qrWidth, 2), 0, 0, 0, $qrWidth, $qrHeight);
 
         $fgRgb = $this->hexToRgb($this->fontColor);
         $textColor = imagecolorallocate($canvas, $fgRgb['r'], $fgRgb['g'], $fgRgb['b']);
 
-        $x = (int) max(0, ($qrWidth - $textWidth) / 2);
+        $x = intdiv($newWidth - $textWidth, 2);
         $y = $qrHeight + 2;
 
         if ($textColor !== false) {

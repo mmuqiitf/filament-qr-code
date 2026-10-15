@@ -30,7 +30,18 @@ it('carries logo and caption through the spec into data URIs and signed params',
         ->and($spec->caption)->toBe('SPEC-LOGO')
         ->and($spec->toSignedParams('SPEC-LOGO')['logo'])->toBe('non-existent-logo.png')
         ->and($spec->toSignedParams('SPEC-LOGO')['caption'])->toBe('SPEC-LOGO')
-        ->and($display->getQrDataUri())->toStartWith('data:image/png;base64,');
+        ->and($display->getDownloadDataUri())->toStartWith('data:image/png;base64,');
+});
+
+it('shows the caption once: as HTML under the preview, and in the downloaded file', function () {
+    $display = QrCodeDisplay::make('qr')->data('CAP-1')->caption('Official Product SKU Verification QR')->downloadable();
+    $entry = QrEntry::make('qr')->data('CAP-1')->caption('Official Product SKU Verification QR')->downloadable();
+
+    foreach ([$display, $entry] as $component) {
+        expect($component->getQrDataUri())->toStartWith('data:image/svg+xml;base64,')
+            ->and($component->getQrDataUri())->toBe(QrCodeDisplay::make('plain')->data('CAP-1')->getQrDataUri())
+            ->and($component->getDownloadDataUri())->toStartWith('data:image/png;base64,');
+    }
 });
 
 it('signs the full spec on column modal URLs and reproduces it in the controller', function () {
