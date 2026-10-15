@@ -21,4 +21,12 @@ trait HasSequentialScan
     {
         return $this->evaluate($this->nextField);
     }
+
+    /** @return array<string, mixed> */
+    public function getSequentialScanPayload(): array
+    {
+        return [
+            'nextField' => $this->getNextField(),
+        ];
+    }
 }

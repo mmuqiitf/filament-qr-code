@@ -111,4 +111,12 @@ class QrCollectAction extends Action
     {
         return (bool) $this->evaluate($this->allowDuplicates);
     }
+
+    /** @return array<string, mixed> */
+    public function getComponentScanPayload(): array
+    {
+        return [
+            'allowDuplicates' => $this->isDuplicatesAllowed(),
+        ];
+    }
 }

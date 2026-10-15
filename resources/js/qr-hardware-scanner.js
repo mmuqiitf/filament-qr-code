@@ -1,5 +1,6 @@
 import { qrFeedback } from './audio-feedback.js';
 import { emitScanFeedback } from './qr-camera-core.js';
+import { readWireModelPath, findFieldInput } from './field-locator.js';
 
 const GLOBAL_LISTENER_KEY = '__filamentQrCodeGlobalHardwareListeners';
 
@@ -50,6 +51,7 @@ export function isGlobalHardwareListenerActive() {
 export function createHardwareScannerHandler({
     burstThresholdMs = 50,
     minBarcodeLength = 2,
+    minFastKeys = 1,
     preventFormSubmit = true,
     terminators = ['Enter', 'Tab'],
     scanTimeoutMs = 150,
@@ -98,7 +100,7 @@ export function createHardwareScannerHandler({
         flushTimer = setTimeout(() => {
             // Terminator-less gun: a completed burst with no suffix key.
             // Only flush when the burst actually looked like a scan.
-            if (isBursting && fastStreak >= 2 && buffer.length >= minBarcodeLength) {
+            if (isBursting && fastStreak >= Math.max(2, minFastKeys) && buffer.length >= minBarcodeLength) {
                 emit(buffer);
             } else if (!isBursting) {
                 buffer = '';
@@ -120,6 +122,11 @@ export function createHardwareScannerHandler({
                 return false;
             }
 
+            // Auto-repeat comes from a held-down key; scanners never emit it.
+            if (event.repeat) {
+                return false;
+            }
+
             const now = Date.now();
             const timeDiff = now - lastKeyTime;
             lastKeyTime = now;
@@ -127,7 +134,7 @@ export function createHardwareScannerHandler({
             const isTerminator = terminators.includes(event.key);
 
             if (isTerminator) {
-                if (isBursting && fastStreak >= 1 && buffer.length >= minBarcodeLength) {
+                if (isBursting && fastStreak >= minFastKeys && buffer.length >= minBarcodeLength) {
                     if (preventFormSubmit) {
                         event.preventDefault();
                         event.stopPropagation();
@@ -192,8 +199,10 @@ export function qrHardwareScannerListenerComponent({
     vibrateDurationMs = 100,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
+    minFastKeys = 1,
     scanTimeoutMs = 150,
     autoFocusNext = true,
+    fallbackToAnyInput = true,
 } = {}) {
     // Filament text inputs plus numeric / textarea fallbacks for cashier forms.
     const SCANNABLE_SELECTOR = 'input[type="text"], input[type="search"], input[type="number"], textarea';
@@ -209,6 +218,7 @@ export function qrHardwareScannerListenerComponent({
             this.hardwareScannerHandler = createHardwareScannerHandler({
                 burstThresholdMs,
                 minBarcodeLength,
+                minFastKeys,
                 preventFormSubmit: preventSubmit,
                 terminators,
                 scanTimeoutMs,
@@ -234,26 +244,7 @@ export function qrHardwareScannerListenerComponent({
         },
 
         findFieldElement(fieldName) {
-            const selectors = [
-                `[data-field-name="${fieldName}"] input`,
-                `[data-field-name="${fieldName}"] textarea`,
-                `input[name="${fieldName}"]`,
-                `textarea[name="${fieldName}"]`,
-                `#${fieldName}`,
-            ];
-
-            for (const selector of selectors) {
-                try {
-                    const el = document.querySelector(selector);
-                    if (el) {
-                        return el;
-                    }
-                } catch {
-                    // Ignore invalid selector characters in dynamic field names.
-                }
-            }
-
-            return null;
+            return findFieldInput(fieldName);
         },
 
         handleGlobalScan(scannedValue) {
@@ -277,7 +268,7 @@ export function qrHardwareScannerListenerComponent({
                 }
             }
 
-            if (!targetInput) {
+            if (!targetInput && fallbackToAnyInput) {
                 const inputs = document.querySelectorAll(`form ${SCANNABLE_SELECTOR}:not([disabled]):not([readonly])`);
                 for (const input of inputs) {
                     if (!input.value) {
@@ -286,6 +277,14 @@ export function qrHardwareScannerListenerComponent({
                         break;
                     }
                 }
+            }
+
+            if (!targetInput) {
+                window.dispatchEvent(new CustomEvent('qr-scan-unrouted', {
+                    detail: { value: scannedValue },
+                }));
+
+                return;
             }
 
             if (targetInput) {
@@ -307,9 +306,7 @@ export function qrHardwareScannerListenerComponent({
                 // Keep Livewire / entangled Alpine state in sync when the DOM
                 // event alone is not enough (e.g. x-model bound scanner fields).
                 try {
-                    const livewirePath = targetInput.getAttribute('wire:model')
-                        || targetInput.getAttribute('wire:model.defer')
-                        || targetInput.getAttribute('wire:model.live');
+                    const livewirePath = readWireModelPath(targetInput);
                     if (livewirePath && this.$wire) {
                         this.$wire.set(livewirePath, scannedValue);
                     }

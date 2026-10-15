@@ -1,0 +1,25 @@
+{
+    "allowDuplicates": true,
+    "beepDurationMs": 80,
+    "beepFrequency": 880,
+    "burstThresholdMs": 50,
+    "delayBetweenScansMs": 900,
+    "formats": [],
+    "fps": 12,
+    "hardwareScanner": true,
+    "insecureMessage": "Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.",
+    "minBarcodeLength": 2,
+    "minFastKeys": 1,
+    "preferRearCamera": true,
+    "preventSubmit": true,
+    "qrbox": 250,
+    "scanTimeoutMs": 150,
+    "sound": true,
+    "suppressWhenGlobalListenerActive": true,
+    "terminators": [
+        "Enter",
+        "Tab"
+    ],
+    "vibrate": true,
+    "vibrateDurationMs": 100
+}

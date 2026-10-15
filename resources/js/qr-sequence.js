@@ -26,6 +26,7 @@ export default function qrScanSequenceComponent({
     burstThresholdMs = 50,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
+    minFastKeys = 1,
     scanTimeoutMs = 150,
     suppressWhenGlobalListenerActive = true,
     fps = 25,
@@ -63,6 +64,7 @@ export default function qrScanSequenceComponent({
                 this.hardwareScannerHandler = createHardwareScannerHandler({
                     burstThresholdMs,
                     minBarcodeLength,
+                    minFastKeys,
                     terminators,
                     scanTimeoutMs,
                     suppressWhenGlobalListenerActive,

@@ -99,3 +99,35 @@ it('prefers explicit setters over config for scan defaults', function () {
         ->and($field->getScanPayload()['fps'])->toBe(15)
         ->and($field->getScanPayload()['sound'])->toBeTrue();
 });
+
+it('exposes min fast keys from config with a v0.2-compatible default', function () {
+    expect(QrScanner::make('sku')->getScanPayload()['minFastKeys'])->toBe(1);
+
+    config()->set('qr-code.hardware_scanner.min_fast_keys', 3);
+
+    expect(QrScanner::make('sku')->getScanPayload()['minFastKeys'])->toBe(3)
+        ->and(QrScanner::make('sku')->hardwareScanner(minFastKeys: 4)->getScanPayload()['minFastKeys'])->toBe(4);
+});
+
+it('exposes the listener any-input fallback flag', function () {
+    expect(QrHardwareScannerListener::make(['sku'])->getScanPayload()['fallbackToAnyInput'])->toBeTrue()
+        ->and(QrHardwareScannerListener::make(['sku'])->fallbackToAnyInput(false)->getScanPayload()['fallbackToAnyInput'])->toBeFalse();
+
+    config()->set('qr-code.hardware_scanner.fallback_to_any_input', false);
+
+    expect(QrHardwareScannerListener::make(['sku'])->getScanPayload()['fallbackToAnyInput'])->toBeFalse();
+});
+
+it('merges component-contributed extras into the payload', function () {
+    $scanner = new class('sku') extends QrScanner
+    {
+        public function getComponentScanPayload(): array
+        {
+            return ['stationId' => 'line-3'];
+        }
+    };
+
+    expect($scanner->getScanPayload())
+        ->toHaveKey('stationId', 'line-3')
+        ->toHaveKey('burstThresholdMs', 50);
+});

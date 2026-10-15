@@ -10,13 +10,22 @@ trait HasScanPayload
 {
     /**
      * One payload for the browser: every scan option this surface supports,
-     * with config-backed defaults. Blade views spread it into the Alpine
-     * init (`...@js($getScanPayload())`) instead of repeating option keys.
+     * with config-backed defaults. Blade views spread it into the Alpine init.
      *
      * @return array<string, mixed>
      */
     public function getScanPayload(): array
     {
         return ScanOptions::payload($this);
+    }
+
+    /**
+     * Surface-specific options merged on top of the trait-contributed ones.
+     *
+     * @return array<string, mixed>
+     */
+    public function getComponentScanPayload(): array
+    {
+        return [];
     }
 }

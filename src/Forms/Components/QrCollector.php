@@ -45,11 +45,8 @@ class QrCollector extends Field
      */
     public function distinctItems(bool|Closure $condition = true): static
     {
-        if (! (bool) $this->evaluate($condition)) {
-            return $this;
-        }
-
-        $this->rules(['array', new DistinctCodes]);
+        $this->rule('array', $condition);
+        $this->rule(new DistinctCodes, $condition);
 
         return $this;
     }
@@ -62,5 +59,14 @@ class QrCollector extends Field
     public function getDelayBetweenScansMs(): int
     {
         return (int) $this->evaluate($this->delayBetweenScansMs);
+    }
+
+    /** @return array<string, mixed> */
+    public function getComponentScanPayload(): array
+    {
+        return [
+            'allowDuplicates' => $this->isDuplicatesAllowed(),
+            'delayBetweenScansMs' => $this->getDelayBetweenScansMs(),
+        ];
     }
 }

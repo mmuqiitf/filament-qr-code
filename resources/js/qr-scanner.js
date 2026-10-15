@@ -1,5 +1,6 @@
 import { qrFeedback } from './audio-feedback.js';
 import { createHardwareScannerHandler, sanitizeScannedValue } from './qr-hardware-scanner.js';
+import { findFieldInput, readWireModelPath } from './field-locator.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -28,6 +29,7 @@ export default function qrScannerComponent({
     burstThresholdMs = 50,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
+    minFastKeys = 1,
     scanTimeoutMs = 150,
     suppressWhenGlobalListenerActive = true,
     fps = 25,
@@ -62,6 +64,7 @@ export default function qrScannerComponent({
                 this.hardwareScannerHandler = createHardwareScannerHandler({
                     burstThresholdMs,
                     minBarcodeLength,
+                    minFastKeys,
                     terminators,
                     scanTimeoutMs,
                     suppressWhenGlobalListenerActive,
@@ -77,14 +80,6 @@ export default function qrScannerComponent({
                 };
                 this.$el.addEventListener('keydown', this.boundHardwareScannerHandler);
             }
-
-            // Sync with Livewire state binding
-            this.$watch('value', (newVal) => {
-                const path = this.getStatePath();
-                if (this.$wire && path) {
-                    this.$wire.set(path, newVal);
-                }
-            });
         },
 
         destroy() {
@@ -99,12 +94,8 @@ export default function qrScannerComponent({
             if (this.statePath) {
                 return this.statePath;
             }
-            const inputEl = this.$el.querySelector('input');
-            return inputEl?.getAttribute('wire:model') ||
-                inputEl?.getAttribute('wire:model.defer') ||
-                inputEl?.getAttribute('wire:model.live') ||
-                this.$el.getAttribute('wire:model') ||
-                '';
+
+            return readWireModelPath(this.$el.querySelector('input')) || readWireModelPath(this.$el) || '';
         },
 
         openScannerModal() {
@@ -218,6 +209,9 @@ export default function qrScannerComponent({
 
             this.value = trimmed;
 
+            // Typed input syncs through entangle + wire:model; a scan is a
+            // discrete event, so it is pushed live exactly once to run
+            // afterStateUpdated hooks (rejectWhen, normalizeUsing).
             const path = this.getStatePath();
             if (this.$wire && path) {
                 this.$wire.set(path, trimmed);
@@ -251,30 +245,16 @@ export default function qrScannerComponent({
         },
 
         advanceFocus(targetFieldName) {
-            // Find input by data-field-name, name, id, or wire:model
-            const selectors = [
-                `[data-field-name="${targetFieldName}"] input`,
-                `input[name="${targetFieldName}"]`,
-                `textarea[name="${targetFieldName}"]`,
-                `#${targetFieldName}`,
-                `[wire\\:model*="${targetFieldName}"]`,
-                `[name*="${targetFieldName}"]`,
-            ];
+            const targetElement = findFieldInput(targetFieldName);
 
-            for (const selector of selectors) {
-                let targetEl = null;
-                try {
-                    targetEl = document.querySelector(selector);
-                } catch {
-                    continue;
-                }
-                if (targetEl) {
-                    targetEl.focus();
-                    if (typeof targetEl.select === 'function') {
-                        targetEl.select();
-                    }
-                    break;
-                }
+            if (!targetElement) {
+                return;
+            }
+
+            targetElement.focus();
+
+            if (typeof targetElement.select === 'function') {
+                targetElement.select();
             }
         },
 

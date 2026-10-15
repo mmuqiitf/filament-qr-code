@@ -141,3 +141,44 @@ describe('createHardwareScannerHandler', () => {
         expect(seen).toEqual(['PRD-1001']);
     });
 });
+
+describe('burst hardening (P0.2)', () => {
+    function repeatEvent(key) {
+        return { ...keyEvent(key), repeat: true };
+    }
+
+    it('never treats a held-down key (auto-repeat) as a scan', () => {
+        const seen = [];
+        const handler = createHardwareScannerHandler({ onScan: (value) => seen.push(value) });
+
+        handler.handleKeyDown(keyEvent('a'));
+        for (let index = 0; index < 6; index++) {
+            handler.handleKeyDown(repeatEvent('a'));
+        }
+
+        expect(handler.handleKeyDown(keyEvent('Enter'))).toBe(false);
+        expect(seen).toEqual([]);
+    });
+
+    it('requires minFastKeys consecutive fast gaps before a terminator counts', () => {
+        const seen = [];
+        const handler = createHardwareScannerHandler({ minFastKeys: 3, onScan: (value) => seen.push(value) });
+
+        typeBurst(handler, 'AB');
+        expect(handler.handleKeyDown(keyEvent('Enter'))).toBe(false);
+
+        typeBurst(handler, 'ABCDE');
+        expect(handler.handleKeyDown(keyEvent('Enter'))).toBe(true);
+        expect(seen).toEqual(['ABCDE']);
+    });
+
+    it('keeps v0.2 behaviour by default (one fast gap is enough)', () => {
+        const seen = [];
+        const handler = createHardwareScannerHandler({ onScan: (value) => seen.push(value) });
+
+        typeBurst(handler, 'AB');
+
+        expect(handler.handleKeyDown(keyEvent('Enter'))).toBe(true);
+        expect(seen).toEqual(['AB']);
+    });
+});

@@ -28,7 +28,7 @@ class QrCodeDisplay extends Field
 
     protected string|Closure $backgroundColor = '#ffffff';
 
-    protected ?string $captionText = null;
+    protected string|Closure|null $captionText = null;
 
     protected string|Closure|null $errorCorrectionLevel = null;
 
@@ -95,7 +95,7 @@ class QrCodeDisplay extends Field
         return $this;
     }
 
-    public function caption(?string $text): static
+    public function caption(string|Closure|null $text): static
     {
         $this->captionText = $text;
 
@@ -104,7 +104,9 @@ class QrCodeDisplay extends Field
 
     public function getCaption(): ?string
     {
-        return $this->captionText;
+        $caption = $this->evaluate($this->captionText);
+
+        return $caption === null ? null : (string) $caption;
     }
 
     public function downloadable(bool|Closure $condition = true): static
@@ -139,7 +141,7 @@ class QrCodeDisplay extends Field
             errorCorrection: $this->errorCorrectionLevel === null ? null : (string) $this->evaluate($this->errorCorrectionLevel),
             logoPath: $this->logoPath === null ? null : (string) $this->evaluate($this->logoPath),
             logoSize: (int) $this->evaluate($this->logoSize),
-            caption: $this->captionText,
+            caption: $this->getCaption(),
         );
     }
 

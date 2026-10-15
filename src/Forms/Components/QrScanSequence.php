@@ -78,7 +78,7 @@ class QrScanSequence extends Component
             if (is_string($item)) {
                 $formatted[] = [
                     'key' => is_string($key) ? $key : $item,
-                    'label' => ucwords(str_replace(['_', '-'], ' ', is_string($key) ? $item : $item)),
+                    'label' => ucwords(str_replace(['_', '-'], ' ', $item)),
                 ];
             } elseif (is_array($item)) {
                 $itemKey = isset($item['key']) && is_string($item['key']) ? $item['key'] : (string) $key;
@@ -320,5 +320,16 @@ class QrScanSequence extends Component
     public function isSequenceComplete(?array $mergedState = null): bool
     {
         return $this->getMissingSequenceKeys($mergedState) === [];
+    }
+
+    /** @return array<string, mixed> */
+    public function getComponentScanPayload(): array
+    {
+        return [
+            'fields' => $this->getScanFields(),
+            'statePrefix' => $this->getStatePathPrefix(),
+            'componentStatePath' => $this->getComponentStatePath(),
+            'editable' => $this->isEditable(),
+        ];
     }
 }
