@@ -252,6 +252,9 @@ php artisan qr-code:doctor
 | Sequence submit misses scanned values        | `statePathPrefix()` doesn't match the schema `statePath()`                | Set both to the same prefix, or give the sequence `->statePath()` and read via `mergeSequenceState()`. A banner warns in the UI when they differ. |
 | Same burst handled twice                     | Field `QrScanner` listener + page `QrHardwareScannerListener` both active | Keep the global listener; field handlers stand down automatically (or `->suppressWhenGlobalListener(false)`).                                     |
 | Typed text becomes a "scan"                  | `minBarcodeLength` too low for a keyboard-heavy form                      | Raise `minBarcodeLength` to 4–6 on that component.                                                                                                |
+| Scan lands in the wrong input (e.g. search)  | Station Listener fell back to the first empty form input                  | `QrHardwareScannerListener::make([...])->fallbackToAnyInput(false)` (or `hardware_scanner.fallback_to_any_input => false`); listen for `qr-scan-unrouted`. |
+| Holding a key + Enter registered as a scan   | Keyboard auto-repeat looked like a burst (v0.2 and earlier)                   | Auto-repeat keys are now ignored; for stricter detection use `->minFastKeys(3)` (or `hardware_scanner.min_fast_keys`).                            |
+| `nextField()` / listener misses a field      | Name does not match exactly                                               | Use the exact field name; nested paths like `items.0.sku` are supported, and `sku` never matches `parent_sku`.                                   |
 | Table page is slow with many QRs             | Eager modal data-URIs per row                                             | Keep `->lazyModal()` (default) and the persistent cache enabled; tune `generator.cache_ttl`.                                                      |
 
 ## Reporting issues
