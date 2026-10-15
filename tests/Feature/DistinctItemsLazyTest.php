@@ -11,8 +11,8 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
-use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCodeDisplay;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 
 class DistinctItemsFormComponent extends Component implements HasForms
 {
