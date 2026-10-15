@@ -60,4 +60,13 @@ class QrCollector extends Field
     {
         return (int) $this->evaluate($this->delayBetweenScansMs);
     }
+
+    /** @return array<string, mixed> */
+    public function getComponentScanPayload(): array
+    {
+        return [
+            'allowDuplicates' => $this->isDuplicatesAllowed(),
+            'delayBetweenScansMs' => $this->getDelayBetweenScansMs(),
+        ];
+    }
 }

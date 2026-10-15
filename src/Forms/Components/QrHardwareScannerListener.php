@@ -95,4 +95,14 @@ class QrHardwareScannerListener extends Component
     {
         return (bool) $this->evaluate($this->autoFocusNext);
     }
+
+    /** @return array<string, mixed> */
+    public function getComponentScanPayload(): array
+    {
+        return [
+            'fields' => $this->getFields(),
+            'fallbackToAnyInput' => $this->shouldFallbackToAnyInput(),
+            'autoFocusNext' => $this->isAutoFocusNext(),
+        ];
+    }
 }

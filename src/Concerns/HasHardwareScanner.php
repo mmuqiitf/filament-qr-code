@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Concerns;
 
 use Closure;
+use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 
 trait HasHardwareScanner
 {
@@ -62,9 +63,7 @@ trait HasHardwareScanner
     public function getMinFastKeys(): int
     {
         if ($this->minFastKeys === null) {
-            $configured = function_exists('config') ? config('qr-code.hardware_scanner.min_fast_keys', 1) : 1;
-
-            return max(1, is_numeric($configured) ? (int) $configured : 1);
+            return ConfigValue::int('qr-code.hardware_scanner.min_fast_keys', 1, minimum: 1);
         }
 
         return max(1, (int) $this->evaluate($this->minFastKeys));
@@ -73,9 +72,7 @@ trait HasHardwareScanner
     public function isHardwareScannerEnabled(): bool
     {
         if ($this->isHardwareScannerEnabled === null) {
-            $configured = function_exists('config') ? config('qr-code.hardware_scanner.enabled', true) : true;
-
-            return is_bool($configured) ? $configured : (bool) $configured;
+            return ConfigValue::bool('qr-code.hardware_scanner.enabled', true);
         }
 
         return (bool) $this->evaluate($this->isHardwareScannerEnabled);
@@ -84,9 +81,7 @@ trait HasHardwareScanner
     public function getBurstThresholdMs(): int
     {
         if ($this->burstThresholdMs === null) {
-            $configured = function_exists('config') ? config('qr-code.hardware_scanner.burst_threshold_ms', 50) : 50;
-
-            return is_numeric($configured) ? max(1, (int) $configured) : 50;
+            return ConfigValue::int('qr-code.hardware_scanner.burst_threshold_ms', 50, minimum: 1);
         }
 
         return max(1, (int) $this->evaluate($this->burstThresholdMs));
@@ -95,9 +90,7 @@ trait HasHardwareScanner
     public function shouldPreventFormSubmit(): bool
     {
         if ($this->preventFormSubmit === null) {
-            $configured = function_exists('config') ? config('qr-code.hardware_scanner.prevent_form_submit', true) : true;
-
-            return is_bool($configured) ? $configured : (bool) $configured;
+            return ConfigValue::bool('qr-code.hardware_scanner.prevent_form_submit', true);
         }
 
         return (bool) $this->evaluate($this->preventFormSubmit);
@@ -122,9 +115,7 @@ trait HasHardwareScanner
     public function getMinBarcodeLength(): int
     {
         if ($this->minBarcodeLength === null) {
-            $configured = function_exists('config') ? config('qr-code.hardware_scanner.min_barcode_length', 2) : 2;
-
-            return max(1, is_numeric($configured) ? (int) $configured : 2);
+            return ConfigValue::int('qr-code.hardware_scanner.min_barcode_length', 2, minimum: 1);
         }
 
         return max(1, (int) $this->evaluate($this->minBarcodeLength));
@@ -140,9 +131,7 @@ trait HasHardwareScanner
     public function getScanTimeoutMs(): int
     {
         if ($this->scanTimeoutMs === null) {
-            $configured = function_exists('config') ? config('qr-code.hardware_scanner.scan_timeout_ms', 150) : 150;
-
-            return max(0, is_numeric($configured) ? (int) $configured : 150);
+            return ConfigValue::int('qr-code.hardware_scanner.scan_timeout_ms', 150, minimum: 0);
         }
 
         return max(0, (int) $this->evaluate($this->scanTimeoutMs));
@@ -163,6 +152,21 @@ trait HasHardwareScanner
     public function isSuppressedWhenGlobalListenerActive(): bool
     {
         return (bool) $this->evaluate($this->suppressWhenGlobalListenerActive);
+    }
+
+    /** @return array<string, mixed> */
+    public function getHardwareScannerScanPayload(): array
+    {
+        return [
+            'hardwareScanner' => $this->isHardwareScannerEnabled(),
+            'burstThresholdMs' => $this->getBurstThresholdMs(),
+            'terminators' => $this->getTerminators(),
+            'minBarcodeLength' => $this->getMinBarcodeLength(),
+            'minFastKeys' => $this->getMinFastKeys(),
+            'scanTimeoutMs' => $this->getScanTimeoutMs(),
+            'suppressWhenGlobalListenerActive' => $this->isSuppressedWhenGlobalListenerActive(),
+            'preventSubmit' => $this->shouldPreventFormSubmit(),
+        ];
     }
 
     /**

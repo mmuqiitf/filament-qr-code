@@ -321,4 +321,15 @@ class QrScanSequence extends Component
     {
         return $this->getMissingSequenceKeys($mergedState) === [];
     }
+
+    /** @return array<string, mixed> */
+    public function getComponentScanPayload(): array
+    {
+        return [
+            'fields' => $this->getScanFields(),
+            'statePrefix' => $this->getStatePathPrefix(),
+            'componentStatePath' => $this->getComponentStatePath(),
+            'editable' => $this->isEditable(),
+        ];
+    }
 }

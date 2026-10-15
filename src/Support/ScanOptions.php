@@ -4,172 +4,88 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Support;
 
-use Closure;
+use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
+use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
+use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
+use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
 use Throwable;
 
 /**
  * Single source of truth for the option payload passed to the browser.
- *
- * Five Blade views used to repeat the same ~15 option keys by hand, which
- * meant the `qr-code.camera`, `qr-code.hardware_scanner`, and
- * `qr-code.feedback.sound` config values never reached the browser, and the
- * collect-action modal drifted (`$beepDuration` vs `$beepDurationMs`).
- * Each scan surface now exposes one `getScanPayload()` method backed by this
- * Module, so key names and defaults live in exactly one place.
+ * Each scan trait contributes its own keys; the surface adds its extras
+ * through getComponentScanPayload().
  */
 final class ScanOptions
 {
-    /**
-     * Build the Alpine init payload for any scan surface.
-     *
-     * Only keys the component supports (via its getters) are included;
-     * unknown keys are simply omitted and the JS component defaults apply.
-     * Extra keys are harmless: every Alpine scan Module destructures only
-     * the params it needs.
-     *
-     * @return array<string, mixed>
-     */
+    /** @var array<class-string, string> */
+    private const Contributors = [
+        HasFeedback::class => 'getFeedbackScanPayload',
+        HasHardwareScanner::class => 'getHardwareScannerScanPayload',
+        HasCameraScanning::class => 'getCameraScanPayload',
+        HasSequentialScan::class => 'getSequentialScanPayload',
+    ];
+
+    /** @return array<string, mixed> */
     public static function payload(object $component): array
     {
+        $traits = class_uses_recursive($component);
         $payload = [];
 
-        // Feedback (HasFeedback).
-        if (method_exists($component, 'hasSound')) {
-            $payload['sound'] = $component->hasSound();
-        }
-
-        if (method_exists($component, 'hasVibration')) {
-            $payload['vibrate'] = $component->hasVibration();
-        }
-
-        if (method_exists($component, 'getBeepFrequencyHz')) {
-            $payload['beepFrequency'] = $component->getBeepFrequencyHz();
-        }
-
-        if (method_exists($component, 'getBeepDurationMs')) {
-            $payload['beepDurationMs'] = $component->getBeepDurationMs();
-        }
-
-        if (method_exists($component, 'getVibrateDurationMs')) {
-            $payload['vibrateDurationMs'] = $component->getVibrateDurationMs();
-        }
-
-        // Hardware scanner (HasHardwareScanner).
-        if (method_exists($component, 'isHardwareScannerEnabled')) {
-            $payload['hardwareScanner'] = $component->isHardwareScannerEnabled();
-        }
-
-        if (method_exists($component, 'getBurstThresholdMs')) {
-            $payload['burstThresholdMs'] = $component->getBurstThresholdMs();
-        }
-
-        if (method_exists($component, 'getTerminators')) {
-            $payload['terminators'] = $component->getTerminators();
-        }
-
-        if (method_exists($component, 'getMinBarcodeLength')) {
-            $payload['minBarcodeLength'] = $component->getMinBarcodeLength();
-        }
-
-        if (method_exists($component, 'getMinFastKeys')) {
-            $payload['minFastKeys'] = $component->getMinFastKeys();
-        }
-
-        if (method_exists($component, 'getScanTimeoutMs')) {
-            $payload['scanTimeoutMs'] = $component->getScanTimeoutMs();
-        }
-
-        if (method_exists($component, 'isSuppressedWhenGlobalListenerActive')) {
-            $payload['suppressWhenGlobalListenerActive'] = $component->isSuppressedWhenGlobalListenerActive();
-        }
-
-        if (method_exists($component, 'shouldPreventFormSubmit')) {
-            $payload['preventSubmit'] = $component->shouldPreventFormSubmit();
-        }
-
-        // Camera (HasCameraScanning).
-        $hasCamera = false;
-
-        if (method_exists($component, 'getEffectiveFps')) {
-            $payload['fps'] = $component->getEffectiveFps();
-            $hasCamera = true;
-        }
-
-        if (method_exists($component, 'getQrbox')) {
-            $payload['qrbox'] = $component->getQrbox();
-            $hasCamera = true;
-        }
-
-        if (method_exists($component, 'isPreferRearCamera')) {
-            $payload['preferRearCamera'] = $component->isPreferRearCamera();
-            $hasCamera = true;
-        }
-
-        if (method_exists($component, 'getSupportedFormats')) {
-            $payload['formats'] = $component->getSupportedFormats();
-            $hasCamera = true;
-        }
-
-        if ($hasCamera) {
-            $payload['insecureMessage'] = __('filament-qr-code::ui.camera_needs_secure_context');
-        }
-
-        // Surface-specific extras. The state path can throw when the component
-        // is not mounted in a form, so it resolves to null instead.
-        if (method_exists($component, 'getStatePath')) {
-            $statePath = self::attempt(fn () => $component->getStatePath());
-            if (is_string($statePath) && $statePath !== '') {
-                $payload['statePath'] = $statePath;
+        foreach (self::Contributors as $trait => $method) {
+            if (! in_array($trait, $traits, true)) {
+                continue;
             }
+
+            $payload = [...$payload, ...self::contribution($component, $method)];
         }
 
-        if (method_exists($component, 'getNextField')) {
-            $payload['nextField'] = $component->getNextField();
+        $statePath = self::statePathOf($component);
+
+        if ($statePath !== null) {
+            $payload['statePath'] = $statePath;
         }
 
-        if (method_exists($component, 'getScanFields')) {
-            $payload['fields'] = $component->getScanFields();
-        } elseif (method_exists($component, 'getFields')) {
-            $payload['fields'] = $component->getFields();
+        if (! in_array(HasScanPayload::class, $traits, true)) {
+            return $payload;
         }
 
-        if (method_exists($component, 'getStatePathPrefix')) {
-            $payload['statePrefix'] = $component->getStatePathPrefix();
-        }
-
-        if (method_exists($component, 'getComponentStatePath')) {
-            $payload['componentStatePath'] = $component->getComponentStatePath();
-        }
-
-        if (method_exists($component, 'isEditable')) {
-            $payload['editable'] = $component->isEditable();
-        }
-
-        if (method_exists($component, 'isDuplicatesAllowed')) {
-            $payload['allowDuplicates'] = $component->isDuplicatesAllowed();
-        }
-
-        if (method_exists($component, 'getDelayBetweenScansMs')) {
-            $payload['delayBetweenScansMs'] = $component->getDelayBetweenScansMs();
-        }
-
-        if (method_exists($component, 'shouldFallbackToAnyInput')) {
-            $payload['fallbackToAnyInput'] = $component->shouldFallbackToAnyInput();
-        }
-
-        if (method_exists($component, 'isAutoFocusNext')) {
-            $payload['autoFocusNext'] = $component->isAutoFocusNext();
-        }
-
-        return $payload;
+        return [...$payload, ...self::contribution($component, 'getComponentScanPayload')];
     }
 
-    private static function attempt(Closure $call): mixed
+    /** @return array<string, mixed> */
+    private static function contribution(object $component, string $method): array
     {
+        /** @var callable(): array<string, mixed> $contributor */
+        $contributor = [$component, $method];
+
+        return $contributor();
+    }
+
+    /**
+     * The state path throws when the component is not mounted in a form,
+     * so it resolves to null instead.
+     */
+    private static function statePathOf(object $component): ?string
+    {
+        if (! method_exists($component, 'getStatePath')) {
+            return null;
+        }
+
         try {
-            return $call();
+            $statePath = $component->getStatePath();
         } catch (Throwable) {
             return null;
         }
+
+        if (! is_string($statePath)) {
+            return null;
+        }
+
+        if ($statePath === '') {
+            return null;
+        }
+
+        return $statePath;
     }
 }

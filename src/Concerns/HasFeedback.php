@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Concerns;
 
 use Closure;
+use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 
 trait HasFeedback
 {
@@ -56,9 +57,7 @@ trait HasFeedback
     public function hasSound(): bool
     {
         if ($this->hasSound === null) {
-            $configured = function_exists('config') ? config('qr-code.feedback.sound', true) : true;
-
-            return is_bool($configured) ? $configured : (bool) $configured;
+            return ConfigValue::bool('qr-code.feedback.sound', true);
         }
 
         return (bool) $this->evaluate($this->hasSound);
@@ -67,9 +66,7 @@ trait HasFeedback
     public function hasVibration(): bool
     {
         if ($this->hasVibration === null) {
-            $configured = function_exists('config') ? config('qr-code.feedback.vibrate', true) : true;
-
-            return is_bool($configured) ? $configured : (bool) $configured;
+            return ConfigValue::bool('qr-code.feedback.vibrate', true);
         }
 
         return (bool) $this->evaluate($this->hasVibration);
@@ -80,9 +77,7 @@ trait HasFeedback
         $value = $this->beepFrequencyHz === null ? null : $this->evaluate($this->beepFrequencyHz);
 
         if ($value === null) {
-            $configured = function_exists('config') ? config('qr-code.feedback.beep_frequency', 880) : 880;
-
-            return is_numeric($configured) ? max(100, (int) $configured) : 880;
+            return ConfigValue::int('qr-code.feedback.beep_frequency', 880, minimum: 100);
         }
 
         return max(100, (int) $value);
@@ -93,9 +88,7 @@ trait HasFeedback
         $value = $this->beepDurationMs === null ? null : $this->evaluate($this->beepDurationMs);
 
         if ($value === null) {
-            $configured = function_exists('config') ? config('qr-code.feedback.beep_duration_ms', 80) : 80;
-
-            return is_numeric($configured) ? max(20, (int) $configured) : 80;
+            return ConfigValue::int('qr-code.feedback.beep_duration_ms', 80, minimum: 20);
         }
 
         return max(20, (int) $value);
@@ -106,11 +99,21 @@ trait HasFeedback
         $value = $this->vibrateDurationMs === null ? null : $this->evaluate($this->vibrateDurationMs);
 
         if ($value === null) {
-            $configured = function_exists('config') ? config('qr-code.feedback.vibrate_duration_ms', 100) : 100;
-
-            return is_numeric($configured) ? max(0, (int) $configured) : 100;
+            return ConfigValue::int('qr-code.feedback.vibrate_duration_ms', 100, minimum: 0);
         }
 
         return max(0, (int) $value);
+    }
+
+    /** @return array<string, mixed> */
+    public function getFeedbackScanPayload(): array
+    {
+        return [
+            'sound' => $this->hasSound(),
+            'vibrate' => $this->hasVibration(),
+            'beepFrequency' => $this->getBeepFrequencyHz(),
+            'beepDurationMs' => $this->getBeepDurationMs(),
+            'vibrateDurationMs' => $this->getVibrateDurationMs(),
+        ];
     }
 }

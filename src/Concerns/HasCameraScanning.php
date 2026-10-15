@@ -6,6 +6,7 @@ namespace Mmuqiitf\FilamentQrCode\Concerns;
 
 use Closure;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 
 trait HasCameraScanning
 {
@@ -57,9 +58,7 @@ trait HasCameraScanning
     public function getFps(): int
     {
         if ($this->fps === null) {
-            $configured = function_exists('config') ? config('qr-code.camera.fps', 25) : 25;
-
-            return is_numeric($configured) ? max(1, (int) $configured) : 25;
+            return ConfigValue::int('qr-code.camera.fps', 25, minimum: 1);
         }
 
         return max(1, (int) $this->evaluate($this->fps));
@@ -90,9 +89,7 @@ trait HasCameraScanning
     public function getQrbox(): int
     {
         if ($this->qrbox === null) {
-            $configured = function_exists('config') ? config('qr-code.camera.qrbox', 250) : 250;
-
-            return is_numeric($configured) ? max(1, (int) $configured) : 250;
+            return ConfigValue::int('qr-code.camera.qrbox', 250, minimum: 1);
         }
 
         return max(1, (int) $this->evaluate($this->qrbox));
@@ -101,9 +98,7 @@ trait HasCameraScanning
     public function isPreferRearCamera(): bool
     {
         if ($this->preferRearCamera === null) {
-            $configured = function_exists('config') ? config('qr-code.camera.prefer_rear_camera', true) : true;
-
-            return is_bool($configured) ? $configured : (bool) $configured;
+            return ConfigValue::bool('qr-code.camera.prefer_rear_camera', true);
         }
 
         return (bool) $this->evaluate($this->preferRearCamera);
@@ -129,5 +124,17 @@ trait HasCameraScanning
         }
 
         return $result;
+    }
+
+    /** @return array<string, mixed> */
+    public function getCameraScanPayload(): array
+    {
+        return [
+            'fps' => $this->getEffectiveFps(),
+            'qrbox' => $this->getQrbox(),
+            'preferRearCamera' => $this->isPreferRearCamera(),
+            'formats' => $this->getSupportedFormats(),
+            'insecureMessage' => __('filament-qr-code::ui.camera_needs_secure_context'),
+        ];
     }
 }

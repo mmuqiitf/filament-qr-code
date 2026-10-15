@@ -117,3 +117,17 @@ it('exposes the listener any-input fallback flag', function () {
 
     expect(QrHardwareScannerListener::make(['sku'])->getScanPayload()['fallbackToAnyInput'])->toBeFalse();
 });
+
+it('merges component-contributed extras into the payload', function () {
+    $scanner = new class('sku') extends QrScanner
+    {
+        public function getComponentScanPayload(): array
+        {
+            return ['stationId' => 'line-3'];
+        }
+    };
+
+    expect($scanner->getScanPayload())
+        ->toHaveKey('stationId', 'line-3')
+        ->toHaveKey('burstThresholdMs', 50);
+});
