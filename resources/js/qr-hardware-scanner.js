@@ -185,6 +185,10 @@ export function createHardwareScannerHandler({
     };
 }
 
+function isTextEntry(element) {
+    return Boolean(element) && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA');
+}
+
 /**
  * Alpine component for QrHardwareScannerListener.
  */
@@ -211,6 +215,10 @@ export function qrHardwareScannerListenerComponent({
         registeredFields: fields,
         hardwareScannerHandler: null,
         boundKeyHandler: null,
+        // Focused input and its value when a keystroke sequence started, so
+        // a burst routed elsewhere can undo the keys it typed into it.
+        burstOrigin: null,
+        lastKeyAt: 0,
 
         init() {
             trackGlobalListener(1);
@@ -229,6 +237,7 @@ export function qrHardwareScannerListenerComponent({
             });
 
             this.boundKeyHandler = (e) => {
+                this.rememberBurstOrigin();
                 this.hardwareScannerHandler.handleKeyDown(e);
             };
             window.addEventListener('keydown', this.boundKeyHandler);
@@ -247,12 +256,46 @@ export function qrHardwareScannerListenerComponent({
             return findFieldInput(fieldName);
         },
 
+        rememberBurstOrigin() {
+            const now = Date.now();
+            const startsSequence = now - this.lastKeyAt > burstThresholdMs;
+            this.lastKeyAt = now;
+
+            if (!startsSequence) {
+                return;
+            }
+
+            const active = document.activeElement;
+            this.burstOrigin = isTextEntry(active) ? { element: active, value: active.value } : null;
+        },
+
+        isRegisteredField(element) {
+            const name = element.getAttribute('name') || element.closest('[data-field-name]')?.getAttribute('data-field-name');
+
+            return this.registeredFields.some((fieldName) => findFieldInput(fieldName) === element || fieldName === name);
+        },
+
+        restoreBurstOrigin(targetInput) {
+            const origin = this.burstOrigin;
+            this.burstOrigin = null;
+
+            if (!origin || origin.element === targetInput || origin.element.value === origin.value) {
+                return;
+            }
+
+            origin.element.value = origin.value;
+            origin.element.dispatchEvent(new Event('input', { bubbles: true }));
+            origin.element.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+
         handleGlobalScan(scannedValue) {
             let targetInput = null;
             let targetFieldName = null;
             const active = document.activeElement;
 
-            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+            // With registered fields, a focused input only receives the scan
+            // when it is one of them (a focused search/member box is not).
+            if (isTextEntry(active) && (this.registeredFields.length === 0 || this.isRegisteredField(active))) {
                 targetInput = active;
                 targetFieldName = active.getAttribute('name') || active.closest('[data-field-name]')?.getAttribute('data-field-name');
             }
@@ -288,6 +331,7 @@ export function qrHardwareScannerListenerComponent({
             }
 
             if (targetInput) {
+                this.restoreBurstOrigin(targetInput);
                 targetInput.focus();
                 targetInput.value = scannedValue;
                 targetInput.dispatchEvent(new Event('input', { bubbles: true }));
