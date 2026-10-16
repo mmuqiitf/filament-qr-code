@@ -54,3 +54,56 @@ it('does not dispatch the qr-scan-rejected browser event from the server', funct
 
     ScanChecksTestComponent::scan($test, 'SKU-404')->assertNotDispatched('qr-scan-rejected');
 });
+it('onScanned receives ScanResult, Set and Get and can fill a sibling field', function (): void {
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner
+        ->lookup(ScanCheckProduct::class, 'sku')
+        ->onScanned(function (ScanResult $result, Set $set, Get $get): void {
+            $set('note', "{$get('sku')} x {$result->record->stock}");
+
+        }));
+
+    ScanChecksTestComponent::scan($test, 'SKU-1')
+        ->assertSet('data.sku', 'SKU-1')
+        ->assertSet('data.note', 'SKU-1 x 5');
+});
+
+it('runs onScanned after state is set and before the events', function (): void {
+    $order = [];
+    Event::listen(ScanAccepted::class, function () use (&$order): void {
+        $order[] = 'ScanAccepted';
+    });
+    Event::listen(QrCodeScanned::class, function () use (&$order): void {
+        $order[] = 'QrCodeScanned';
+    });
+
+    $test = ScanChecksTestComponent::test(function (QrScanner $scanner) use (&$order): QrScanner {
+        return $scanner
+            ->onScanned(function (Get $get) use (&$order): void {
+                $order[] = "onScanned:{$get('sku')}";
+            });
+    });
+
+    ScanChecksTestComponent::scan($test, 'ABC');
+
+    expect($order)->toBe(['onScanned:ABC', 'ScanAccepted', 'QrCodeScanned']);
+});
+
+it('does not run onScanned for a rejected scan', function (): void {
+    $calls = 0;
+
+    $test = ScanChecksTestComponent::test(function (QrScanner $scanner) use (&$calls): QrScanner {
+        return $scanner
+            ->lookup(ScanCheckProduct::class, 'sku')
+            ->onScanned(function () use (&$calls): void {
+                $calls++;
+            });
+    });
+
+    ScanChecksTestComponent::scan($test, 'SKU-404');
+
+    expect($calls)->toBe(0);
+});
+
+it('counts an onScanned callback as a server check', function (): void {
+    expect(QrScanner::make('sku')->onScanned(fn () => null)->hasServerScanChecks())->toBeTrue();
+});

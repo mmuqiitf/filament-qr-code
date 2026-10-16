@@ -40,6 +40,8 @@ trait InteractsWithScans
 
     protected bool $hasRegisteredScanChecksRule = false;
 
+    protected ?Closure $onScannedCallback = null;
+
     /** @param  array<int, mixed>|ValidationRule|Closure  $rules */
     public function validateUsing(array|ValidationRule|Closure $rules): static
     {
@@ -84,6 +86,7 @@ trait InteractsWithScans
     {
         $this->state($result->code);
         $this->callAfterStateUpdated();
+        $this->evaluateScanCallback($this->onScannedCallback, $result);
 
         event(new ScanAccepted($result, $this->getName()));
         event(new QrCodeScanned(
@@ -92,6 +95,30 @@ trait InteractsWithScans
             field: $this->getName(),
             context: ['record_key' => $result->record?->getKey()],
         ));
+    }
+
+    public function onScanned(?Closure $callback): static
+    {
+        $this->onScannedCallback = $callback;
+
+        return $this;
+    }
+
+    protected function evaluateScanCallback(?Closure $callback, ScanResult $result): void
+    {
+        if (! $callback instanceof Closure) {
+            return;
+        }
+
+        $this->evaluate($callback, [
+            'result' => $result,
+            'code' => $result->code,
+            'record' => $result->record,
+            'source' => $result->source,
+        ], [
+            ScanResult::class => $result,
+            ScanInput::class => $result->source,
+        ]);
     }
 
     protected function rejectScan(ScanResult $result): void
@@ -222,7 +249,8 @@ trait InteractsWithScans
     {
         return $this->scanRules !== []
             || $this->scanCheckClosures !== []
-            || $this->lookupModel !== null;
+            || $this->lookupModel !== null
+            || $this->onScannedCallback !== null;
     }
 
     protected function registerScanChecksRule(): void
