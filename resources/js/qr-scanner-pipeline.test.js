@@ -83,4 +83,49 @@ describe('qrScanner server checks', () => {
         expect(wire.methodCalls).toEqual([]);
         expect(wire.calls).toEqual([['data.sku', 'PRD-1001']]);
     });
+
+    it('rejected result clears the value and dispatches qr-scan-rejected once', async () => {
+        const { scanner } = mountChecked({ respond: () => Promise.resolve(rejected('SKU-404', 'No record found for "SKU-404".')) });
+        const rejectedEvents = captureWindowEvent('qr-scan-rejected');
+        const scannedEvents = captureWindowEvent('qr-scanned');
+        scanner.value = 'OLD';
+
+        const result = await scanner.handleScanResult('SKU-404');
+
+        expect(result.passes).toBe(false);
+        expect(scanner.value).toBe('');
+        expect(rejectedEvents).toEqual([
+            { value: 'SKU-404', field: 'sku', source: 'camera', message: 'No record found for "SKU-404".' },
+        ]);
+        expect(scannedEvents).toEqual([]);
+    });
+
+    it('keeps the value on reject when clearOnReject is off', async () => {
+        const { scanner } = mountChecked({ clearOnReject: false, respond: () => Promise.resolve(rejected('X', 'Nope')) });
+        scanner.value = 'OLD';
+
+        await scanner.handleScanResult('X');
+
+        expect(scanner.value).toBe('OLD');
+    });
+
+    it.each([
+        ['a null result', () => Promise.resolve(null)],
+        ['a rejected call', () => Promise.reject(new Error('offline'))],
+    ])('turns %s into a rejected scan with the scan_failed message', async (label, respond) => {
+        const errors = [];
+        const originalError = console.error;
+        console.error = (...args) => errors.push(args);
+
+        try {
+            const { scanner } = mountChecked({ respond, scanFailedMessage: 'The scan could not be checked. Please try again.' });
+            const rejectedEvents = captureWindowEvent('qr-scan-rejected');
+
+            await scanner.handleScanResult('SKU-1');
+
+            expect(rejectedEvents.map(({ message }) => message)).toEqual(['The scan could not be checked. Please try again.']);
+        } finally {
+            console.error = originalError;
+        }
+    });
 });

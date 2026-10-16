@@ -278,7 +278,13 @@ export default function qrScannerComponent({
             }
         },
 
-        applyRejected() {},
+        applyRejected({ code, source, message }, field) {
+            if (clearOnReject) {
+                this.value = '';
+            }
+
+            window.dispatchEvent(new CustomEvent('qr-scan-rejected', { detail: { value: code, field, source, message } }));
+        },
 
         advanceFocus(targetFieldName) {
             const targetElement = findFieldInput(targetFieldName);
