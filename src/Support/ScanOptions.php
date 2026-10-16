@@ -6,8 +6,8 @@ namespace Mmuqiitf\FilamentQrCode\Support;
 
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
-use Mmuqiitf\FilamentQrCode\Concerns\HasOutcomeFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Concerns\HasOutcomeFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
 use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScans;
