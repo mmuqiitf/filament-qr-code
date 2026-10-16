@@ -22,6 +22,27 @@ class ConfigValue
         return max($minimum, (int) $value);
     }
 
+    /**
+     * @param  list<int>  $default
+     * @return list<int>
+     */
+    public static function intList(string $key, array $default): array
+    {
+        $value = self::read($key, $default);
+
+        if (! is_array($value) || ! array_is_list($value)) {
+            return $default;
+        }
+
+        foreach ($value as $item) {
+            if (! is_int($item) || $item < 0) {
+                return $default;
+            }
+        }
+
+        return $value;
+    }
+
     private static function read(string $key, mixed $default): mixed
     {
         if (! function_exists('config')) {
