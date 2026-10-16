@@ -12,7 +12,7 @@ import {
     stopCameraFeed,
     storageKeyFor,
 } from './qr-camera-core.js';
-import { requestScanCheck } from './scan-pipeline.js';
+import { createScanDeduper, requestScanCheck } from './scan-pipeline.js';
 
 /**
  * Alpine component for QrScanner field.
@@ -47,6 +47,7 @@ export default function qrScannerComponent({
     scanFailedMessage = 'The scan could not be checked. Please try again.',
 } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('scanner');
+    const deduper = createScanDeduper();
 
     return {
         // State
@@ -77,7 +78,7 @@ export default function qrScannerComponent({
                     scanTimeoutMs,
                     suppressWhenGlobalListenerActive,
                     onScan: (scannedValue) => {
-                        this.handleScanResult(scannedValue);
+                        this.handleScanResult(scannedValue, 'hardware');
                     },
                 });
 
@@ -191,8 +192,7 @@ export default function qrScannerComponent({
                     this.selectedDeviceId,
                     config,
                     (decodedText) => {
-                        this.handleScanResult(decodedText);
-                        this.closeScannerModal();
+                        this.onCameraDecode(decodedText);
                     },
                     () => {
                         // Frame scan error (no QR/barcode detected in frame), silent ignore
@@ -214,11 +214,17 @@ export default function qrScannerComponent({
         async handleScanResult(scannedText, source = 'camera') {
             const code = sanitizeScannedValue(scannedText);
 
-            if (!code) {
+            if (!code || this.isChecking) {
                 return { passes: false, ignored: true };
             }
 
             const field = this.$el.getAttribute('data-field-name') || null;
+
+            if (deduper.isDuplicate(code, cooldownMs)) {
+                window.dispatchEvent(new CustomEvent('qr-scan-duplicate', { detail: { value: code, field, source } }));
+
+                return { passes: false, ignored: true };
+            }
 
             if (!serverCheck || !componentKey || !this.$wire) {
                 this.acceptLocally(code, source, field);
@@ -240,6 +246,53 @@ export default function qrScannerComponent({
                 return result;
             } finally {
                 this.isChecking = false;
+            }
+        },
+
+        async onCameraDecode(decodedText) {
+            if (!serverCheck || !componentKey) {
+                await this.handleScanResult(decodedText, 'camera');
+                this.closeScannerModal();
+
+                return;
+            }
+
+            if (this.isChecking) {
+                return;
+            }
+
+            this.pauseCamera();
+
+            const result = await this.handleScanResult(decodedText, 'camera');
+
+            if (result.ignored) {
+                this.resumeCamera();
+
+                return;
+            }
+
+            if (result.passes) {
+                this.closeScannerModal();
+
+                return;
+            }
+
+            this.resumeCamera();
+        },
+
+        pauseCamera() {
+            try {
+                this.html5Qrcode?.pause?.(true);
+            } catch (error) {
+                console.debug('QR camera pause failed:', error);
+            }
+        },
+
+        resumeCamera() {
+            try {
+                this.html5Qrcode?.resume?.();
+            } catch (error) {
+                console.debug('QR camera resume failed:', error);
             }
         },
 
@@ -351,7 +404,7 @@ export default function qrScannerComponent({
                 return;
             }
 
-            this.handleScanResult(decodedText);
+            await this.handleScanResult(decodedText, 'upload');
             this.closeScannerModal();
         },
     };

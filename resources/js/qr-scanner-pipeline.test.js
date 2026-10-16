@@ -128,4 +128,60 @@ describe('qrScanner server checks', () => {
             console.error = originalError;
         }
     });
+
+    it('same code within cooldown is dropped and emits qr-scan-duplicate', async () => {
+        const { scanner, wire } = mountChecked();
+        const duplicates = captureWindowEvent('qr-scan-duplicate');
+
+        await scanner.handleScanResult('SKU-1');
+        await scanner.handleScanResult('SKU-1');
+
+        expect(wire.methodCalls).toHaveLength(1);
+        expect(duplicates).toEqual([{ value: 'SKU-1', field: 'sku', source: 'camera' }]);
+    });
+
+    it('ignores a second scan while a check is in flight', async () => {
+        const pending = [];
+        const { scanner, wire } = mountChecked({
+            respond: (key, method, { code }) => new Promise((resolve) => pending.push(() => resolve(accepted(code)))),
+        });
+
+        const first = scanner.handleScanResult('SKU-1');
+        const second = await scanner.handleScanResult('SKU-2');
+
+        expect(second).toEqual({ passes: false, ignored: true });
+        expect(wire.methodCalls).toHaveLength(1);
+
+        pending[0]();
+        await first;
+
+        expect(scanner.isChecking).toBe(false);
+    });
+
+    it('pauses the camera during a check and resumes it after a reject', async () => {
+        const cameraCalls = [];
+        const { scanner } = mountChecked({ respond: () => Promise.resolve(rejected('X', 'Nope')) });
+        scanner.html5Qrcode = {
+            pause: (shouldPauseVideo) => cameraCalls.push(['pause', shouldPauseVideo]),
+            resume: () => cameraCalls.push(['resume']),
+        };
+        scanner.isScanning = true;
+        scanner.isModalOpen = true;
+
+        await scanner.onCameraDecode('X');
+
+        expect(cameraCalls).toEqual([['pause', true], ['resume']]);
+        expect(scanner.isModalOpen).toBe(true);
+    });
+
+    it('closes the scanner after an accepted camera scan', async () => {
+        const { scanner } = mountChecked();
+        const closes = [];
+        scanner.html5Qrcode = { pause: () => {}, resume: () => {} };
+        scanner.closeScannerModal = () => closes.push('close');
+
+        await scanner.onCameraDecode('SKU-1');
+
+        expect(closes).toEqual(['close']);
+    });
 });
