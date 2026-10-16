@@ -53,3 +53,52 @@ it('reports server checks once a rule is configured', function (): void {
     expect(QrScanner::make('sku')->hasServerScanChecks())->toBeFalse()
         ->and(QrScanner::make('sku')->validateUsing(['max:5'])->hasServerScanChecks())->toBeTrue();
 });
+it('lookup sets record on ScanResult; missing SKU rejects with record_not_found', function (): void {
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->lookup(ScanCheckProduct::class, 'sku'));
+
+    ScanChecksTestComponent::scan($test, 'SKU-1')
+        ->assertReturned(fn (array $result): bool => $result['passes'] === true
+            && $result['record_key'] === ScanCheckProduct::query()->where('sku', 'SKU-1')->value('id'));
+
+    ScanChecksTestComponent::scan($test, 'SKU-404')
+        ->assertReturned(fn (array $result): bool => $result['passes'] === false
+            && $result['message'] === 'No record found for "SKU-404".');
+});
+
+it('translates record_not_found', function (): void {
+    app()->setLocale('id');
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->lookup(ScanCheckProduct::class, 'sku'));
+
+    ScanChecksTestComponent::scan($test, 'SKU-404')
+        ->assertReturned(fn (array $result): bool => $result['message'] === 'Data untuk "SKU-404" tidak ditemukan.');
+});
+
+it('applies modifyQueryUsing to the lookup', function (): void {
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->lookup(
+        ScanCheckProduct::class,
+        'sku',
+        modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query) => $query->where('active', true),
+    ));
+
+    ScanChecksTestComponent::scan($test, 'SKU-OLD')
+        ->assertReturned(fn (array $result): bool => $result['passes'] === false);
+});
+
+it('runs rules before the lookup', function (): void {
+    \Illuminate\Support\Facades\DB::enableQueryLog();
+
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner
+        ->lookup(ScanCheckProduct::class, 'sku')
+        ->validateUsing(['max:3']));
+
+    \Illuminate\Support\Facades\DB::flushQueryLog();
+
+    ScanChecksTestComponent::scan($test, 'SKU-1')
+        ->assertReturned(fn (array $result): bool => str_contains((string) $result['message'], 'must not be greater than 3'));
+
+    expect(collect(\Illuminate\Support\Facades\DB::getQueryLog())->pluck('query')->filter(fn (string $sql): bool => str_contains($sql, 'scan_check_products')))->toBeEmpty();
+});
+
+it('reports server checks once a lookup is configured', function (): void {
+    expect(QrScanner::make('sku')->lookup(ScanCheckProduct::class, 'sku')->hasServerScanChecks())->toBeTrue();
+});

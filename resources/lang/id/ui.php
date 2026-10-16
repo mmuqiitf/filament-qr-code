@@ -45,4 +45,5 @@ return [
     'type_or_scan' => 'Ketik atau pindai kode...',
     'scan_empty' => 'Kode yang dipindai kosong.',
     'scan_rejected' => 'Kode ini ditolak.',
+    'record_not_found' => 'Data untuk ":code" tidak ditemukan.',
 ];
