@@ -43,4 +43,6 @@ return [
     'starting_feed' => 'Menyiapkan umpan kamera...',
     'stop' => 'Berhenti',
     'type_or_scan' => 'Ketik atau pindai kode...',
+    'scan_empty' => 'Kode yang dipindai kosong.',
+    'scan_rejected' => 'Kode ini ditolak.',
 ];

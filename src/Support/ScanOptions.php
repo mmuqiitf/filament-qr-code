@@ -9,6 +9,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
+use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScans;
 use Throwable;
 
 /**
@@ -24,6 +25,7 @@ final class ScanOptions
         HasHardwareScanner::class => 'getHardwareScannerScanPayload',
         HasCameraScanning::class => 'getCameraScanPayload',
         HasSequentialScan::class => 'getSequentialScanPayload',
+        InteractsWithScans::class => 'getScanChecksScanPayload',
     ];
 
     /** @return array<string, mixed> */
