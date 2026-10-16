@@ -11,6 +11,7 @@ use Filament\Forms\Components\Field;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Concerns\HasOutcomeFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
 use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScans;
@@ -22,6 +23,7 @@ class QrScanner extends Field
     use HasCameraScanning;
     use HasFeedback;
     use HasHardwareScanner;
+    use HasOutcomeFeedback;
     use HasPlaceholder;
     use HasScanPayload;
     use HasSequentialScan;

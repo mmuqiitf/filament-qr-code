@@ -46,6 +46,20 @@ return [
         'beep_duration_ms' => 80,
         'vibrate' => true,
         'vibrate_duration_ms' => 100,
+
+        // Outcome feedback for fields with server checks (validateUsing, lookup,
+        // onScanned, onRejected). sound / vibrate above stay master switches.
+        // Override per field with beep(), vibrate(success:, error:) and flash().
+        'success' => [
+            'sound' => true,
+            'vibrate' => [100], // ms pattern
+            'flash' => true,
+        ],
+        'error' => [
+            'sound' => true,
+            'vibrate' => [80, 60, 80],
+            'flash' => true,
+        ],
     ],
 
     /*

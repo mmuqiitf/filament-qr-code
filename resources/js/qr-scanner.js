@@ -13,6 +13,7 @@ import {
     storageKeyFor,
 } from './qr-camera-core.js';
 import { createScanDeduper, requestScanCheck } from './scan-pipeline.js';
+import { playOutcomeFeedback } from './feedback.js';
 
 /**
  * Alpine component for QrScanner field.
@@ -45,6 +46,8 @@ export default function qrScannerComponent({
     cooldownMs = 0,
     clearOnReject = true,
     scanFailedMessage = 'The scan could not be checked. Please try again.',
+    successFeedback = null,
+    errorFeedback = null,
 } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('scanner');
     const deduper = createScanDeduper();
@@ -335,7 +338,11 @@ export default function qrScannerComponent({
             // The server already wrote the state; this keeps the deferred entangle in step without a request.
             this.value = code;
 
-            emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
+            if (successFeedback) {
+                playOutcomeFeedback('success', successFeedback, { element: this.$el, beepFrequency, beepDurationMs });
+            } else {
+                emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
+            }
 
             window.dispatchEvent(new CustomEvent('qr-scan-accepted', { detail: { value: code, field, source, recordKey } }));
             window.dispatchEvent(new CustomEvent('qr-scanned', {
@@ -351,6 +358,8 @@ export default function qrScannerComponent({
             if (clearOnReject) {
                 this.value = '';
             }
+
+            playOutcomeFeedback('error', errorFeedback, { element: this.$el, beepFrequency, beepDurationMs });
 
             window.dispatchEvent(new CustomEvent('qr-scan-rejected', { detail: { value: code, field, source, message } }));
         },

@@ -26,9 +26,21 @@ trait HasFeedback
         return $this;
     }
 
-    public function vibrate(bool|Closure $condition = true): static
+    /** @var list<int>|null */
+    protected ?array $successVibrationPattern = null;
+
+    /** @var list<int>|null */
+    protected ?array $errorVibrationPattern = null;
+
+    /**
+     * @param  list<int>|null  $success
+     * @param  list<int>|null  $error
+     */
+    public function vibrate(bool|Closure $condition = true, ?array $success = null, ?array $error = null): static
     {
         $this->hasVibration = $condition;
+        $this->successVibrationPattern = $success ?? $this->successVibrationPattern;
+        $this->errorVibrationPattern = $error ?? $this->errorVibrationPattern;
 
         return $this;
     }

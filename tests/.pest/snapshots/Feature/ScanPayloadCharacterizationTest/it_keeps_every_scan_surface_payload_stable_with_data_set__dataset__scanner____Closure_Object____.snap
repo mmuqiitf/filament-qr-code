@@ -4,6 +4,15 @@
     "burstThresholdMs": 50,
     "clearOnReject": true,
     "cooldownMs": 0,
+    "errorFeedback": {
+        "sound": true,
+        "vibrate": [
+            80,
+            60,
+            80
+        ],
+        "flash": true
+    },
     "fileScanFailedMessage": "No barcode or QR code found in the selected image.",
     "formats": [
         "QR_CODE"
@@ -21,6 +30,13 @@
     "scanTimeoutMs": 150,
     "serverCheck": false,
     "sound": true,
+    "successFeedback": {
+        "sound": true,
+        "vibrate": [
+            100
+        ],
+        "flash": true
+    },
     "suppressWhenGlobalListenerActive": true,
     "terminators": [
         "Enter",

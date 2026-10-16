@@ -52,6 +52,46 @@ class QrFeedback {
         }
     }
 
+    playTones(tones = []) {
+        try {
+            const context = this.getAudioContext();
+            if (!context) return;
+
+            if (context.state === 'suspended') {
+                context.resume();
+            }
+
+            tones.forEach(({ frequency, durationMs, delayMs = 0 }) => {
+                const startAt = context.currentTime + delayMs / 1000;
+                const stopAt = startAt + durationMs / 1000;
+                const oscillator = context.createOscillator();
+                const gain = context.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(frequency, startAt);
+                gain.gain.setValueAtTime(0.15, startAt);
+                gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+
+                oscillator.connect(gain);
+                gain.connect(context.destination);
+                oscillator.start(startAt);
+                oscillator.stop(stopAt);
+            });
+        } catch (error) {
+            console.debug('Audio feedback error:', error);
+        }
+    }
+
+    vibratePattern(pattern = []) {
+        try {
+            if (typeof navigator !== 'undefined' && navigator.vibrate && pattern.length > 0) {
+                navigator.vibrate(pattern);
+            }
+        } catch (error) {
+            console.debug('Haptic feedback error:', error);
+        }
+    }
+
     trigger(options = {}) {
         const soundEnabled = options.sound !== false;
         const vibrateEnabled = options.vibrate !== false;
