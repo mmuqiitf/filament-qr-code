@@ -21,6 +21,7 @@ Features:
 ---
 
 - [Filament QR Code](#filament-qr-code)
+  - [Try it](#try-it)
   - [Requirements](#requirements)
   - [How it works](#how-it-works)
   - [Installation](#installation)
@@ -38,6 +39,19 @@ Features:
   - [Security Vulnerabilities](#security-vulnerabilities)
   - [Credits](#credits)
   - [License](#license)
+
+---
+
+## Try it
+
+The [filament-qr-code-example](https://github.com/mmuqiitf/filament-qr-code-example) app demos every component (scanner showcase, cashier POS, work-order sequence, QR customizer, products resource):
+
+```bash
+git clone https://github.com/mmuqiitf/filament-qr-code-example && cd filament-qr-code-example
+composer setup            # composer + npm install, .env, key, SQLite migrations, asset build
+php artisan db:seed       # admin@example.com / password
+composer dev              # http://localhost:8081/admin
+```
 
 ---
 
