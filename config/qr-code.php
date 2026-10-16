@@ -50,6 +50,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Live Scan Checks
+    |--------------------------------------------------------------------------
+    |
+    | - cooldown_ms: Same code scanned again within this window is ignored.
+    |   Used only by fields with server checks (validateUsing / lookup);
+    |   fields without checks default to 0. Override per field with cooldown().
+    |
+    */
+    'scan' => [
+        'cooldown_ms' => 1500,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Camera Scanner Defaults
     |--------------------------------------------------------------------------
     |

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
+use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 use Throwable;
 
@@ -29,6 +30,8 @@ trait InteractsWithScans
     protected string $lookupColumn = 'code';
 
     protected ?Closure $modifyLookupQueryUsing = null;
+
+    protected int|Closure|null $cooldownMs = null;
 
     /** @param  array<int, mixed>|ValidationRule|Closure  $rules */
     public function validateUsing(array|ValidationRule|Closure $rules): static
@@ -178,6 +181,26 @@ trait InteractsWithScans
         return $this->scanRules !== []
             || $this->scanCheckClosures !== []
             || $this->lookupModel !== null;
+    }
+
+    public function cooldown(int|Closure $milliseconds): static
+    {
+        $this->cooldownMs = $milliseconds;
+
+        return $this;
+    }
+
+    public function getCooldownMs(): int
+    {
+        if ($this->cooldownMs !== null) {
+            return max(0, (int) $this->evaluate($this->cooldownMs));
+        }
+
+        if (! $this->hasServerScanChecks()) {
+            return 0;
+        }
+
+        return ConfigValue::int('qr-code.scan.cooldown_ms', 1500, minimum: 0);
     }
 
     /** @return array{serverCheck: bool, componentKey?: string} */
