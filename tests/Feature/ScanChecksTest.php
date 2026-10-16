@@ -102,3 +102,57 @@ it('runs rules before the lookup', function (): void {
 it('reports server checks once a lookup is configured', function (): void {
     expect(QrScanner::make('sku')->lookup(ScanCheckProduct::class, 'sku')->hasServerScanChecks())->toBeTrue();
 });
+it('closure check receives the looked-up record and its message rejects the scan', function (): void {
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner
+        ->lookup(ScanCheckProduct::class, 'sku')
+        ->validateUsing(fn (string $code, ?ScanCheckProduct $record): ?string => $record?->stock > 0 ? null : 'Out of stock'));
+
+    ScanChecksTestComponent::scan($test, 'SKU-EMPTY')
+        ->assertReturned(fn (array $result): bool => $result['passes'] === false && $result['message'] === 'Out of stock');
+
+    ScanChecksTestComponent::scan($test, 'SKU-1')
+        ->assertReturned(fn (array $result): bool => $result['passes'] === true);
+});
+
+it('rejects with scan_rejected when a closure returns false', function (): void {
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->validateUsing(fn (): bool => false));
+
+    ScanChecksTestComponent::scan($test, 'ANY')
+        ->assertReturned(fn (array $result): bool => $result['message'] === __('filament-qr-code::ui.scan_rejected'));
+});
+
+it('passes the scan source to closures', function (): void {
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner
+        ->validateUsing(fn (?\Mmuqiitf\FilamentQrCode\Enums\ScanInput $source): ?string => $source === \Mmuqiitf\FilamentQrCode\Enums\ScanInput::Hardware ? null : 'Hardware only'));
+
+    ScanChecksTestComponent::scan($test, 'X', 'camera')->assertReturned(fn (array $result): bool => $result['message'] === 'Hardware only');
+    ScanChecksTestComponent::scan($test, 'X', 'hardware')->assertReturned(fn (array $result): bool => $result['passes'] === true);
+});
+
+it('runs rules, then lookup, then closures and stops at the first failure', function (): void {
+    $calls = [];
+
+    $test = ScanChecksTestComponent::test(function (QrScanner $scanner) use (&$calls) {
+        return $scanner
+            ->validateUsing(function () use (&$calls): ?string {
+                $calls[] = 'closure-1';
+
+                return 'First closure fails';
+            })
+            ->validateUsing(function () use (&$calls): ?string {
+                $calls[] = 'closure-2';
+
+                return null;
+            })
+            ->lookup(ScanCheckProduct::class, 'sku')
+            ->validateUsing(['max:10']);
+    });
+
+    $calls = [];
+    ScanChecksTestComponent::scan($test, 'SKU-404')->assertReturned(fn (array $result): bool => str_starts_with((string) $result['message'], 'No record found'));
+    expect($calls)->toBe([]);
+
+    $calls = [];
+    ScanChecksTestComponent::scan($test, 'SKU-1')->assertReturned(fn (array $result): bool => $result['message'] === 'First closure fails');
+    expect($calls)->toBe(['closure-1']);
+});

@@ -82,7 +82,31 @@ trait InteractsWithScans
             return $record;
         }
 
-        return ScanResult::accept($code, $source, $record);
+        return $this->runScanCheckClosures($code, $source, $record)
+            ?? ScanResult::accept($code, $source, $record);
+    }
+
+    protected function runScanCheckClosures(string $code, ?ScanInput $source, ?Model $record): ?ScanResult
+    {
+        foreach ($this->scanCheckClosures as $check) {
+            $outcome = $this->evaluate($check, [
+                'code' => $code,
+                'record' => $record,
+                'source' => $source,
+            ], [
+                ScanInput::class => $source,
+            ]);
+
+            if ($outcome === false) {
+                return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_rejected'));
+            }
+
+            if (is_string($outcome) && $outcome !== '') {
+                return ScanResult::reject($code, $source, $outcome);
+            }
+        }
+
+        return null;
     }
 
     /** @param  class-string<Model>  $model */
