@@ -24,7 +24,11 @@ QrScanner::make('sku')
     ->minFastKeys(3) // consecutive fast keystrokes before a terminator counts
     ->beepFrequency(880)
     ->beepDuration(80)
-    ->vibrateDuration(100);
+    ->vibrateDuration(100)
+    // server-checked fields only (see scanning.md → Feedback)
+    ->beep(success: true, error: true)
+    ->vibrate(success: [100], error: [80, 60, 80])
+    ->flash();
 ```
 
 ### `hardware_scanner`
@@ -60,6 +64,8 @@ QrHardwareScannerListener::make(['sku'])
 | `beep_duration_ms`    | `80`     |
 | `vibrate`             | `true`   |
 | `vibrate_duration_ms` | `100`    |
+| `success`             | `['sound' => true, 'vibrate' => [100], 'flash' => true]` |
+| `error`               | `['sound' => true, 'vibrate' => [80, 60, 80], 'flash' => true]` |
 
 ### `camera`
 

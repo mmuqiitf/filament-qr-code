@@ -17,7 +17,7 @@
             ...@js($scanPayload)
         })"
         data-field-name="{{ $getName() }}"
-        class="relative"
+        class="relative rounded-lg"
     >
         <div class="flex rounded-lg shadow-sm">
             <input

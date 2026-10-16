@@ -266,3 +266,23 @@ QrScanner::make('sku')
 - If the request fails, the scan is rejected with "The scan could not be checked. Please try again."
 - The same code scanned again within the cooldown is ignored and fires `qr-scan-duplicate`.
 - A page-level `QrHardwareScannerListener` hands bursts to a server-checked field, so wedge scans are checked too.
+
+### Feedback
+
+Fields with server checks give a different cue for each outcome:
+
+| Outcome | Sound | Vibration | Flash |
+|---|---|---|---|
+| Accepted | one tone (`beepFrequency`, `beepDuration`) | `[100]` | green |
+| Rejected or check failed | two low tones | `[80, 60, 80]` | red |
+| Duplicate (within cooldown) | none | none | none |
+
+```php
+QrScanner::make('sku')
+    ->lookup(Product::class, 'sku')
+    ->beep(success: true, error: true)
+    ->vibrate(success: [50], error: [200, 100, 200])
+    ->flash(); // or flash(false)
+```
+
+Defaults live in `qr-code.feedback.success` and `qr-code.feedback.error`. `sound(false)` and `vibrate(false)` still turn everything off. Fields without checks keep the single success beep.

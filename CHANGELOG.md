@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Server-side checks for live `QrScanner` scans (P1a). Each scan makes one
+  Livewire call to a new `handleScan()` hook (Filament's
+  `callSchemaComponentMethod`) and gets a pass/fail result back.
+  - `validateUsing()` accepts Laravel rule arrays, rule objects and closures;
+    `lookup(Model::class, column, modifyQueryUsing:)` finds a record. Checks
+    run in order (rules, lookup, closures) and stop at the first failure, with
+    translated messages (`record_not_found`, `scan_failed`). The same checks
+    re-run on form submit (`ScanChecksRule`).
+  - `onScanned()` / `onRejected()` callbacks with `ScanResult`, `Get` and `Set`
+    (live scans only); `clearOnReject()`; events `ScanAccepted` and
+    `ScanRejected`. Accepted live scans now fire `QrCodeScanned` (audited when
+    `qr-code.audit.enabled`).
+  - Browser pipeline: duplicate suppression within `cooldown()` (event
+    `qr-scan-duplicate`), the camera pauses while a check runs, the field
+    clears on reject and `qr-scan-rejected` / `qr-scan-accepted` fire once.
+    Page-level hardware bursts are checked too.
+  - Outcome feedback: success and error tones, vibration patterns and a
+    green/red flash, configurable in `qr-code.feedback.success` / `.error` and
+    per field with `beep()`, `vibrate(success:, error:)` and `flash()`.
+- Config: `qr-code.scan.cooldown_ms`, `qr-code.scan.clear_on_reject`,
+  `qr-code.feedback.success`, `qr-code.feedback.error`.
+
+### Changed
+- `QrScanner` fields without any server check behave exactly as before
+  (no extra request, no cooldown, single success beep).
+
 ## [0.3.1] - 2026-10-16
 
 ### Fixed

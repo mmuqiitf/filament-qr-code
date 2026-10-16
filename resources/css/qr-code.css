@@ -134,3 +134,45 @@
         max-width: 100%;
     }
 }
+
+/* Scan outcome flash (server-checked QrScanner fields) */
+.fi-qr-flash-success {
+    animation: fi-qr-flash-success 300ms ease-out;
+}
+
+.fi-qr-flash-danger {
+    animation: fi-qr-flash-danger 300ms ease-out;
+}
+
+@keyframes fi-qr-flash-success {
+    from {
+        box-shadow: 0 0 0 3px rgb(34 197 94 / 0.7);
+    }
+    to {
+        box-shadow: 0 0 0 3px rgb(34 197 94 / 0);
+    }
+}
+
+@keyframes fi-qr-flash-danger {
+    from {
+        box-shadow: 0 0 0 3px rgb(239 68 68 / 0.8);
+    }
+    to {
+        box-shadow: 0 0 0 3px rgb(239 68 68 / 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fi-qr-flash-success,
+    .fi-qr-flash-danger {
+        animation: none;
+    }
+
+    .fi-qr-flash-success {
+        outline: 2px solid rgb(34 197 94);
+    }
+
+    .fi-qr-flash-danger {
+        outline: 2px solid rgb(239 68 68);
+    }
+}
