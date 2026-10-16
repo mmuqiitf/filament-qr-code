@@ -332,10 +332,15 @@ trait InteractsWithScans
         return ConfigValue::int('qr-code.scan.cooldown_ms', 1500, minimum: 0);
     }
 
-    /** @return array{serverCheck: bool, componentKey?: string} */
+    /** @return array{serverCheck: bool, cooldownMs: int, clearOnReject: bool, scanFailedMessage: string, componentKey?: string} */
     public function getScanChecksScanPayload(): array
     {
-        $payload = ['serverCheck' => $this->hasServerScanChecks()];
+        $payload = [
+            'serverCheck' => $this->hasServerScanChecks(),
+            'cooldownMs' => $this->getCooldownMs(),
+            'clearOnReject' => $this->shouldClearOnReject(),
+            'scanFailedMessage' => __('filament-qr-code::ui.scan_failed'),
+        ];
 
         try {
             $key = $this->getKey();

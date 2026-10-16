@@ -79,8 +79,10 @@ QrHardwareScannerListener::make(['sku'])
 
 | Event                     | Detail                        | Fired when                         |
 | ------------------------- | ----------------------------- | ---------------------------------- |
-| `qr-scanned`              | `{ value, field, nextField }` | any `QrScanner` scan               |
-| `qr-scan-rejected`        | `{ message }`                 | a `rejectWhen()` predicate matched |
+| `qr-scanned`              | `{ value, field, nextField, source, recordKey? }` | any accepted `QrScanner` scan |
+| `qr-scan-accepted`        | `{ value, field, source, recordKey }` | a server-checked scan passed |
+| `qr-scan-rejected`        | `{ message, value?, field?, source? }` | a server-checked scan failed, or a `rejectWhen()` predicate matched |
+| `qr-scan-duplicate`       | `{ value, field, source }`    | same code again within the field's cooldown |
 | `qr-hardware-scanned`     | `{ value, field }`            | page-global hardware burst         |
 | `qr-scan-unrouted`        | `{ value }`                   | page-global burst found no target field |
 | `qr-sequence-step`        | `{ field, value, index }`     | each container step                |

@@ -12,6 +12,7 @@ import {
     stopCameraFeed,
     storageKeyFor,
 } from './qr-camera-core.js';
+import { createScanDeduper, requestScanCheck } from './scan-pipeline.js';
 
 /**
  * Alpine component for QrScanner field.
@@ -39,8 +40,14 @@ export default function qrScannerComponent({
     cameraStorageKey = null,
     fileScanFailedMessage = 'No barcode or QR code found in selected image.',
     insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
+    serverCheck = false,
+    componentKey = null,
+    cooldownMs = 0,
+    clearOnReject = true,
+    scanFailedMessage = 'The scan could not be checked. Please try again.',
 } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('scanner');
+    const deduper = createScanDeduper();
 
     return {
         // State
@@ -56,6 +63,8 @@ export default function qrScannerComponent({
         html5Qrcode: null,
         scannerElementId: '',
         hardwareScannerHandler: null,
+        isChecking: false,
+        boundDeliverHandler: null,
         boundHardwareScannerHandler: null,
 
         init() {
@@ -70,7 +79,7 @@ export default function qrScannerComponent({
                     scanTimeoutMs,
                     suppressWhenGlobalListenerActive,
                     onScan: (scannedValue) => {
-                        this.handleScanResult(scannedValue);
+                        this.handleScanResult(scannedValue, 'hardware');
                     },
                 });
 
@@ -81,9 +90,24 @@ export default function qrScannerComponent({
                 };
                 this.$el.addEventListener('keydown', this.boundHardwareScannerHandler);
             }
+
+            this.boundDeliverHandler = (event) => {
+                if (!serverCheck || !componentKey) {
+                    return;
+                }
+
+                event.preventDefault();
+                this.handleScanResult(event.detail?.value, 'hardware');
+            };
+            this.$el.addEventListener('qr-scan-deliver', this.boundDeliverHandler);
         },
 
         destroy() {
+            if (this.boundDeliverHandler) {
+                this.$el.removeEventListener('qr-scan-deliver', this.boundDeliverHandler);
+                this.boundDeliverHandler = null;
+            }
+
             if (this.boundHardwareScannerHandler) {
                 this.$el.removeEventListener('keydown', this.boundHardwareScannerHandler);
                 this.boundHardwareScannerHandler = null;
@@ -184,8 +208,7 @@ export default function qrScannerComponent({
                     this.selectedDeviceId,
                     config,
                     (decodedText) => {
-                        this.handleScanResult(decodedText);
-                        this.closeScannerModal();
+                        this.onCameraDecode(decodedText);
                     },
                     () => {
                         // Frame scan error (no QR/barcode detected in frame), silent ignore
@@ -204,45 +227,132 @@ export default function qrScannerComponent({
             await stopCameraFeed(this, 'camera scanner');
         },
 
-        handleScanResult(scannedText) {
-            const trimmed = sanitizeScannedValue(scannedText);
-            if (!trimmed) return;
+        async handleScanResult(scannedText, source = 'camera') {
+            const code = sanitizeScannedValue(scannedText);
 
-            this.value = trimmed;
+            if (!code || this.isChecking) {
+                return { passes: false, ignored: true };
+            }
 
-            // Typed input syncs through entangle + wire:model; a scan is a
-            // discrete event, so it is pushed live exactly once to run
-            // afterStateUpdated hooks (rejectWhen, normalizeUsing).
+            const field = this.$el.getAttribute('data-field-name') || null;
+
+            if (deduper.isDuplicate(code, cooldownMs)) {
+                window.dispatchEvent(new CustomEvent('qr-scan-duplicate', { detail: { value: code, field, source } }));
+
+                return { passes: false, ignored: true };
+            }
+
+            if (!serverCheck || !componentKey || !this.$wire) {
+                this.acceptLocally(code, source, field);
+
+                return { passes: true, code, source };
+            }
+
+            this.isChecking = true;
+
+            try {
+                const result = await requestScanCheck(this.$wire, { componentKey, code, source, scanFailedMessage });
+
+                if (result.passes) {
+                    this.applyAccepted(result, field);
+                } else {
+                    this.applyRejected(result, field);
+                }
+
+                return result;
+            } finally {
+                this.isChecking = false;
+            }
+        },
+
+        async onCameraDecode(decodedText) {
+            if (!serverCheck || !componentKey) {
+                await this.handleScanResult(decodedText, 'camera');
+                this.closeScannerModal();
+
+                return;
+            }
+
+            if (this.isChecking) {
+                return;
+            }
+
+            this.pauseCamera();
+
+            const result = await this.handleScanResult(decodedText, 'camera');
+
+            if (result.ignored) {
+                this.resumeCamera();
+
+                return;
+            }
+
+            if (result.passes) {
+                this.closeScannerModal();
+
+                return;
+            }
+
+            this.resumeCamera();
+        },
+
+        pauseCamera() {
+            try {
+                this.html5Qrcode?.pause?.(true);
+            } catch (error) {
+                console.debug('QR camera pause failed:', error);
+            }
+        },
+
+        resumeCamera() {
+            try {
+                this.html5Qrcode?.resume?.();
+            } catch (error) {
+                console.debug('QR camera resume failed:', error);
+            }
+        },
+
+        acceptLocally(code, source, field) {
+            this.value = code;
+
             const path = this.getStatePath();
             if (this.$wire && path) {
-                this.$wire.set(path, trimmed);
+                this.$wire.set(path, code);
             }
 
-            // The single beep for this delivery (camera or hardware): the
-            // interceptor that routed hardware bursts never beeps.
-            emitScanFeedback(qrFeedback, {
-                sound,
-                vibrate,
-                beepFrequency,
-                beepDurationMs,
-                vibrateDurationMs,
-            });
+            emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
 
-            // Dispatch custom window event
             window.dispatchEvent(new CustomEvent('qr-scanned', {
-                detail: {
-                    value: trimmed,
-                    field: this.$el.getAttribute('data-field-name') || null,
-                    nextField: nextField,
-                },
+                detail: { value: code, field, nextField, source },
             }));
 
-            // Handle sequential focus transition if configured
             if (nextField) {
-                this.$nextTick(() => {
-                    this.advanceFocus(nextField);
-                });
+                this.$nextTick(() => this.advanceFocus(nextField));
             }
+        },
+
+        applyAccepted({ code, source, recordKey }, field) {
+            // The server already wrote the state; this keeps the deferred entangle in step without a request.
+            this.value = code;
+
+            emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
+
+            window.dispatchEvent(new CustomEvent('qr-scan-accepted', { detail: { value: code, field, source, recordKey } }));
+            window.dispatchEvent(new CustomEvent('qr-scanned', {
+                detail: { value: code, field, nextField, source, recordKey },
+            }));
+
+            if (nextField) {
+                this.$nextTick(() => this.advanceFocus(nextField));
+            }
+        },
+
+        applyRejected({ code, source, message }, field) {
+            if (clearOnReject) {
+                this.value = '';
+            }
+
+            window.dispatchEvent(new CustomEvent('qr-scan-rejected', { detail: { value: code, field, source, message } }));
         },
 
         advanceFocus(targetFieldName) {
@@ -310,7 +420,7 @@ export default function qrScannerComponent({
                 return;
             }
 
-            this.handleScanResult(decodedText);
+            await this.handleScanResult(decodedText, 'upload');
             this.closeScannerModal();
         },
     };

@@ -257,3 +257,12 @@ QrScanner::make('sku')
 - Accepted live scans fire `ScanAccepted` and `QrCodeScanned` (with `source` `camera`, `hardware` or `upload`); rejected ones fire `ScanRejected`. With `qr-code.audit.enabled`, accepted live scans are logged.
 - If `onScanned` throws, the field keeps its previous value, the error is reported, and the scan is rejected with the generic message.
 - Configuring `onScanned` or `onRejected` alone makes the field call the server on every scan and enables the default cooldown.
+
+### In the browser
+
+- A field with server checks sends each scan to the server once and waits for the answer. While it waits, the camera pauses and further scans are ignored.
+- Accepted: the value stays, the success beep plays, and `qr-scan-accepted` and `qr-scanned` fire. Camera scans close the scanner.
+- Rejected: the field clears (unless `clearOnReject(false)`), `qr-scan-rejected` fires once with the message, and the camera resumes so you can scan again.
+- If the request fails, the scan is rejected with "The scan could not be checked. Please try again."
+- The same code scanned again within the cooldown is ignored and fires `qr-scan-duplicate`.
+- A page-level `QrHardwareScannerListener` hands bursts to a server-checked field, so wedge scans are checked too.

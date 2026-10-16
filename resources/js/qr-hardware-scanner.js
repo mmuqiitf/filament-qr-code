@@ -333,6 +333,20 @@ export function qrHardwareScannerListenerComponent({
             if (targetInput) {
                 this.restoreBurstOrigin(targetInput);
                 targetInput.focus();
+                const deliverEvent = new CustomEvent('qr-scan-deliver', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: { value: scannedValue },
+                });
+
+                if (!targetInput.dispatchEvent(deliverEvent)) {
+                    window.dispatchEvent(new CustomEvent('qr-hardware-scanned', {
+                        detail: { value: scannedValue, field: targetFieldName },
+                    }));
+
+                    return;
+                }
+
                 targetInput.value = scannedValue;
                 targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                 targetInput.dispatchEvent(new Event('change', { bubbles: true }));
