@@ -184,4 +184,24 @@ describe('qrScanner server checks', () => {
 
         expect(closes).toEqual(['close']);
     });
+
+    it('claims qr-scan-deliver events and checks them as hardware scans', async () => {
+        const { scanner, wire } = mountChecked();
+        const input = document.querySelector('[data-field-name="sku"] input');
+        const event = new CustomEvent('qr-scan-deliver', { bubbles: true, cancelable: true, detail: { value: 'SKU-9' } });
+
+        const notCancelled = input.dispatchEvent(event);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(notCancelled).toBe(false);
+        expect(wire.methodCalls).toEqual([['form.sku', 'handleScan', { code: 'SKU-9', source: 'hardware' }]]);
+        expect(scanner.isChecking).toBe(false);
+    });
+
+    it('does not claim qr-scan-deliver without server checks', () => {
+        mountChecked({ serverCheck: false });
+        const input = document.querySelector('[data-field-name="sku"] input');
+
+        expect(input.dispatchEvent(new CustomEvent('qr-scan-deliver', { bubbles: true, cancelable: true, detail: { value: 'X' } }))).toBe(true);
+    });
 });

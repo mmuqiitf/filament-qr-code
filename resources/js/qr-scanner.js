@@ -64,6 +64,7 @@ export default function qrScannerComponent({
         scannerElementId: '',
         hardwareScannerHandler: null,
         isChecking: false,
+        boundDeliverHandler: null,
         boundHardwareScannerHandler: null,
 
         init() {
@@ -89,9 +90,24 @@ export default function qrScannerComponent({
                 };
                 this.$el.addEventListener('keydown', this.boundHardwareScannerHandler);
             }
+
+            this.boundDeliverHandler = (event) => {
+                if (!serverCheck || !componentKey) {
+                    return;
+                }
+
+                event.preventDefault();
+                this.handleScanResult(event.detail?.value, 'hardware');
+            };
+            this.$el.addEventListener('qr-scan-deliver', this.boundDeliverHandler);
         },
 
         destroy() {
+            if (this.boundDeliverHandler) {
+                this.$el.removeEventListener('qr-scan-deliver', this.boundDeliverHandler);
+                this.boundDeliverHandler = null;
+            }
+
             if (this.boundHardwareScannerHandler) {
                 this.$el.removeEventListener('keydown', this.boundHardwareScannerHandler);
                 this.boundHardwareScannerHandler = null;
