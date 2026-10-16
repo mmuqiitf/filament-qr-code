@@ -207,7 +207,7 @@ QrScanner::make('sku')
 **Closure checks.** A closure passed to `validateUsing()` is evaluated with Filament's
 `evaluate()`, so it can ask for `code`, `record` (the lookup result, or `null`), `source`,
 `get`, `set`, `component` and `livewire`. It returns `null` (or `true`) to pass, or a
-string message (or `false`, which uses the generic `qr-code::ui.scan_rejected` message) to fail.
+string message (or `false`, which uses the generic `filament-qr-code::ui.scan_rejected` message) to fail.
 Anything else is treated as a pass.
 
 **Callback injection.** `onScanned()` and `onRejected()` closures are also evaluated with
@@ -220,10 +220,10 @@ Typed parameters resolve by type, so `fn (ScanResult $r, Set $s, Get $g)` works.
 
 `handleScan(string $code, string $source)`:
 
-1. **Parse input.** `ScanInput::tryFrom($source)`; an unknown source becomes `ScanInput::Camera`. The code is trimmed. An empty code is rejected with `qr-code::ui.scan_empty`.
-2. **Guard.** If `hasServerScanChecks()` is false, the method still works (it accepts and sets state) but the client never calls it in that case (section 5.4). If the field is disabled or read-only, reject with `qr-code::ui.scan_rejected`.
+1. **Parse input.** `ScanInput::tryFrom($source)`; an unknown source becomes `ScanInput::Camera`. The code is trimmed. An empty code is rejected with `filament-qr-code::ui.scan_empty`.
+2. **Guard.** If `hasServerScanChecks()` is false, the method still works (it accepts and sets state) but the client never calls it in that case (section 5.4). If the field is disabled or read-only, reject with `filament-qr-code::ui.scan_rejected`.
 3. **Rules.** All array and rule-object entries are merged into one list and run with `Validator::make(['code' => $code], ['code' => $rules], attributes: ['code' => $this->getLabel()])`. The first error message is the result message, translated by Laravel's validator.
-4. **Lookup.** If configured: `$model::query()`, then `modifyQueryUsing` (evaluated with `query`), then `->where($column, $code)->first()`. A miss rejects with `qr-code::ui.record_not_found` (`:code` replaced).
+4. **Lookup.** If configured: `$model::query()`, then `modifyQueryUsing` (evaluated with `query`), then `->where($column, $code)->first()`. A miss rejects with `filament-qr-code::ui.record_not_found` (`:code` replaced).
 5. **Closures.** Closure checks run in the order they were added, receiving the lookup `record`.
 6. The first failing stage stops the pipeline. Rule arrays and rule objects always run before the lookup, and closures always run after it, whatever order the `validateUsing()` calls were made in. This lets closures use `$record`.
 7. **On pass:** `$this->state($code)` (and `callAfterStateUpdated()`, so existing `normalizeUsing()`/`rejectWhen()` keep working), then `onScanned`, then `event(new ScanAccepted(...))` and `event(new QrCodeScanned(...))`.
@@ -282,7 +282,7 @@ final readonly class ScanChecksRule implements ValidationRule
 
 ### 4.5 Error handling
 
-- Any `Throwable` thrown inside stages 3–8 is caught, passed to `report($e)`, and turned into `ScanResult::reject($code, $source, __('qr-code::ui.scan_failed'))`. `ValidationException` is not reported, only converted.
+- Any `Throwable` thrown inside stages 3–8 is caught, passed to `report($e)`, and turned into `ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_failed'))`. `ValidationException` is not reported, only converted.
 - A lookup miss gives `record_not_found` (not `scan_failed`).
 - An unregistered component key or a missing method returns `null` from Filament; the client shows the `scan_failed` message (passed in the Alpine payload) as a rejection.
 - A network or Livewire error rejects the promise; the client handles it the same way and logs it with `console.error`, not silently.
@@ -302,7 +302,7 @@ New translation keys in `resources/lang/{en,id}/ui.php`: `scan_empty`, `scan_rej
     'serverCheck' => $this->hasServerScanChecks(),
     'clearOnReject' => $this->shouldClearOnReject(),
     'cooldownMs' => $this->getCooldownMs(),
-    'scanFailedMessage' => __('qr-code::ui.scan_failed'),
+    'scanFailedMessage' => __('filament-qr-code::ui.scan_failed'),
 ]
 ```
 
