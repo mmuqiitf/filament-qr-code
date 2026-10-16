@@ -103,10 +103,10 @@ return [
     | Scan Audit
     |--------------------------------------------------------------------------
     |
-    | Every server-observed scan (collector action handling, programmatic
-    | triggers) dispatches a QrCodeScanned event. Enable the log listener
-    | to record them; live camera/hardware scans stay client-side and are
-    | not audited until they reach the server.
+    | Every server-observed scan (live scans accepted by a QrScanner with
+    | server checks, collector action handling, programmatic triggers)
+    | dispatches a QrCodeScanned event. Enable the log listener to record
+    | them. Rejected scans fire ScanRejected and are not logged here.
     |
     */
     'audit' => [

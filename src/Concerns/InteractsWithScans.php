@@ -81,7 +81,21 @@ trait InteractsWithScans
             return $result->toClient();
         }
 
-        $this->acceptScan($result);
+        $previousState = $this->getState();
+
+        try {
+            $this->acceptScan($result);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            $this->state($previousState);
+
+            $failure = ScanResult::reject($result->code, $result->source, __('filament-qr-code::ui.scan_failed'));
+
+            event(new ScanRejected($failure, $this->getName()));
+
+            return $failure->toClient();
+        }
 
         return $result->toClient();
     }
@@ -95,7 +109,7 @@ trait InteractsWithScans
         event(new ScanAccepted($result, $this->getName()));
         event(new QrCodeScanned(
             code: $result->code,
-            source: $result->source?->value ?? ScanInput::Camera->value,
+            source: ($result->source ?? ScanInput::Camera)->value,
             field: $this->getName(),
             context: ['record_key' => $result->record?->getKey()],
         ));

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Log;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
 use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
@@ -168,4 +171,67 @@ it('runs onRejected before ScanRejected', function (): void {
 
 it('counts an onRejected callback as a server check', function (): void {
     expect(QrScanner::make('sku')->onRejected(fn () => null)->hasServerScanChecks())->toBeTrue();
+});
+it('an exception in onScanned restores the previous state, is reported and returns scan_failed', function (): void {
+    Exceptions::fake();
+    Event::fake([ScanAccepted::class, ScanRejected::class, QrCodeScanned::class]);
+
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner
+        ->onScanned(fn () => throw new RuntimeException('callback broke')));
+
+    $test->set('data.sku', 'OLD');
+
+    ScanChecksTestComponent::scan($test, 'NEW')
+        ->assertReturned(fn (array $result): bool => $result['passes'] === false
+            && $result['message'] === __('filament-qr-code::ui.scan_failed'))
+        ->assertSet('data.sku', 'OLD');
+
+    Exceptions::assertReported(RuntimeException::class);
+    Event::assertDispatched(ScanRejected::class);
+    Event::assertNotDispatched(QrCodeScanned::class);
+});
+
+it('submit never runs onScanned/onRejected or dispatches scan events', function (): void {
+    Event::fake([ScanAccepted::class, ScanRejected::class, QrCodeScanned::class]);
+    $calls = [];
+
+    $test = ScanChecksTestComponent::test(function (QrScanner $scanner) use (&$calls): QrScanner {
+        return $scanner
+            ->lookup(ScanCheckProduct::class, 'sku')
+            ->onScanned(function () use (&$calls): void {
+                $calls[] = 'scanned';
+            })
+            ->onRejected(function () use (&$calls): void {
+                $calls[] = 'rejected';
+            });
+    });
+
+    $test->set('data.sku', 'SKU-404')->call('submit')->assertHasErrors(['data.sku']);
+    $test->set('data.sku', 'SKU-1')->call('submit')->assertHasNoErrors();
+
+    expect($calls)->toBe([]);
+    Event::assertNotDispatched(ScanAccepted::class);
+    Event::assertNotDispatched(ScanRejected::class);
+    Event::assertNotDispatched(QrCodeScanned::class);
+});
+
+it('logs accepted live scans through LogQrCodeScan when auditing is enabled', function (): void {
+    $logged = [];
+    Log::listen(function (MessageLogged $message) use (&$logged): void {
+        $logged[] = $message->context;
+    });
+    config()->set('qr-code.audit.enabled', true);
+
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->lookup(ScanCheckProduct::class, 'sku'));
+
+    ScanChecksTestComponent::scan($test, 'SKU-1', 'upload');
+    ScanChecksTestComponent::scan($test, 'SKU-404', 'upload');
+
+    expect($logged)->toHaveCount(1)
+        ->and($logged[0]['code'])->toBe('SKU-1')
+        ->and($logged[0]['source'])->toBe('upload')
+        ->and($logged[0]['field'])->toBe('sku')
+        ->and($logged[0]['context'])->toBe(['record_key' => ScanCheckProduct::query()->where('sku', 'SKU-1')->value('id')]);
+
+    config()->set('qr-code.audit.enabled', false);
 });
