@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `qr-code.feedback.success`, `qr-code.feedback.error`.
 
 ### Fixed
+- Upload scans flashed (and named the field in `qr-scan-*` events as) the
+  hidden file input instead of the field: Alpine's `$el` is the calling
+  element, so `QrScanner` now resolves the field wrapper via `$root`.
 - The outcome flash ring was never visible: it played behind the open
   scanner modal and faded in 300 ms. It now runs on the field after the modal
   closes (on the modal panel while it stays open) and lasts 900 ms.

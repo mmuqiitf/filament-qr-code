@@ -92,7 +92,7 @@ export default function qrScannerComponent({
                 this.boundHardwareScannerHandler = (e) => {
                     this.hardwareScannerHandler.handleKeyDown(e);
                 };
-                this.$el.addEventListener('keydown', this.boundHardwareScannerHandler);
+                this.fieldElement().addEventListener('keydown', this.boundHardwareScannerHandler);
             }
 
             this.boundDeliverHandler = (event) => {
@@ -103,17 +103,17 @@ export default function qrScannerComponent({
                 event.preventDefault();
                 this.handleScanResult(event.detail?.value, 'hardware');
             };
-            this.$el.addEventListener('qr-scan-deliver', this.boundDeliverHandler);
+            this.fieldElement().addEventListener('qr-scan-deliver', this.boundDeliverHandler);
         },
 
         destroy() {
             if (this.boundDeliverHandler) {
-                this.$el.removeEventListener('qr-scan-deliver', this.boundDeliverHandler);
+                this.fieldElement().removeEventListener('qr-scan-deliver', this.boundDeliverHandler);
                 this.boundDeliverHandler = null;
             }
 
             if (this.boundHardwareScannerHandler) {
-                this.$el.removeEventListener('keydown', this.boundHardwareScannerHandler);
+                this.fieldElement().removeEventListener('keydown', this.boundHardwareScannerHandler);
                 this.boundHardwareScannerHandler = null;
             }
             this.stopScan();
@@ -124,7 +124,7 @@ export default function qrScannerComponent({
                 return this.statePath;
             }
 
-            return readWireModelPath(this.$el.querySelector('input')) || readWireModelPath(this.$el) || '';
+            return readWireModelPath(this.fieldElement().querySelector('input')) || readWireModelPath(this.fieldElement()) || '';
         },
 
         openScannerModal() {
@@ -136,6 +136,12 @@ export default function qrScannerComponent({
             });
         },
 
+        // In Alpine, $el is the element whose directive called the method (e.g. the hidden file input);
+        // $root is the x-data field wrapper.
+        fieldElement() {
+            return this.$root ?? this.$el;
+        },
+
         closeScannerModal() {
             this.stopScan().then(() => {
                 this.isModalOpen = false;
@@ -144,7 +150,7 @@ export default function qrScannerComponent({
                 this.pendingFlash = null;
 
                 if (outcome) {
-                    this.$nextTick(() => flashElement(this.$el, FLASH_CLASSES[outcome]));
+                    this.$nextTick(() => flashElement(this.fieldElement(), FLASH_CLASSES[outcome]));
                 }
             });
         },
@@ -152,14 +158,14 @@ export default function qrScannerComponent({
         // The modal overlay hides the field, so flash the panel now and the field once the modal closes.
         flashTargetFor(outcome, settings) {
             if (!this.isModalOpen) {
-                return this.$el;
+                return this.fieldElement();
             }
 
             if (settings?.flash) {
                 this.pendingFlash = outcome;
             }
 
-            return this.$el.querySelector('[data-qr-scanner-panel]');
+            return this.fieldElement().querySelector('[data-qr-scanner-panel]');
         },
 
         async loadCamerasAndStart() {
@@ -258,7 +264,7 @@ export default function qrScannerComponent({
                 return { passes: false, ignored: true };
             }
 
-            const field = this.$el.getAttribute('data-field-name') || null;
+            const field = this.fieldElement().getAttribute('data-field-name') || null;
 
             if (deduper.isDuplicate(code, cooldownMs)) {
                 window.dispatchEvent(new CustomEvent('qr-scan-duplicate', { detail: { value: code, field, source } }));

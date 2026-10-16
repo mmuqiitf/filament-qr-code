@@ -225,3 +225,44 @@ describe('flash visibility around the scanner modal', () => {
         expect(FLASH_MS).toBeGreaterThanOrEqual(900);
     });
 });
+
+describe('flash target when a nested directive calls the method', () => {
+    it('upload from the file input flashes the field root and names the field', async () => {
+        recordFeedback();
+        document.body.innerHTML =
+            '<div data-field-name="sku"><input type="text" wire:model="data.sku"><div data-qr-scanner-panel><input type="file" class="hidden"></div></div>';
+        const element = document.querySelector('[data-field-name="sku"]');
+        const fileInput = element.querySelector('input[type="file"]');
+        const scanner = mountComponent(
+            qrScannerComponent({
+                statePath: 'data.sku',
+                hardwareScanner: false,
+                serverCheck: true,
+                componentKey: 'form.sku',
+                cooldownMs: 1500,
+                successFeedback,
+                errorFeedback,
+            }),
+            {
+                element,
+                currentElement: fileInput,
+                wire: createWireSpy({
+                    respond: () =>
+                        Promise.resolve({ passes: true, code: 'A', source: 'upload', message: null, record_key: 1 }),
+                }),
+            },
+        );
+        const accepted = [];
+        window.addEventListener('qr-scan-accepted', (event) => accepted.push(event.detail), { once: true });
+        scanner.isModalOpen = true;
+        scanner.stopScan = () => Promise.resolve();
+
+        await scanner.handleScanResult('A', 'upload');
+        scanner.closeScannerModal();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(element.classList.contains(FLASH_CLASSES.success)).toBe(true);
+        expect(fileInput.classList.contains(FLASH_CLASSES.success)).toBe(false);
+        expect(accepted[0].field).toBe('sku');
+    });
+});

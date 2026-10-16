@@ -1,13 +1,15 @@
 /**
  * Minimal Alpine-like harness for unit tests: mounts a component object with
- * $el, $wire, $id, $nextTick, and a $watch that fires synchronously when a
+ * $el, $root, $wire, $id, $nextTick, and a $watch that fires synchronously when a
  * watched property changes (Alpine fires watchers on change).
  */
-export function mountComponent(component, { element, wire = null } = {}) {
+export function mountComponent(component, { element, wire = null, currentElement = null } = {}) {
     const watchers = {};
 
     const context = {
-        $el: element,
+        // Alpine sets $el to the element whose directive runs; $root is the x-data element.
+        $el: currentElement ?? element,
+        $root: element,
         $wire: wire,
         $id: (name) => `${name}-1`,
         $nextTick: (callback) => callback(),
