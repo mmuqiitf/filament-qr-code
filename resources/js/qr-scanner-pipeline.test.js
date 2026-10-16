@@ -63,7 +63,9 @@ describe('qrScanner server checks', () => {
         expect(result.passes).toBe(true);
         expect(scanner.value).toBe('SKU-1');
         expect(acceptedEvents).toEqual([{ value: 'SKU-1', field: 'sku', source: 'hardware', recordKey: 7 }]);
-        expect(scannedEvents).toEqual([{ value: 'SKU-1', field: 'sku', nextField: null, source: 'hardware', recordKey: 7 }]);
+        expect(scannedEvents).toEqual([
+            { value: 'SKU-1', field: 'sku', nextField: null, source: 'hardware', recordKey: 7 },
+        ]);
     });
 
     it('keeps the unconfigured path unchanged: no server call, one $wire.set', () => {
@@ -85,7 +87,9 @@ describe('qrScanner server checks', () => {
     });
 
     it('rejected result clears the value and dispatches qr-scan-rejected once', async () => {
-        const { scanner } = mountChecked({ respond: () => Promise.resolve(rejected('SKU-404', 'No record found for "SKU-404".')) });
+        const { scanner } = mountChecked({
+            respond: () => Promise.resolve(rejected('SKU-404', 'No record found for "SKU-404".')),
+        });
         const rejectedEvents = captureWindowEvent('qr-scan-rejected');
         const scannedEvents = captureWindowEvent('qr-scanned');
         scanner.value = 'OLD';
@@ -101,7 +105,10 @@ describe('qrScanner server checks', () => {
     });
 
     it('keeps the value on reject when clearOnReject is off', async () => {
-        const { scanner } = mountChecked({ clearOnReject: false, respond: () => Promise.resolve(rejected('X', 'Nope')) });
+        const { scanner } = mountChecked({
+            clearOnReject: false,
+            respond: () => Promise.resolve(rejected('X', 'Nope')),
+        });
         scanner.value = 'OLD';
 
         await scanner.handleScanResult('X');
@@ -118,12 +125,17 @@ describe('qrScanner server checks', () => {
         console.error = (...args) => errors.push(args);
 
         try {
-            const { scanner } = mountChecked({ respond, scanFailedMessage: 'The scan could not be checked. Please try again.' });
+            const { scanner } = mountChecked({
+                respond,
+                scanFailedMessage: 'The scan could not be checked. Please try again.',
+            });
             const rejectedEvents = captureWindowEvent('qr-scan-rejected');
 
             await scanner.handleScanResult('SKU-1');
 
-            expect(rejectedEvents.map(({ message }) => message)).toEqual(['The scan could not be checked. Please try again.']);
+            expect(rejectedEvents.map(({ message }) => message)).toEqual([
+                'The scan could not be checked. Please try again.',
+            ]);
         } finally {
             console.error = originalError;
         }
@@ -188,7 +200,11 @@ describe('qrScanner server checks', () => {
     it('claims qr-scan-deliver events and checks them as hardware scans', async () => {
         const { scanner, wire } = mountChecked();
         const input = document.querySelector('[data-field-name="sku"] input');
-        const event = new CustomEvent('qr-scan-deliver', { bubbles: true, cancelable: true, detail: { value: 'SKU-9' } });
+        const event = new CustomEvent('qr-scan-deliver', {
+            bubbles: true,
+            cancelable: true,
+            detail: { value: 'SKU-9' },
+        });
 
         const notCancelled = input.dispatchEvent(event);
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -202,6 +218,10 @@ describe('qrScanner server checks', () => {
         mountChecked({ serverCheck: false });
         const input = document.querySelector('[data-field-name="sku"] input');
 
-        expect(input.dispatchEvent(new CustomEvent('qr-scan-deliver', { bubbles: true, cancelable: true, detail: { value: 'X' } }))).toBe(true);
+        expect(
+            input.dispatchEvent(
+                new CustomEvent('qr-scan-deliver', { bubbles: true, cancelable: true, detail: { value: 'X' } }),
+            ),
+        ).toBe(true);
     });
 });

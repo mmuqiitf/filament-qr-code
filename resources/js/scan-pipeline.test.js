@@ -41,10 +41,12 @@ describe('normalizeScanResult', () => {
     const context = { code: 'SKU-1', source: 'camera', scanFailedMessage: 'Check failed' };
 
     it('maps a server result to the client shape', () => {
-        expect(normalizeScanResult(
-            { passes: true, code: 'SKU-1', source: 'hardware', message: null, record_key: 7 },
-            context,
-        )).toEqual({ passes: true, code: 'SKU-1', source: 'hardware', message: null, recordKey: 7 });
+        expect(
+            normalizeScanResult(
+                { passes: true, code: 'SKU-1', source: 'hardware', message: null, record_key: 7 },
+                context,
+            ),
+        ).toEqual({ passes: true, code: 'SKU-1', source: 'hardware', message: null, recordKey: 7 });
     });
 
     it.each([[null], [undefined], ['oops'], [{}], [{ passes: 'yes' }]])('treats %j as a failed check', (result) => {
@@ -69,7 +71,13 @@ describe('requestScanCheck', () => {
             callSchemaComponentMethod(...args) {
                 calls.push(args);
 
-                return Promise.resolve({ passes: true, code: 'SKU-1', source: 'camera', message: null, record_key: null });
+                return Promise.resolve({
+                    passes: true,
+                    code: 'SKU-1',
+                    source: 'camera',
+                    message: null,
+                    record_key: null,
+                });
             },
         };
 
@@ -95,7 +103,13 @@ describe('requestScanCheck', () => {
             scanFailedMessage: 'Check failed',
         });
 
-        expect(result).toEqual({ passes: false, code: 'SKU-1', source: 'camera', message: 'Check failed', recordKey: null });
+        expect(result).toEqual({
+            passes: false,
+            code: 'SKU-1',
+            source: 'camera',
+            message: 'Check failed',
+            recordKey: null,
+        });
         expect(errors).toHaveBeenCalledTimes(1);
     });
 });
