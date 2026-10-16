@@ -109,3 +109,19 @@ it('returns null for keys that are not registered scanner fields', function (str
 it('reports no server checks when nothing is configured', function (): void {
     expect(QrScanner::make('sku')->hasServerScanChecks())->toBeFalse();
 });
+it('renders the component key and server check flag into the scanner payload', function (): void {
+    $test = Livewire::test(HandleScanTestComponent::class);
+    $key = $test->instance()->keyOf('sku');
+
+    $scanner = $test->instance()->form->getComponent(fn ($component): bool => $component instanceof QrScanner);
+
+    expect($scanner->getScanPayload())
+        ->toHaveKey('componentKey', $key)
+        ->toHaveKey('serverCheck', false);
+});
+
+it('omits the component key when the scanner is not mounted', function (): void {
+    expect(QrScanner::make('sku')->getScanPayload())
+        ->not->toHaveKey('componentKey')
+        ->toHaveKey('serverCheck', false);
+});

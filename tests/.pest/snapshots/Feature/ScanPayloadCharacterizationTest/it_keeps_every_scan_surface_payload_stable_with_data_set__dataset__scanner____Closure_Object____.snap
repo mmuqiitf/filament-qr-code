@@ -16,6 +16,7 @@
     "preventSubmit": true,
     "qrbox": 250,
     "scanTimeoutMs": 150,
+    "serverCheck": false,
     "sound": true,
     "suppressWhenGlobalListenerActive": true,
     "terminators": [

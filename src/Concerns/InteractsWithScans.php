@@ -7,6 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Concerns;
 use Filament\Support\Components\Attributes\ExposedLivewireMethod;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
+use Throwable;
 
 trait InteractsWithScans
 {
@@ -45,5 +46,23 @@ trait InteractsWithScans
     public function hasServerScanChecks(): bool
     {
         return false;
+    }
+
+    /** @return array{serverCheck: bool, componentKey?: string} */
+    public function getScanChecksScanPayload(): array
+    {
+        $payload = ['serverCheck' => $this->hasServerScanChecks()];
+
+        try {
+            $key = $this->getKey();
+        } catch (Throwable) {
+            return $payload;
+        }
+
+        if (blank($key)) {
+            return $payload;
+        }
+
+        return [...$payload, 'componentKey' => $key];
     }
 }
