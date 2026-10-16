@@ -156,3 +156,28 @@ it('runs rules, then lookup, then closures and stops at the first failure', func
     ScanChecksTestComponent::scan($test, 'SKU-1')->assertReturned(fn (array $result): bool => $result['message'] === 'First closure fails');
     expect($calls)->toBe(['closure-1']);
 });
+it('a throwing check becomes scan_failed and is reported', function (): void {
+    \Illuminate\Support\Facades\Exceptions::fake();
+
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->validateUsing(fn () => throw new \RuntimeException('boom')));
+
+    ScanChecksTestComponent::scan($test, 'SKU-1')
+        ->assertReturned(fn (array $result): bool => $result['passes'] === false
+            && $result['message'] === 'The scan could not be checked. Please try again.')
+        ->assertSet('data.sku', null);
+
+    \Illuminate\Support\Facades\Exceptions::assertReported(\RuntimeException::class);
+});
+
+it('converts a ValidationException into its message without reporting it', function (): void {
+    \Illuminate\Support\Facades\Exceptions::fake();
+
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->validateUsing(
+        fn () => throw \Illuminate\Validation\ValidationException::withMessages(['code' => 'Blocked code']),
+    ));
+
+    ScanChecksTestComponent::scan($test, 'SKU-1')
+        ->assertReturned(fn (array $result): bool => $result['message'] === 'Blocked code');
+
+    \Illuminate\Support\Facades\Exceptions::assertNothingReported();
+});

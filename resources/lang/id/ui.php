@@ -46,4 +46,5 @@ return [
     'scan_empty' => 'Kode yang dipindai kosong.',
     'scan_rejected' => 'Kode ini ditolak.',
     'record_not_found' => 'Data untuk ":code" tidak ditemukan.',
+    'scan_failed' => 'Pindaian tidak dapat diperiksa. Silakan coba lagi.',
 ];

@@ -10,6 +10,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 use Throwable;
@@ -67,6 +68,19 @@ trait InteractsWithScans
     }
 
     public function runScanChecks(string $code, ?ScanInput $source): ScanResult
+    {
+        try {
+            return $this->runScanCheckStages($code, $source);
+        } catch (ValidationException $exception) {
+            return ScanResult::reject($code, $source, (string) collect($exception->errors())->flatten()->first());
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_failed'));
+        }
+    }
+
+    protected function runScanCheckStages(string $code, ?ScanInput $source): ScanResult
     {
         if ($code === '') {
             return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_empty'));
