@@ -1,7 +1,7 @@
 # P1a: Server-side scan validation (design spec)
 
 - **Date:** 2026-10-16
-- **Status:** Approved design; spec awaiting owner review
+- **Status:** Approved by owner 2026-10-16 (open questions resolved, section 9)
 - **Roadmap items:** P1.1–P1.5 in the review plan (section F)
 - **Scope:** Sub-project 1 of 3 of P1. This spec covers only `QrScanner`.
 
@@ -81,7 +81,7 @@ The owner's sketch was `$wire.handleScan(statePath, code, source)`. The decision
 contract (one call per scan, one result back) but addresses the field by component key instead
 of state path. This also gives the "only registered scanner fields" guard for free: a key that
 isn't a mounted component, or a component without an exposed `handleScan`, returns `null`, and
-the client treats `null` as a rejected scan (sections 4.4 and 5.2). The state path is still read on the
+the client treats `null` as a rejected scan (sections 4.5 and 5.2). The state path is still read on the
 server from `$this->getStatePath()`, so the client can't pick which path is written.
 
 `handleScan` is **not** `#[Renderless]`. `onScanned()` callbacks may `$set()` other fields,
@@ -117,28 +117,28 @@ final readonly class ScanResult
     public function __construct(
         public bool $passes,
         public string $code,
-        public ScanInput $source,
+        public ?ScanInput $source,
         public ?Model $record = null,
         public ?string $message = null,
     ) {}
 
-    public static function accept(string $code, ScanInput $source, ?Model $record = null): self
+    public static function accept(string $code, ?ScanInput $source, ?Model $record = null): self
     {
         return new self(passes: true, code: $code, source: $source, record: $record);
     }
 
-    public static function reject(string $code, ScanInput $source, string $message): self
+    public static function reject(string $code, ?ScanInput $source, string $message): self
     {
         return new self(passes: false, code: $code, source: $source, message: $message);
     }
 
-    /** @return array{passes: bool, code: string, source: string, message: ?string, record_key: mixed} */
+    /** @return array{passes: bool, code: string, source: ?string, message: ?string, record_key: mixed} */
     public function toClient(): array
     {
         return [
             'passes' => $this->passes,
             'code' => $this->code,
-            'source' => $this->source->value,
+            'source' => $this->source?->value,
             'message' => $this->message,
             'record_key' => $this->record?->getKey(),
         ];
@@ -147,7 +147,7 @@ final readonly class ScanResult
 ```
 
 Only the record key goes to the browser; the full model stays on the server.
-`message` is always already translated.
+`message` is always already translated. `source` is `null` only when the checks run at form submit (section 4.4), where no scan input exists.
 
 Events (`src/Events`), plain classes like the existing `QrCodeScanned`:
 
@@ -199,8 +199,9 @@ QrScanner::make('sku')
 | `onScanned()` | `onScanned(?Closure $callback): static` | Runs after state is set on a pass. |
 | `onRejected()` | `onRejected(?Closure $callback): static` | Runs on a fail. |
 | `clearOnReject()` | `clearOnReject(bool\|Closure $condition = true): static` | Default from `qr-code.scan.clear_on_reject`. |
-| `cooldown()` | `cooldown(int\|Closure $milliseconds): static` | Default from `qr-code.scan.cooldown_ms`. `0` disables dedupe. Negative values are clamped to `0`. |
-| `handleScan()` | `#[ExposedLivewireMethod] handleScan(string $code, string $source): array` | Returns `ScanResult::toClient()`. |
+| `cooldown()` | `cooldown(int\|Closure $milliseconds): static` | Default: `qr-code.scan.cooldown_ms` (1500) when `hasServerScanChecks()` is true, otherwise `0`. An explicit value always wins. `0` disables dedupe. Negative values are clamped to `0`. |
+| `runScanChecks()` | `runScanChecks(string $code, ?ScanInput $source): ScanResult` | Stages 3–6 of the pipeline only: no state writes, callbacks or events. Shared by `handleScan()` and the submit rule. |
+| `handleScan()` | `#[ExposedLivewireMethod] handleScan(string $code, string $source): array` | Calls `runScanChecks()`, applies side effects, returns `ScanResult::toClient()`. |
 | `hasServerScanChecks()` | `hasServerScanChecks(): bool` | `true` when at least one `validateUsing()` entry, a `lookup()`, an `onScanned()` or an `onRejected()` callback is configured. |
 
 **Closure checks.** A closure passed to `validateUsing()` is evaluated with Filament's
@@ -229,11 +230,57 @@ Typed parameters resolve by type, so `fn (ScanResult $r, Set $s, Get $g)` works.
 8. **On fail:** state is not written. If `clearOnReject` is on, `$this->state(null)`. Then `onRejected`, then `event(new ScanRejected(...))`. The server does not dispatch `qr-scan-rejected` here; the client dispatches it once from the returned result (section 5.2), so listeners get one event per rejection.
 9. Return `toClient()`.
 
-**Submit-time safety.** Array and rule-object entries from `validateUsing()` are also added with
-`$this->rules(...)`, so submit validation stays authoritative if JS is bypassed. Closures and
-lookups don't run on submit in this sub-project.
+Stages 3–6 are implemented once, in `runScanChecks()`. Stages 7–9 live in `handleScan()`.
 
-### 4.4 Error handling
+### 4.4 Submit-time checks
+
+Submit validation re-runs the whole check pipeline, so a bypassed or stale browser can't save a
+code that a live scan would reject. When `hasServerScanChecks()` has checks to run (any
+`validateUsing()` entry or a `lookup()`), `InteractsWithScans` registers one extra field rule in
+`setUp()`:
+
+```php
+$this->rule(fn (QrScanner $component): ScanChecksRule => new ScanChecksRule($component));
+```
+
+```php
+namespace Mmuqiitf\FilamentQrCode\Validation;
+
+use Closure;
+use Illuminate\Contracts\Validation\ValidationRule;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
+final readonly class ScanChecksRule implements ValidationRule
+{
+    public function __construct(
+        private QrScanner $component,
+    ) {}
+
+    public function validate(string $attribute, mixed $value, Closure $fail): void
+    {
+        if (blank($value)) {
+            return;
+        }
+
+        $result = $this->component->runScanChecks((string) $value, source: null);
+
+        if ($result->passes) {
+            return;
+        }
+
+        $fail($result->message);
+    }
+}
+```
+
+- The rule runs rules, lookup and closures in the same order and with the same messages as a live scan. Rule arrays and rule objects are **not** also added through `$this->rules()`, so a failing rule reports one error, not two.
+- Blank values pass; `required()` stays the way to demand a value.
+- `onScanned`, `onRejected`, events and state writes never run at submit.
+- Closure checks receive `source = null` at submit and must tolerate it.
+- An exception during submit checks is reported and fails with `scan_failed`, as for live scans.
+- Cost: the lookup query runs once per scan and once more per submit. This is accepted.
+
+### 4.5 Error handling
 
 - Any `Throwable` thrown inside stages 3–8 is caught, passed to `report($e)`, and turned into `ScanResult::reject($code, $source, __('qr-code::ui.scan_failed'))`. `ValidationException` is not reported, only converted.
 - A lookup miss gives `record_not_found` (not `scan_failed`).
@@ -247,7 +294,7 @@ New translation keys in `resources/lang/{en,id}/ui.php`: `scan_empty`, `scan_rej
 
 ### 5.1 Payload additions
 
-`InteractsWithScans::getComponentScanPayload()` contributes (merged by `ScanOptions::payload()`):
+`InteractsWithScans::getScanChecksScanPayload()` contributes these keys. It is registered in the `ScanOptions::Contributors` map (`InteractsWithScans::class => 'getScanChecksScanPayload'`), like the other scan traits, so `getComponentScanPayload()` stays free for surface-specific options:
 
 ```php
 [
@@ -294,7 +341,8 @@ working and configure the success outcome. New per-field overrides on `HasFeedba
 
 ### 5.4 Backward compatibility
 
-- Fields with no `validateUsing()`, `lookup()`, `onScanned()` or `onRejected()` make no `handleScan` call; state, events and the success beep are unchanged. The new dedupe still applies to them (default 1500 ms); `cooldown(0)` restores the old behaviour exactly. This is the one visible change for unconfigured fields and is listed in the changelog.
+- Fields with no `validateUsing()`, `lookup()`, `onScanned()` or `onRejected()` make no `handleScan` call, get no submit rule, and default to `cooldown 0`; state, events and the success beep are unchanged. An app can opt in to dedupe with `cooldown(1500)`.
+- `scanRules()` keeps adding plain field rules (submit only), as today.
 - `rejectWhen()`, `normalizeUsing()`, `scanRules()`, `onScan()`/`triggerOnScan()` and `scanFormat()` are unchanged.
 - Config keys are only added.
 
@@ -305,7 +353,7 @@ Added to `config/qr-code.php` (all overridable per field):
 ```php
 'scan' => [
     'clear_on_reject' => true,
-    'cooldown_ms' => 1500,
+    'cooldown_ms' => 1500, // used only by fields with server checks; others default to 0
 ],
 
 'feedback' => [
@@ -339,7 +387,8 @@ TDD: each PR starts with a failing test.
 - events: `ScanAccepted` + `QrCodeScanned` (source `hardware`) on pass; `ScanRejected` on fail
 - a thrown exception becomes `scan_failed` and is reported (`Exceptions::fake()`)
 - unknown component key and non-scanner component return `null`
-- `hasServerScanChecks()` is false and `serverCheck` is `false` in the payload when nothing is configured
+- `hasServerScanChecks()` is false, `serverCheck` is `false` and `cooldownMs` is `0` in the payload when nothing is configured; `cooldownMs` is `1500` once a check is added
+- submit: a code that fails a rule, misses the lookup or fails a closure blocks `getState()` with the same message; a passing code submits; callbacks and events don't fire at submit; a blank value with no `required()` passes
 - `ScanPayloadCharacterizationTest` is updated for the added keys only
 
 **Vitest** (`resources/js/scan-pipeline.test.js`, `qr-scanner.test.js`, `audio-feedback` tests):
@@ -359,13 +408,15 @@ accepts a known SKU and `$set`s a sibling field, and rejects an unknown SKU with
 | PR | Content | First failing test |
 |---|---|---|
 | 1 | `ScanInput`, `ScanResult`, `InteractsWithScans::handleScan()` via `#[ExposedLivewireMethod]` (accept-only), payload `componentKey`/`serverCheck` | "handleScan via callSchemaComponentMethod returns passes=true and sets state" |
-| 2 | `validateUsing()` (arrays, rule objects, closures), `lookup()`, pipeline order, error handling, translations | "handleScan returns passes=false with translated message when rule fails" |
+| 2 | `validateUsing()` (arrays, rule objects, closures), `lookup()`, `runScanChecks()` order, error handling, translations, `ScanChecksRule` for submit | "handleScan returns passes=false with translated message when rule fails" |
 | 3 | `onScanned()`/`onRejected()` with `Get`/`Set`, `clearOnReject()` (server side), `ScanAccepted`/`ScanRejected`/`QrCodeScanned` | "accepted scan dispatches ScanAccepted and QrCodeScanned with source=hardware" |
-| 4 | `scan-pipeline.js`, dedupe/`cooldown()`, in-flight pause, client clear on reject, config `scan.*` | "same code within 1500 ms is dropped and emits qr-scan-duplicate" |
+| 4 | `scan-pipeline.js`, dedupe/`cooldown()` (default 0 without checks), in-flight pause, client clear on reject, hardware stopgap, config `scan.*` | "same code within 1500 ms is dropped and emits qr-scan-duplicate" |
 | 5 | Outcome feedback (sound, vibration pattern, flash), config `feedback.success/error`, `successFeedback()`/`errorFeedback()` | "rejected result plays error tone and adds danger flash class" |
 
-## 9. Open questions
+## 9. Resolved questions
 
-1. **Dedupe on unconfigured fields.** This spec applies the 1500 ms cooldown to all fields, which changes today's behaviour slightly (section 5.4). Alternative: default `cooldown` to `0` when no server check is configured. Owner to confirm.
-2. **Hardware path in this sub-project.** `qr-hardware-scanner.js` (around line 355) writes `this.$wire.set(livewirePath, scannedValue)` directly, bypassing `handleScanResult`. Decision for PR 4: when the target is a `QrScanner` field with `serverCheck`, the hardware scanner hands the code to that field's `handleScanResult(code, 'hardware')` instead of writing state; otherwise it keeps writing directly. The full router rewrite stays in sub-project 2. Owner to confirm this interim step is acceptable.
-3. **Closures and lookup on submit.** Only rule arrays/objects are re-checked on submit. Should lookups also re-run on submit? Deferred unless the owner wants it.
+Resolved by the owner on 2026-10-16:
+
+1. **Cooldown on fields without checks:** defaults to `0`, so apps that configure no checks see no change. Fields with checks default to `scan.cooldown_ms` (1500). See sections 4.2 and 5.4.
+2. **Hardware path:** the PR 4 stopgap is accepted. `qr-hardware-scanner.js` (around line 355) writes `this.$wire.set(livewirePath, scannedValue)` directly. In PR 4, when the target is a `QrScanner` field with `serverCheck`, the hardware scanner calls that field's `handleScanResult(code, 'hardware')` instead; otherwise it keeps writing directly. The full router rewrite stays in sub-project 2.
+3. **Checks on submit:** lookup and closure checks re-run on submit, together with rules, through `ScanChecksRule` (section 4.4).
