@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-16
+
 ### Fixed
 - `QrHardwareScannerListener` routed bursts into whichever text input had
   focus (e.g. a POS member/search box) even when fields were registered.
@@ -171,7 +173,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.1.0...v0.1.1
