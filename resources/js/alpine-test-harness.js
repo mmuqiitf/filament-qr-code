@@ -35,13 +35,20 @@ export function mountComponent(component, { element, wire = null } = {}) {
     return proxy;
 }
 
-export function createWireSpy() {
+export function createWireSpy({ respond = () => null } = {}) {
     const calls = [];
+    const methodCalls = [];
 
     return {
         calls,
+        methodCalls,
         set(path, value) {
             calls.push([path, value]);
+        },
+        callSchemaComponentMethod(componentKey, method, args) {
+            methodCalls.push([componentKey, method, args]);
+
+            return respond(componentKey, method, args);
         },
     };
 }

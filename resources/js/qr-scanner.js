@@ -12,6 +12,7 @@ import {
     stopCameraFeed,
     storageKeyFor,
 } from './qr-camera-core.js';
+import { requestScanCheck } from './scan-pipeline.js';
 
 /**
  * Alpine component for QrScanner field.
@@ -39,6 +40,11 @@ export default function qrScannerComponent({
     cameraStorageKey = null,
     fileScanFailedMessage = 'No barcode or QR code found in selected image.',
     insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
+    serverCheck = false,
+    componentKey = null,
+    cooldownMs = 0,
+    clearOnReject = true,
+    scanFailedMessage = 'The scan could not be checked. Please try again.',
 } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('scanner');
 
@@ -56,6 +62,7 @@ export default function qrScannerComponent({
         html5Qrcode: null,
         scannerElementId: '',
         hardwareScannerHandler: null,
+        isChecking: false,
         boundHardwareScannerHandler: null,
 
         init() {
@@ -204,46 +211,74 @@ export default function qrScannerComponent({
             await stopCameraFeed(this, 'camera scanner');
         },
 
-        handleScanResult(scannedText) {
-            const trimmed = sanitizeScannedValue(scannedText);
-            if (!trimmed) return;
+        async handleScanResult(scannedText, source = 'camera') {
+            const code = sanitizeScannedValue(scannedText);
 
-            this.value = trimmed;
-
-            // Typed input syncs through entangle + wire:model; a scan is a
-            // discrete event, so it is pushed live exactly once to run
-            // afterStateUpdated hooks (rejectWhen, normalizeUsing).
-            const path = this.getStatePath();
-            if (this.$wire && path) {
-                this.$wire.set(path, trimmed);
+            if (!code) {
+                return { passes: false, ignored: true };
             }
 
-            // The single beep for this delivery (camera or hardware): the
-            // interceptor that routed hardware bursts never beeps.
-            emitScanFeedback(qrFeedback, {
-                sound,
-                vibrate,
-                beepFrequency,
-                beepDurationMs,
-                vibrateDurationMs,
-            });
+            const field = this.$el.getAttribute('data-field-name') || null;
 
-            // Dispatch custom window event
-            window.dispatchEvent(new CustomEvent('qr-scanned', {
-                detail: {
-                    value: trimmed,
-                    field: this.$el.getAttribute('data-field-name') || null,
-                    nextField: nextField,
-                },
-            }));
+            if (!serverCheck || !componentKey || !this.$wire) {
+                this.acceptLocally(code, source, field);
 
-            // Handle sequential focus transition if configured
-            if (nextField) {
-                this.$nextTick(() => {
-                    this.advanceFocus(nextField);
-                });
+                return { passes: true, code, source };
+            }
+
+            this.isChecking = true;
+
+            try {
+                const result = await requestScanCheck(this.$wire, { componentKey, code, source, scanFailedMessage });
+
+                if (result.passes) {
+                    this.applyAccepted(result, field);
+                } else {
+                    this.applyRejected(result, field);
+                }
+
+                return result;
+            } finally {
+                this.isChecking = false;
             }
         },
+
+        acceptLocally(code, source, field) {
+            this.value = code;
+
+            const path = this.getStatePath();
+            if (this.$wire && path) {
+                this.$wire.set(path, code);
+            }
+
+            emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
+
+            window.dispatchEvent(new CustomEvent('qr-scanned', {
+                detail: { value: code, field, nextField, source },
+            }));
+
+            if (nextField) {
+                this.$nextTick(() => this.advanceFocus(nextField));
+            }
+        },
+
+        applyAccepted({ code, source, recordKey }, field) {
+            // The server already wrote the state; this keeps the deferred entangle in step without a request.
+            this.value = code;
+
+            emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
+
+            window.dispatchEvent(new CustomEvent('qr-scan-accepted', { detail: { value: code, field, source, recordKey } }));
+            window.dispatchEvent(new CustomEvent('qr-scanned', {
+                detail: { value: code, field, nextField, source, recordKey },
+            }));
+
+            if (nextField) {
+                this.$nextTick(() => this.advanceFocus(nextField));
+            }
+        },
+
+        applyRejected() {},
 
         advanceFocus(targetFieldName) {
             const targetElement = findFieldInput(targetFieldName);
