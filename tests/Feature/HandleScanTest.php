@@ -125,3 +125,15 @@ it('omits the component key when the scanner is not mounted', function (): void 
         ->not->toHaveKey('componentKey')
         ->toHaveKey('serverCheck', false);
 });
+
+it('scanner payload includes cooldownMs, clearOnReject and scanFailedMessage', function (): void {
+    expect(QrScanner::make('sku')->getScanPayload())
+        ->toHaveKey('cooldownMs', 0)
+        ->toHaveKey('clearOnReject', true)
+        ->toHaveKey('scanFailedMessage', 'The scan could not be checked. Please try again.');
+
+    expect(QrScanner::make('sku')->validateUsing(['max:5'])->clearOnReject(false)->getScanPayload())
+        ->toHaveKey('serverCheck', true)
+        ->toHaveKey('cooldownMs', 1500)
+        ->toHaveKey('clearOnReject', false);
+});
