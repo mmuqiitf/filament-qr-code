@@ -13,6 +13,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
+use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
+use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
+use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
 use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 use Mmuqiitf\FilamentQrCode\Validation\ScanChecksRule;
@@ -67,13 +70,33 @@ trait InteractsWithScans
         $result = $this->runScanChecks($code, $input);
 
         if (! $result->passes) {
+            $this->rejectScan($result);
+
             return $result->toClient();
         }
 
+        $this->acceptScan($result);
+
+        return $result->toClient();
+    }
+
+    protected function acceptScan(ScanResult $result): void
+    {
         $this->state($result->code);
         $this->callAfterStateUpdated();
 
-        return $result->toClient();
+        event(new ScanAccepted($result, $this->getName()));
+        event(new QrCodeScanned(
+            code: $result->code,
+            source: $result->source?->value ?? ScanInput::Camera->value,
+            field: $this->getName(),
+            context: ['record_key' => $result->record?->getKey()],
+        ));
+    }
+
+    protected function rejectScan(ScanResult $result): void
+    {
+        event(new ScanRejected($result, $this->getName()));
     }
 
     public function runScanChecks(string $code, ?ScanInput $source): ScanResult
