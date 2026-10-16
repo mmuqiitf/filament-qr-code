@@ -56,6 +56,7 @@
         >
             <div
                 @click.outside="closeScannerModal()"
+                data-qr-scanner-panel
                 class="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800"
             >
                 {{-- Header --}}

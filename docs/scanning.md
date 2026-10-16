@@ -238,7 +238,7 @@ QrScanner::make('sku')
 - Checks run on every live scan and again when the form is submitted, always in this order: rules, lookup, closures. The first failure stops the scan.
 - A closure returns `null` or `true` to pass, a message to fail, or `false` to fail with the generic message.
 - Name the closure parameter `$record` to receive the lookup result. A `Model`-typed parameter with another name receives the form's record instead.
-- `cooldown()` sets how long the browser ignores a repeated code. Fields with checks default to `qr-code.scan.cooldown_ms` (1500 ms); fields without checks default to 0. Use `cooldown(0)` to turn it off. The browser applies it once the client scan pipeline ships (P1a PR 4).
+- `cooldown()` sets how long the browser ignores a repeated code. Fields with checks default to `qr-code.scan.cooldown_ms` (1500 ms); fields without checks default to 0. Use `cooldown(0)` to turn it off. The browser enforces it: a repeat within the window fires `qr-scan-duplicate` and is not sent to the server.
 
 ### Reacting to scans
 
@@ -285,4 +285,4 @@ QrScanner::make('sku')
     ->flash(); // or flash(false)
 ```
 
-Defaults live in `qr-code.feedback.success` and `qr-code.feedback.error`. `sound(false)` and `vibrate(false)` still turn everything off. Fields without checks keep the single success beep.
+Defaults live in `qr-code.feedback.success` and `qr-code.feedback.error`. `sound(false)` and `vibrate(false)` still turn everything off. Fields without checks keep the single success beep. The ring lasts about 0.9 s on the field; while the scanner modal is open it flashes the modal panel instead, and the field ring plays once the modal closes.
