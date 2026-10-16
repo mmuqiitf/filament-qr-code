@@ -6,6 +6,7 @@ namespace Mmuqiitf\FilamentQrCode\Concerns;
 
 use Closure;
 use Filament\Support\Components\Attributes\ExposedLivewireMethod;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Illuminate\Validation\ValidationException;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
+use Mmuqiitf\FilamentQrCode\Validation\ScanChecksRule;
 use Throwable;
 
 trait InteractsWithScans
@@ -33,9 +35,13 @@ trait InteractsWithScans
 
     protected int|Closure|null $cooldownMs = null;
 
+    protected bool $hasRegisteredScanChecksRule = false;
+
     /** @param  array<int, mixed>|ValidationRule|Closure  $rules */
     public function validateUsing(array|ValidationRule|Closure $rules): static
     {
+        $this->registerScanChecksRule();
+
         if ($rules instanceof Closure) {
             $this->scanCheckClosures[] = $rules;
 
@@ -75,7 +81,7 @@ trait InteractsWithScans
         try {
             return $this->runScanCheckStages($code, $source);
         } catch (ValidationException $exception) {
-            return ScanResult::reject($code, $source, (string) collect($exception->errors())->flatten()->first());
+            return ScanResult::reject($code, $source, $exception->validator->errors()->first());
         } catch (Throwable $exception) {
             report($exception);
 
@@ -129,6 +135,8 @@ trait InteractsWithScans
     /** @param  class-string<Model>  $model */
     public function lookup(string $model, string $column = 'code', ?Closure $modifyQueryUsing = null): static
     {
+        $this->registerScanChecksRule();
+
         $this->lookupModel = $model;
         $this->lookupColumn = $column;
         $this->modifyLookupQueryUsing = $modifyQueryUsing;
@@ -166,7 +174,7 @@ trait InteractsWithScans
         $validator = Validator::make(
             ['code' => $code],
             ['code' => $this->scanRules],
-            attributes: ['code' => (string) $this->getLabel()],
+            attributes: ['code' => $this->getScanAttributeLabel()],
         );
 
         if ($validator->passes()) {
@@ -176,11 +184,33 @@ trait InteractsWithScans
         return ScanResult::reject($code, $source, (string) $validator->errors()->first('code'));
     }
 
+    protected function getScanAttributeLabel(): string
+    {
+        $label = $this->getLabel();
+
+        if ($label instanceof Htmlable) {
+            return strip_tags($label->toHtml());
+        }
+
+        return (string) $label;
+    }
+
     public function hasServerScanChecks(): bool
     {
         return $this->scanRules !== []
             || $this->scanCheckClosures !== []
             || $this->lookupModel !== null;
+    }
+
+    protected function registerScanChecksRule(): void
+    {
+        if ($this->hasRegisteredScanChecksRule) {
+            return;
+        }
+
+        $this->hasRegisteredScanChecksRule = true;
+
+        $this->rule(fn (): ScanChecksRule => new ScanChecksRule($this));
     }
 
     public function cooldown(int|Closure $milliseconds): static

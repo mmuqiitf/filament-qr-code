@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Validation\ValidationException;
+use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Tests\Fixtures\ScanCheckProduct;
 use Mmuqiitf\FilamentQrCode\Tests\Fixtures\ScanChecksTestComponent;
@@ -28,9 +34,9 @@ it('accepts a code that passes every rule', function (): void {
 });
 
 it('accepts a rule object and merges repeated validateUsing calls', function (): void {
-    $startsWithSku = new class implements \Illuminate\Contracts\Validation\ValidationRule
+    $startsWithSku = new class implements ValidationRule
     {
-        public function validate(string $attribute, mixed $value, \Closure $fail): void
+        public function validate(string $attribute, mixed $value, Closure $fail): void
         {
             if (! str_starts_with((string) $value, 'SKU-')) {
                 $fail('Codes must start with SKU-.');
@@ -77,7 +83,7 @@ it('applies modifyQueryUsing to the lookup', function (): void {
     $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->lookup(
         ScanCheckProduct::class,
         'sku',
-        modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query) => $query->where('active', true),
+        modifyQueryUsing: fn (Builder $query) => $query->where('active', true),
     ));
 
     ScanChecksTestComponent::scan($test, 'SKU-OLD')
@@ -85,18 +91,18 @@ it('applies modifyQueryUsing to the lookup', function (): void {
 });
 
 it('runs rules before the lookup', function (): void {
-    \Illuminate\Support\Facades\DB::enableQueryLog();
+    DB::enableQueryLog();
 
     $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner
         ->lookup(ScanCheckProduct::class, 'sku')
         ->validateUsing(['max:3']));
 
-    \Illuminate\Support\Facades\DB::flushQueryLog();
+    DB::flushQueryLog();
 
     ScanChecksTestComponent::scan($test, 'SKU-1')
         ->assertReturned(fn (array $result): bool => str_contains((string) $result['message'], 'must not be greater than 3'));
 
-    expect(collect(\Illuminate\Support\Facades\DB::getQueryLog())->pluck('query')->filter(fn (string $sql): bool => str_contains($sql, 'scan_check_products')))->toBeEmpty();
+    expect(collect(DB::getQueryLog())->pluck('query')->filter(fn (string $sql): bool => str_contains($sql, 'scan_check_products')))->toBeEmpty();
 });
 
 it('reports server checks once a lookup is configured', function (): void {
@@ -123,7 +129,7 @@ it('rejects with scan_rejected when a closure returns false', function (): void 
 
 it('passes the scan source to closures', function (): void {
     $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner
-        ->validateUsing(fn (?\Mmuqiitf\FilamentQrCode\Enums\ScanInput $source): ?string => $source === \Mmuqiitf\FilamentQrCode\Enums\ScanInput::Hardware ? null : 'Hardware only'));
+        ->validateUsing(fn (?ScanInput $source): ?string => $source === ScanInput::Hardware ? null : 'Hardware only'));
 
     ScanChecksTestComponent::scan($test, 'X', 'camera')->assertReturned(fn (array $result): bool => $result['message'] === 'Hardware only');
     ScanChecksTestComponent::scan($test, 'X', 'hardware')->assertReturned(fn (array $result): bool => $result['passes'] === true);
@@ -157,27 +163,27 @@ it('runs rules, then lookup, then closures and stops at the first failure', func
     expect($calls)->toBe(['closure-1']);
 });
 it('a throwing check becomes scan_failed and is reported', function (): void {
-    \Illuminate\Support\Facades\Exceptions::fake();
+    Exceptions::fake();
 
-    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->validateUsing(fn () => throw new \RuntimeException('boom')));
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->validateUsing(fn () => throw new RuntimeException('boom')));
 
     ScanChecksTestComponent::scan($test, 'SKU-1')
         ->assertReturned(fn (array $result): bool => $result['passes'] === false
             && $result['message'] === 'The scan could not be checked. Please try again.')
         ->assertSet('data.sku', null);
 
-    \Illuminate\Support\Facades\Exceptions::assertReported(\RuntimeException::class);
+    Exceptions::assertReported(RuntimeException::class);
 });
 
 it('converts a ValidationException into its message without reporting it', function (): void {
-    \Illuminate\Support\Facades\Exceptions::fake();
+    Exceptions::fake();
 
     $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner->validateUsing(
-        fn () => throw \Illuminate\Validation\ValidationException::withMessages(['code' => 'Blocked code']),
+        fn () => throw ValidationException::withMessages(['code' => 'Blocked code']),
     ));
 
     ScanChecksTestComponent::scan($test, 'SKU-1')
         ->assertReturned(fn (array $result): bool => $result['message'] === 'Blocked code');
 
-    \Illuminate\Support\Facades\Exceptions::assertNothingReported();
+    Exceptions::assertNothingReported();
 });

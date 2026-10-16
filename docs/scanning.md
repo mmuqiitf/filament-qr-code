@@ -224,3 +224,18 @@ public function scanProduct(string $code): void
 ```
 
 Keep the manual input's Enter handler: scanner bursts swallow their terminator (`preventFormSubmit`), so Enter only fires for typed input — no double-adds.
+
+## Server-side checks
+
+```php
+QrScanner::make('sku')
+    ->validateUsing(['required', 'string', 'max:32'])
+    ->lookup(Product::class, 'sku', modifyQueryUsing: fn (Builder $query) => $query->where('active', true))
+    ->validateUsing(fn (string $code, ?Product $record): ?string => $record?->stock > 0 ? null : __('Out of stock'))
+    ->cooldown(1500);
+```
+
+- Checks run on every live scan and again when the form is submitted, always in this order: rules, lookup, closures. The first failure stops the scan.
+- A closure returns `null` or `true` to pass, a message to fail, or `false` to fail with the generic message.
+- Name the closure parameter `$record` to receive the lookup result. A `Model`-typed parameter with another name receives the form's record instead.
+- `cooldown()` sets how long the browser ignores a repeated code. Fields with checks default to `qr-code.scan.cooldown_ms` (1500 ms); fields without checks default to 0. Use `cooldown(0)` to turn it off. The browser applies it once the client scan pipeline ships (P1a PR 4).
