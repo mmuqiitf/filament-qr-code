@@ -4,13 +4,55 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Concerns;
 
+use Closure;
 use Filament\Support\Components\Attributes\ExposedLivewireMethod;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
+use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
+use Mmuqiitf\FilamentQrCode\Validation\ScanChecksRule;
 use Throwable;
 
 trait InteractsWithScans
 {
+    /** @var array<int, mixed> */
+    protected array $scanRules = [];
+
+    /** @var array<int, Closure> */
+    protected array $scanCheckClosures = [];
+
+    /** @var class-string<Model>|null */
+    protected ?string $lookupModel = null;
+
+    protected string $lookupColumn = 'code';
+
+    protected ?Closure $modifyLookupQueryUsing = null;
+
+    protected int|Closure|null $cooldownMs = null;
+
+    protected bool $hasRegisteredScanChecksRule = false;
+
+    /** @param  array<int, mixed>|ValidationRule|Closure  $rules */
+    public function validateUsing(array|ValidationRule|Closure $rules): static
+    {
+        $this->registerScanChecksRule();
+
+        if ($rules instanceof Closure) {
+            $this->scanCheckClosures[] = $rules;
+
+            return $this;
+        }
+
+        $this->scanRules = [...$this->scanRules, ...(is_array($rules) ? $rules : [$rules])];
+
+        return $this;
+    }
+
     /** @return array{passes: bool, code: string, source: ?string, message: ?string, record_key: mixed} */
     #[ExposedLivewireMethod]
     public function handleScan(string $code, string $source): array
@@ -36,16 +78,159 @@ trait InteractsWithScans
 
     public function runScanChecks(string $code, ?ScanInput $source): ScanResult
     {
+        try {
+            return $this->runScanCheckStages($code, $source);
+        } catch (ValidationException $exception) {
+            return ScanResult::reject($code, $source, $exception->validator->errors()->first());
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_failed'));
+        }
+    }
+
+    protected function runScanCheckStages(string $code, ?ScanInput $source): ScanResult
+    {
         if ($code === '') {
             return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_empty'));
         }
 
-        return ScanResult::accept($code, $source);
+        if ($rejection = $this->checkScanRules($code, $source)) {
+            return $rejection;
+        }
+
+        $record = $this->lookUpScanRecord($code, $source);
+
+        if ($record instanceof ScanResult) {
+            return $record;
+        }
+
+        return $this->runScanCheckClosures($code, $source, $record)
+            ?? ScanResult::accept($code, $source, $record);
+    }
+
+    protected function runScanCheckClosures(string $code, ?ScanInput $source, ?Model $record): ?ScanResult
+    {
+        foreach ($this->scanCheckClosures as $check) {
+            $outcome = $this->evaluate($check, [
+                'code' => $code,
+                'record' => $record,
+                'source' => $source,
+            ], [
+                ScanInput::class => $source,
+            ]);
+
+            if ($outcome === false) {
+                return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_rejected'));
+            }
+
+            if (is_string($outcome) && $outcome !== '') {
+                return ScanResult::reject($code, $source, $outcome);
+            }
+        }
+
+        return null;
+    }
+
+    /** @param  class-string<Model>  $model */
+    public function lookup(string $model, string $column = 'code', ?Closure $modifyQueryUsing = null): static
+    {
+        $this->registerScanChecksRule();
+
+        $this->lookupModel = $model;
+        $this->lookupColumn = $column;
+        $this->modifyLookupQueryUsing = $modifyQueryUsing;
+
+        return $this;
+    }
+
+    protected function lookUpScanRecord(string $code, ?ScanInput $source): Model|ScanResult|null
+    {
+        if ($this->lookupModel === null) {
+            return null;
+        }
+
+        $query = $this->lookupModel::query();
+
+        if ($this->modifyLookupQueryUsing instanceof Closure) {
+            $query = $this->evaluate($this->modifyLookupQueryUsing, ['query' => $query], [Builder::class => $query]) ?? $query;
+        }
+
+        $record = $query->where($this->lookupColumn, $code)->first();
+
+        if ($record instanceof Model) {
+            return $record;
+        }
+
+        return ScanResult::reject($code, $source, __('filament-qr-code::ui.record_not_found', ['code' => $code]));
+    }
+
+    protected function checkScanRules(string $code, ?ScanInput $source): ?ScanResult
+    {
+        if ($this->scanRules === []) {
+            return null;
+        }
+
+        $validator = Validator::make(
+            ['code' => $code],
+            ['code' => $this->scanRules],
+            attributes: ['code' => $this->getScanAttributeLabel()],
+        );
+
+        if ($validator->passes()) {
+            return null;
+        }
+
+        return ScanResult::reject($code, $source, (string) $validator->errors()->first('code'));
+    }
+
+    protected function getScanAttributeLabel(): string
+    {
+        $label = $this->getLabel();
+
+        if ($label instanceof Htmlable) {
+            return strip_tags($label->toHtml());
+        }
+
+        return (string) $label;
     }
 
     public function hasServerScanChecks(): bool
     {
-        return false;
+        return $this->scanRules !== []
+            || $this->scanCheckClosures !== []
+            || $this->lookupModel !== null;
+    }
+
+    protected function registerScanChecksRule(): void
+    {
+        if ($this->hasRegisteredScanChecksRule) {
+            return;
+        }
+
+        $this->hasRegisteredScanChecksRule = true;
+
+        $this->rule(fn (): ScanChecksRule => new ScanChecksRule($this));
+    }
+
+    public function cooldown(int|Closure $milliseconds): static
+    {
+        $this->cooldownMs = $milliseconds;
+
+        return $this;
+    }
+
+    public function getCooldownMs(): int
+    {
+        if ($this->cooldownMs !== null) {
+            return max(0, (int) $this->evaluate($this->cooldownMs));
+        }
+
+        if (! $this->hasServerScanChecks()) {
+            return 0;
+        }
+
+        return ConfigValue::int('qr-code.scan.cooldown_ms', 1500, minimum: 0);
     }
 
     /** @return array{serverCheck: bool, componentKey?: string} */
