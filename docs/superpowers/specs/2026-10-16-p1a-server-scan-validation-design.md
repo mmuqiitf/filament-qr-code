@@ -420,3 +420,9 @@ Resolved by the owner on 2026-10-16:
 1. **Cooldown on fields without checks:** defaults to `0`, so apps that configure no checks see no change. Fields with checks default to `scan.cooldown_ms` (1500). See sections 4.2 and 5.4.
 2. **Hardware path:** the PR 4 stopgap is accepted. `qr-hardware-scanner.js` (around line 355) writes `this.$wire.set(livewirePath, scannedValue)` directly. In PR 4, when the target is a `QrScanner` field with `serverCheck`, the hardware scanner calls that field's `handleScanResult(code, 'hardware')` instead; otherwise it keeps writing directly. The full router rewrite stays in sub-project 2.
 3. **Checks on submit:** lookup and closure checks re-run on submit, together with rules, through `ScanChecksRule` (section 4.4).
+
+Resolved by the owner on 2026-10-16 (PR 1 plan review):
+
+4. **Submit rejections:** a `ScanChecksRule` failure shows the normal field validation error only. `onRejected` and `ScanRejected` fire for live scans only.
+5. **Disabled or read-only field:** `handleScan` rejects with `scan_rejected` (not `null`).
+6. **Component key format:** verified at runtime before PR 1 Task 3 is implemented (see the PR 1 plan).

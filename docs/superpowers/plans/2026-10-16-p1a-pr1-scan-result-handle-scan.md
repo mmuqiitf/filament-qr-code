@@ -572,3 +572,9 @@ git commit -m "feat: expose scanner component key and server check flag to the b
 - PR 3: `onScanned()`/`onRejected()`, `clearOnReject()`, `ScanAccepted`/`ScanRejected`/`QrCodeScanned` events.
 - PR 4: JS pipeline, `cooldown()`, payload keys `clearOnReject`/`cooldownMs`/`scanFailedMessage`, hardware stopgap.
 - PR 5: outcome feedback.
+
+## Owner rulings (2026-10-16)
+
+1. Submit-time rejections show the normal field error only; `onRejected`/`ScanRejected` are live-scan only (affects PR 2/3, not this PR).
+2. A disabled or read-only field rejects with `scan_rejected` (Task 3 test "rejects scans on a disabled field").
+3. Verify the absolute component key format at runtime first (Task 3 Step 2 note) before writing the implementation.
