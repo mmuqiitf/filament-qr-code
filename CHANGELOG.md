@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `QrHardwareScannerListener` routed bursts into whichever text input had
+  focus (e.g. a POS member/search box) even when fields were registered.
+  A focused input now only receives the scan if it is a registered field;
+  otherwise the scan goes to the registered field and the focused input is
+  restored to its pre-burst value (with `input`/`change` events so
+  Livewire state is corrected too). Without registered fields the focused
+  input still receives the scan.
+
 ## [0.3.0] - 2026-10-15
 
 ### Upgrading from 0.2
