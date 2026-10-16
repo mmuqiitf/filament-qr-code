@@ -13,6 +13,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
+use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
+use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
+use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
 use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 use Mmuqiitf\FilamentQrCode\Validation\ScanChecksRule;
@@ -36,6 +39,12 @@ trait InteractsWithScans
     protected int|Closure|null $cooldownMs = null;
 
     protected bool $hasRegisteredScanChecksRule = false;
+
+    protected ?Closure $onScannedCallback = null;
+
+    protected ?Closure $onRejectedCallback = null;
+
+    protected bool|Closure|null $clearOnReject = null;
 
     /** @param  array<int, mixed>|ValidationRule|Closure  $rules */
     public function validateUsing(array|ValidationRule|Closure $rules): static
@@ -67,13 +76,101 @@ trait InteractsWithScans
         $result = $this->runScanChecks($code, $input);
 
         if (! $result->passes) {
+            $this->rejectScan($result);
+
             return $result->toClient();
         }
 
-        $this->state($result->code);
-        $this->callAfterStateUpdated();
+        $previousState = $this->getState();
+
+        try {
+            $this->acceptScan($result);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            $this->state($previousState);
+
+            $failure = ScanResult::reject($result->code, $result->source, __('filament-qr-code::ui.scan_failed'));
+
+            event(new ScanRejected($failure, $this->getName()));
+
+            return $failure->toClient();
+        }
 
         return $result->toClient();
+    }
+
+    protected function acceptScan(ScanResult $result): void
+    {
+        $this->state($result->code);
+        $this->callAfterStateUpdated();
+        $this->evaluateScanCallback($this->onScannedCallback, $result);
+
+        event(new ScanAccepted($result, $this->getName()));
+        event(new QrCodeScanned(
+            code: $result->code,
+            source: ($result->source ?? ScanInput::Camera)->value,
+            field: $this->getName(),
+            context: ['record_key' => $result->record?->getKey()],
+        ));
+    }
+
+    public function onScanned(?Closure $callback): static
+    {
+        $this->onScannedCallback = $callback;
+
+        return $this;
+    }
+
+    protected function evaluateScanCallback(?Closure $callback, ScanResult $result): void
+    {
+        if (! $callback instanceof Closure) {
+            return;
+        }
+
+        $this->evaluate($callback, [
+            'result' => $result,
+            'code' => $result->code,
+            'record' => $result->record,
+            'source' => $result->source,
+        ], [
+            ScanResult::class => $result,
+            ScanInput::class => $result->source,
+        ]);
+    }
+
+    public function onRejected(?Closure $callback): static
+    {
+        $this->onRejectedCallback = $callback;
+
+        return $this;
+    }
+
+    public function clearOnReject(bool|Closure $condition = true): static
+    {
+        $this->clearOnReject = $condition;
+
+        return $this;
+    }
+
+    public function shouldClearOnReject(): bool
+    {
+        if ($this->clearOnReject === null) {
+            return ConfigValue::bool('qr-code.scan.clear_on_reject', true);
+        }
+
+        return (bool) $this->evaluate($this->clearOnReject);
+    }
+
+    protected function rejectScan(ScanResult $result): void
+    {
+        if ($this->shouldClearOnReject()) {
+            $this->state(null);
+        }
+
+        $this->evaluateScanCallback($this->onRejectedCallback, $result);
+
+        event(new ScanRejected($result, $this->getName()));
     }
 
     public function runScanChecks(string $code, ?ScanInput $source): ScanResult
@@ -199,7 +296,9 @@ trait InteractsWithScans
     {
         return $this->scanRules !== []
             || $this->scanCheckClosures !== []
-            || $this->lookupModel !== null;
+            || $this->lookupModel !== null
+            || $this->onScannedCallback !== null
+            || $this->onRejectedCallback !== null;
     }
 
     protected function registerScanChecksRule(): void

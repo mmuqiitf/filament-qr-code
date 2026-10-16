@@ -56,10 +56,13 @@ return [
     | - cooldown_ms: Same code scanned again within this window is ignored.
     |   Used only by fields with server checks (validateUsing / lookup);
     |   fields without checks default to 0. Override per field with cooldown().
+    | - clear_on_reject: Clear the field when a live scan is rejected.
+    |   Override per field with clearOnReject().
     |
     */
     'scan' => [
         'cooldown_ms' => 1500,
+        'clear_on_reject' => true,
     ],
 
     /*
@@ -100,10 +103,10 @@ return [
     | Scan Audit
     |--------------------------------------------------------------------------
     |
-    | Every server-observed scan (collector action handling, programmatic
-    | triggers) dispatches a QrCodeScanned event. Enable the log listener
-    | to record them; live camera/hardware scans stay client-side and are
-    | not audited until they reach the server.
+    | Every server-observed scan (live scans accepted by a QrScanner with
+    | server checks, collector action handling, programmatic triggers)
+    | dispatches a QrCodeScanned event. Enable the log listener to record
+    | them. Rejected scans fire ScanRejected and are not logged here.
     |
     */
     'audit' => [

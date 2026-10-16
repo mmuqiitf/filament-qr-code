@@ -239,3 +239,21 @@ QrScanner::make('sku')
 - A closure returns `null` or `true` to pass, a message to fail, or `false` to fail with the generic message.
 - Name the closure parameter `$record` to receive the lookup result. A `Model`-typed parameter with another name receives the form's record instead.
 - `cooldown()` sets how long the browser ignores a repeated code. Fields with checks default to `qr-code.scan.cooldown_ms` (1500 ms); fields without checks default to 0. Use `cooldown(0)` to turn it off. The browser applies it once the client scan pipeline ships (P1a PR 4).
+
+### Reacting to scans
+
+```php
+QrScanner::make('sku')
+    ->lookup(Product::class, 'sku')
+    ->onScanned(function (ScanResult $result, Set $set): void {
+        $set('price', $result->record->price);
+    })
+    ->onRejected(fn (ScanResult $result) => Notification::make()->danger()->title($result->message)->send())
+    ->clearOnReject(); // default from qr-code.scan.clear_on_reject
+```
+
+- `onScanned` and `onRejected` run for live scans only, never when the form is submitted.
+- Callbacks can ask for `ScanResult $result`, `Get $get`, `Set $set`, `string $code`, `$record` (named), `?ScanInput $source`, `$component` and `$livewire`.
+- Accepted live scans fire `ScanAccepted` and `QrCodeScanned` (with `source` `camera`, `hardware` or `upload`); rejected ones fire `ScanRejected`. With `qr-code.audit.enabled`, accepted live scans are logged.
+- If `onScanned` throws, the field keeps its previous value, the error is reported, and the scan is rejected with the generic message.
+- Configuring `onScanned` or `onRejected` alone makes the field call the server on every scan and enables the default cooldown.
