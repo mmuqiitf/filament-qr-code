@@ -42,6 +42,10 @@ trait InteractsWithScans
 
     protected ?Closure $onScannedCallback = null;
 
+    protected ?Closure $onRejectedCallback = null;
+
+    protected bool|Closure|null $clearOnReject = null;
+
     /** @param  array<int, mixed>|ValidationRule|Closure  $rules */
     public function validateUsing(array|ValidationRule|Closure $rules): static
     {
@@ -121,8 +125,37 @@ trait InteractsWithScans
         ]);
     }
 
+    public function onRejected(?Closure $callback): static
+    {
+        $this->onRejectedCallback = $callback;
+
+        return $this;
+    }
+
+    public function clearOnReject(bool|Closure $condition = true): static
+    {
+        $this->clearOnReject = $condition;
+
+        return $this;
+    }
+
+    public function shouldClearOnReject(): bool
+    {
+        if ($this->clearOnReject === null) {
+            return ConfigValue::bool('qr-code.scan.clear_on_reject', true);
+        }
+
+        return (bool) $this->evaluate($this->clearOnReject);
+    }
+
     protected function rejectScan(ScanResult $result): void
     {
+        if ($this->shouldClearOnReject()) {
+            $this->state(null);
+        }
+
+        $this->evaluateScanCallback($this->onRejectedCallback, $result);
+
         event(new ScanRejected($result, $this->getName()));
     }
 
@@ -250,7 +283,8 @@ trait InteractsWithScans
         return $this->scanRules !== []
             || $this->scanCheckClosures !== []
             || $this->lookupModel !== null
-            || $this->onScannedCallback !== null;
+            || $this->onScannedCallback !== null
+            || $this->onRejectedCallback !== null;
     }
 
     protected function registerScanChecksRule(): void

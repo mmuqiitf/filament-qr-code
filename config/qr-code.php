@@ -56,10 +56,13 @@ return [
     | - cooldown_ms: Same code scanned again within this window is ignored.
     |   Used only by fields with server checks (validateUsing / lookup);
     |   fields without checks default to 0. Override per field with cooldown().
+    | - clear_on_reject: Clear the field when a live scan is rejected.
+    |   Override per field with clearOnReject().
     |
     */
     'scan' => [
         'cooldown_ms' => 1500,
+        'clear_on_reject' => true,
     ],
 
     /*

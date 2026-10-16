@@ -107,3 +107,65 @@ it('does not run onScanned for a rejected scan', function (): void {
 it('counts an onScanned callback as a server check', function (): void {
     expect(QrScanner::make('sku')->onScanned(fn () => null)->hasServerScanChecks())->toBeTrue();
 });
+it('rejected scan runs onRejected and clears state when clearOnReject', function (): void {
+    $messages = [];
+
+    $test = ScanChecksTestComponent::test(function (QrScanner $scanner) use (&$messages): QrScanner {
+        return $scanner
+            ->lookup(ScanCheckProduct::class, 'sku')
+            ->onRejected(function (ScanResult $result, Set $set) use (&$messages): void {
+                $messages[] = $result->message;
+                $set('note', 'rejected');
+            });
+    });
+
+    $test->set('data.sku', 'SKU-1');
+
+    ScanChecksTestComponent::scan($test, 'SKU-404')
+        ->assertSet('data.sku', null)
+        ->assertSet('data.note', 'rejected');
+
+    expect($messages)->toBe(['No record found for "SKU-404".']);
+});
+
+it('keeps the previous state when clearOnReject is off', function (): void {
+    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner) => $scanner
+        ->lookup(ScanCheckProduct::class, 'sku')
+        ->clearOnReject(false));
+
+    $test->set('data.sku', 'SKU-1');
+
+    ScanChecksTestComponent::scan($test, 'SKU-404')->assertSet('data.sku', 'SKU-1');
+});
+
+it('reads the clearOnReject default from config', function (): void {
+    expect(QrScanner::make('sku')->shouldClearOnReject())->toBeTrue();
+
+    config()->set('qr-code.scan.clear_on_reject', false);
+
+    expect(QrScanner::make('sku')->shouldClearOnReject())->toBeFalse()
+        ->and(QrScanner::make('sku')->clearOnReject()->shouldClearOnReject())->toBeTrue();
+});
+
+it('runs onRejected before ScanRejected', function (): void {
+    $order = [];
+    Event::listen(ScanRejected::class, function () use (&$order): void {
+        $order[] = 'ScanRejected';
+    });
+
+    $test = ScanChecksTestComponent::test(function (QrScanner $scanner) use (&$order): QrScanner {
+        return $scanner
+            ->validateUsing(['max:2'])
+            ->onRejected(function () use (&$order): void {
+                $order[] = 'onRejected';
+            });
+    });
+
+    ScanChecksTestComponent::scan($test, 'TOO-LONG');
+
+    expect($order)->toBe(['onRejected', 'ScanRejected']);
+});
+
+it('counts an onRejected callback as a server check', function (): void {
+    expect(QrScanner::make('sku')->onRejected(fn () => null)->hasServerScanChecks())->toBeTrue();
+});
