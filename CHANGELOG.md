@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-17
+
+### Upgrading from 0.3
+- Run `php artisan filament:assets` after updating: the scanner JS and CSS
+  changed (scan pipeline, outcome feedback, flash styles).
+- No breaking API changes. `QrScanner` fields without server checks behave as
+  before; `vibrate()` keeps its signature and gains optional `success:` /
+  `error:` patterns.
+
 ### Added
 - Server-side checks for live `QrScanner` scans (P1a). Each scan makes one
   Livewire call to a new `handleScan()` hook (Filament's
@@ -27,16 +36,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Outcome feedback: success and error tones, vibration patterns and a
     green/red flash, configurable in `qr-code.feedback.success` / `.error` and
     per field with `beep()`, `vibrate(success:, error:)` and `flash()`.
+  - Delivered in #14–#22 (spec, plans and P1a PRs 1–5).
 - Config: `qr-code.scan.cooldown_ms`, `qr-code.scan.clear_on_reject`,
   `qr-code.feedback.success`, `qr-code.feedback.error`.
 
 ### Fixed
 - Upload scans flashed (and named the field in `qr-scan-*` events as) the
   hidden file input instead of the field: Alpine's `$el` is the calling
-  element, so `QrScanner` now resolves the field wrapper via `$root`.
+  element, so `QrScanner` now resolves the field wrapper via `$root` (#24).
 - The outcome flash ring was never visible: it played behind the open
   scanner modal and faded in 300 ms. It now runs on the field after the modal
-  closes (on the modal panel while it stays open) and lasts 900 ms.
+  closes (on the modal panel while it stays open) and lasts 900 ms (#23).
 
 ### Changed
 - `QrScanner` fields without any server check behave exactly as before
@@ -208,7 +218,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.1.1...v0.2.0
