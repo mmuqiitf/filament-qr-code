@@ -43,4 +43,6 @@ return [
     'starting_feed' => 'Starting camera feed...',
     'stop' => 'Stop',
     'type_or_scan' => 'Type or scan a code...',
+    'scan_empty' => 'The scanned code is empty.',
+    'scan_rejected' => 'This code was rejected.',
 ];

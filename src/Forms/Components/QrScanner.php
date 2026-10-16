@@ -13,6 +13,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
+use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScans;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 
 class QrScanner extends Field
@@ -24,6 +25,7 @@ class QrScanner extends Field
     use HasPlaceholder;
     use HasScanPayload;
     use HasSequentialScan;
+    use InteractsWithScans;
 
     protected string $view = 'filament-qr-code::components.qr-scanner';
 
