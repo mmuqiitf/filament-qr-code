@@ -5,7 +5,7 @@ export const ERROR_TONES = [
     { frequency: 220, durationMs: 90, delayMs: 140 },
 ];
 
-export const FLASH_MS = 300;
+export const FLASH_MS = 900;
 
 export const FLASH_CLASSES = {
     success: 'fi-qr-flash-success',

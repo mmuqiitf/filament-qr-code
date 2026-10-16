@@ -13,7 +13,7 @@ import {
     storageKeyFor,
 } from './qr-camera-core.js';
 import { createScanDeduper, requestScanCheck } from './scan-pipeline.js';
-import { playOutcomeFeedback } from './feedback.js';
+import { FLASH_CLASSES, flashElement, playOutcomeFeedback } from './feedback.js';
 
 /**
  * Alpine component for QrScanner field.
@@ -57,6 +57,7 @@ export default function qrScannerComponent({
         value: state,
         statePath: statePath,
         isModalOpen: false,
+        pendingFlash: null,
         isScanning: false,
         isLoading: false,
         hasError: false,
@@ -138,7 +139,27 @@ export default function qrScannerComponent({
         closeScannerModal() {
             this.stopScan().then(() => {
                 this.isModalOpen = false;
+
+                const outcome = this.pendingFlash;
+                this.pendingFlash = null;
+
+                if (outcome) {
+                    this.$nextTick(() => flashElement(this.$el, FLASH_CLASSES[outcome]));
+                }
             });
+        },
+
+        // The modal overlay hides the field, so flash the panel now and the field once the modal closes.
+        flashTargetFor(outcome, settings) {
+            if (!this.isModalOpen) {
+                return this.$el;
+            }
+
+            if (settings?.flash) {
+                this.pendingFlash = outcome;
+            }
+
+            return this.$el.querySelector('[data-qr-scanner-panel]');
         },
 
         async loadCamerasAndStart() {
@@ -308,6 +329,8 @@ export default function qrScannerComponent({
         },
 
         resumeCamera() {
+            this.pendingFlash = null;
+
             try {
                 this.html5Qrcode?.resume?.();
             } catch (error) {
@@ -339,7 +362,11 @@ export default function qrScannerComponent({
             this.value = code;
 
             if (successFeedback) {
-                playOutcomeFeedback('success', successFeedback, { element: this.$el, beepFrequency, beepDurationMs });
+                playOutcomeFeedback('success', successFeedback, {
+                    element: this.flashTargetFor('success', successFeedback),
+                    beepFrequency,
+                    beepDurationMs,
+                });
             } else {
                 emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
             }
@@ -359,7 +386,11 @@ export default function qrScannerComponent({
                 this.value = '';
             }
 
-            playOutcomeFeedback('error', errorFeedback, { element: this.$el, beepFrequency, beepDurationMs });
+            playOutcomeFeedback('error', errorFeedback, {
+                element: this.flashTargetFor('error', errorFeedback),
+                beepFrequency,
+                beepDurationMs,
+            });
 
             window.dispatchEvent(new CustomEvent('qr-scan-rejected', { detail: { value: code, field, source, message } }));
         },

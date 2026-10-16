@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Config: `qr-code.scan.cooldown_ms`, `qr-code.scan.clear_on_reject`,
   `qr-code.feedback.success`, `qr-code.feedback.error`.
 
+### Fixed
+- The outcome flash ring was never visible: it played behind the open
+  scanner modal and faded in 300 ms. It now runs on the field after the modal
+  closes (on the modal panel while it stays open) and lasts 900 ms.
+
 ### Changed
 - `QrScanner` fields without any server check behave exactly as before
   (no extra request, no cooldown, single success beep).

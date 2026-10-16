@@ -171,3 +171,57 @@ describe('QrFeedback', () => {
         expect(() => qrFeedback.playTones(ERROR_TONES)).not.toThrow();
     });
 });
+
+describe('flash visibility around the scanner modal', () => {
+    function mountWithModal(respond) {
+        const mounted = mountScanner({ respond });
+        mounted.element.insertAdjacentHTML('beforeend', '<div data-qr-scanner-panel></div>');
+        mounted.panel = mounted.element.querySelector('[data-qr-scanner-panel]');
+        mounted.scanner.isModalOpen = true;
+        mounted.scanner.stopScan = () => new Promise((resolve) => setTimeout(resolve, 400));
+
+        return mounted;
+    }
+
+    const reject = () =>
+        Promise.resolve({ passes: false, code: 'X', source: 'upload', message: 'Nope', record_key: null });
+
+    it('flashes the field after the scanner modal closes, not behind it', async () => {
+        recordFeedback();
+        const { scanner, element } = mountWithModal(reject);
+
+        await scanner.handleScanResult('X', 'upload');
+        scanner.closeScannerModal();
+
+        expect(element.classList.contains(FLASH_CLASSES.error)).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(400);
+
+        expect(scanner.isModalOpen).toBe(false);
+        expect(element.classList.contains(FLASH_CLASSES.error)).toBe(true);
+
+        vi.advanceTimersByTime(FLASH_MS - 1);
+        expect(element.classList.contains(FLASH_CLASSES.error)).toBe(true);
+    });
+
+    it('camera reject with the modal open flashes the panel and leaves no pending field flash', async () => {
+        recordFeedback();
+        const { scanner, element, panel } = mountWithModal(reject);
+        scanner.html5Qrcode = { pause: () => {}, resume: () => {} };
+
+        await scanner.onCameraDecode('X');
+
+        expect(panel.classList.contains(FLASH_CLASSES.error)).toBe(true);
+        expect(element.classList.contains(FLASH_CLASSES.error)).toBe(false);
+
+        vi.advanceTimersByTime(FLASH_MS);
+        scanner.closeScannerModal();
+        await vi.advanceTimersByTimeAsync(400);
+
+        expect(element.classList.contains(FLASH_CLASSES.error)).toBe(false);
+    });
+
+    it('keeps the ring long enough to notice', () => {
+        expect(FLASH_MS).toBeGreaterThanOrEqual(900);
+    });
+});

@@ -137,15 +137,16 @@
 
 /* Scan outcome flash (server-checked QrScanner fields) */
 .fi-qr-flash-success {
-    animation: fi-qr-flash-success 300ms ease-out;
+    animation: fi-qr-flash-success 900ms ease-out;
 }
 
 .fi-qr-flash-danger {
-    animation: fi-qr-flash-danger 300ms ease-out;
+    animation: fi-qr-flash-danger 900ms ease-out;
 }
 
 @keyframes fi-qr-flash-success {
-    from {
+    0%,
+    40% {
         box-shadow: 0 0 0 3px rgb(34 197 94 / 0.7);
     }
     to {
@@ -154,7 +155,8 @@
 }
 
 @keyframes fi-qr-flash-danger {
-    from {
+    0%,
+    40% {
         box-shadow: 0 0 0 3px rgb(239 68 68 / 0.8);
     }
     to {
