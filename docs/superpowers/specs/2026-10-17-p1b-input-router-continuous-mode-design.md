@@ -1,7 +1,7 @@
 # P1b: Hardware input router and continuous mode (design spec)
 
 - **Date:** 2026-10-17
-- **Status:** Draft for owner review (binding decisions in section 2.3, open questions in section 10)
+- **Status:** Approved by owner 2026-10-17 (binding decisions in section 2.3, resolved questions in section 12)
 - **Roadmap items:** P1.6 and P1.7 in the review plan (section F)
 - **Scope:** Sub-project 2 of 3 of P1. Builds on P1a (`handleScan`, `ScanResult`, cooldown, outcome feedback), shipped in v0.4.0.
 
@@ -127,14 +127,14 @@ per `burstId`.
 
 1. **Camera modal open.** If a target reports an open camera modal (`target.isModalOpen()`), it owns the burst. The modal is the user's current task.
 2. **Focused target.** If `document.activeElement` is inside a registered target (any scope), that target owns the burst (**focused scan field wins over listener fields**).
-3. **First listening target.** Otherwise, collect page-scope targets that `accept(code)`, expand a listener into its `candidates()` (its registered inputs that are empty, enabled and not read-only, matching today's rule), sort all by DOM order (`compareDocumentPosition`), and deliver to the first (**decision 1**).
+3. **First listening target.** Otherwise, collect page-scope targets that `accept(code)`, expand a listener into its `candidates()` (each ranked by its own input's DOM position, not the listener element; resolution 1) (its registered inputs that are empty, enabled and not read-only, matching today's rule), sort all by DOM order (`compareDocumentPosition`), and deliver to the first (**decision 1**).
 4. **Legacy fallback.** If nothing matched and a mounted listener has `fallbackToAnyInput` on, the listener receives it and writes into the first empty form input (v0.4 behaviour).
 5. **Unrouted.** Dispatch `qr-scan-unrouted` `{ value }`.
 
 **Typed-character cleanup.** Wedge keys land in whatever input has focus before the burst is
 recognised. The router records the focused text entry and its value at burst start (the
 `burstOrigin` logic now in the listener moves into the router). When the burst is delivered to a
-target other than that input, the origin value is restored, as today. When the burst goes to the
+target other than that input, the origin value is restored, as today, unless the input (or an ancestor) has `data-qr-ignore`. When the burst goes to the
 focused target, the target's `deliver()` overwrites the value anyway.
 
 **Submit prevention.** When a burst completes on a terminator and `preventSubmit` applies, the
@@ -236,7 +236,7 @@ Reject path is unchanged (`onRejected`, `clearOnReject`).
 
 **Submit.** With display `Empty` the field is blank at submit, so `ScanChecksRule` passes; using
 `required()` on a continuous field is a configuration error and logs a one-time warning in local
-env. Continuous fields are normally `->dehydrated(false)`; the docs recommend it.
+env; it never throws (resolution 5). Continuous fields are normally `->dehydrated(false)`; the docs recommend it.
 
 ### 5.4 Payload
 
@@ -259,6 +259,7 @@ updated for added keys only.
         'display' => 'empty',          // 'empty' | 'last_code'   (decision 2)
         'pause_on_reject' => false,    // false = show error, keep scanning (decision 3)
         'keep_camera_open' => false,   // false = close modal after each scan (decision 4)
+        'cooldown_ms' => 300,          // duplicate window for continuous fields (resolution 2)
     ],
 ],
 ```
@@ -272,13 +273,14 @@ Invalid values fall back to the defaults (existing `ConfigValue` pattern, `tryFr
 | Two listeners on one page | Both register; candidates merged in DOM order; first empty registered field wins. One delivery. |
 | Listener + page-scope `QrScanner` | DOM order decides; whichever is earlier is "first listening". |
 | Listener + collector | Previously double-handled; now DOM order, one delivery. |
+| Input marked `data-qr-ignore` | Never a burst origin to restore: its typed text is left as is (resolution 4). Routing still follows section 4.2. |
 | Focused non-scan text input (search box) | Not a target, so step 3 applies: scan goes to first listening field and the typed characters are reverted in the search box. With no page targets, the burst stays as typed text (no target, nothing to revert) and `qr-scan-unrouted` fires. |
 | Focused focus-scope `QrScanner` | Step 2, it wins. |
 | Focus-scope `QrScanner` not focused, no page targets | Unrouted; characters stay where they were typed (today's behaviour). |
 | Camera modal open | Step 1: modal owner gets hardware bursts. |
 | Field disabled / read-only / checking / paused | `accept()` false, skipped; server also rejects disabled fields (P1a). |
-| Rapid bursts (< check round trip) | Each burst routed independently; a busy continuous field holds one queued code (section 4.5); further codes while queue full emit `qr-scan-duplicate`-style `qr-scan-dropped` (open question 3). |
-| Same code twice inside cooldown | Existing cooldown drops it (`qr-scan-duplicate`). |
+| Rapid bursts (< check round trip) | Each burst routed independently; a busy continuous field holds one queued code (section 4.5); further codes while the queue is full are dropped and emit `qr-scan-dropped` `{ value, field, source }` (resolution 3). |
+| Same code twice inside cooldown | Existing cooldown drops it (`qr-scan-duplicate`). Continuous fields use `scan.continuous.cooldown_ms` (300) unless `cooldown()` is set. |
 | Livewire morph / SPA navigation | Targets unregister in `destroy()`; router removes its listener when empty; re-register on init. Registration is idempotent by `id`. |
 | Two bundles loaded | Single router via window key. |
 | Human typing in a scan field | Unchanged P0 guards; not a burst, nothing routed. |
@@ -337,10 +339,12 @@ TDD: each PR starts from the failing test named in section 11.
 
 PRs 1–3 are P1.6, PR 4 is P1.7, PR 5 docs/demo.
 
-## 12. Open questions
+## 12. Resolved questions
 
-1. **Listener ranking:** listener candidates are ranked by the DOM position of each registered input (proposed), not of the invisible listener element. Confirm.
-2. **Continuous cooldown:** keep `scan.cooldown_ms` (1500) for continuous fields, or a lower continuous default so scanning the same SKU twice for quantity 2 works faster? Proposal: keep 1500, apps can set `cooldown()`.
-3. **Overflow while busy:** queue depth 1 with `qr-scan-dropped` beyond it (proposed), or an unbounded FIFO?
-4. **Search box revert:** with page targets present, a scan typed into a focused non-scan input is reverted and re-routed (decision 1 read literally). Should a per-input opt-out (`data-qr-ignore`) be added for inputs that should keep wedge text?
-5. **`required()` on continuous fields:** warn only (proposed) or throw in local env?
+Resolved by the owner on 2026-10-17 (PR #26 review):
+
+1. **Listener ranking:** listener candidates are ranked by the DOM position of each registered input, not of the hidden listener element (section 4.2).
+2. **Continuous cooldown:** continuous fields get their own default, `scan.continuous.cooldown_ms` = 300; other fields keep `scan.cooldown_ms` = 1500. `cooldown()` still overrides per field (section 6).
+3. **Overflow while busy:** one-slot queue; further scans are dropped and dispatch `qr-scan-dropped` (sections 4.5, 7).
+4. **Opt-out of stray-text restore:** inputs (or ancestors) with `data-qr-ignore` keep wedge text; the router never restores them (sections 4.2, 7).
+5. **`required()` on continuous fields:** logs a one-time warning in local env only; never throws (section 5.3).
