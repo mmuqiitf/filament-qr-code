@@ -1,0 +1,286 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Mmuqiitf\FilamentQrCode\Concerns;
+
+use Closure;
+use Filament\Support\Components\Attributes\ExposedLivewireMethod;
+use Illuminate\Validation\ValidationException;
+use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
+use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
+use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
+use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
+use Mmuqiitf\FilamentQrCode\Events\ScanSequenceCompleted;
+use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
+use Mmuqiitf\FilamentQrCode\Support\ScanResult;
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+use Mmuqiitf\FilamentQrCode\Support\SequenceScanResult;
+use Throwable;
+
+/**
+ * Server side of QrScanSequence steps: one handleStepScan() call per scan
+ * checks the step, records the value and, on the last step, completes the set.
+ */
+trait HasSequenceSteps
+{
+    protected ?Closure $onCompletedCallback = null;
+
+    protected bool|Closure|null $shouldAutoSubmit = null;
+
+    protected string|Closure|null $autoSubmitMethod = null;
+
+    /** @return array<int, ScanStep> */
+    abstract public function getScanSteps(): array;
+
+    /** @return array<string, mixed> */
+    abstract public function getSequenceState(): array;
+
+    abstract public function normalizeStepValue(string $fieldKey, mixed $value): mixed;
+
+    abstract public function getStatePathPrefix(): string;
+
+    abstract public function getComponentStatePath(): ?string;
+
+    public function onCompleted(?Closure $callback): static
+    {
+        $this->onCompletedCallback = $callback;
+
+        return $this;
+    }
+
+    public function autoSubmit(bool|Closure $condition = true, string|Closure|null $method = null): static
+    {
+        $this->shouldAutoSubmit = $condition;
+        $this->autoSubmitMethod = $method;
+
+        return $this;
+    }
+
+    public function shouldAutoSubmit(): bool
+    {
+        if ($this->shouldAutoSubmit === null) {
+            return ConfigValue::bool('qr-code.sequence.auto_submit', false);
+        }
+
+        return (bool) $this->evaluate($this->shouldAutoSubmit);
+    }
+
+    public function getAutoSubmitMethod(): string
+    {
+        $method = $this->autoSubmitMethod === null
+            ? (function_exists('config') ? config('qr-code.sequence.submit_method', 'submit') : 'submit')
+            : $this->evaluate($this->autoSubmitMethod);
+
+        return is_string($method) && $method !== '' ? $method : 'submit';
+    }
+
+    /**
+     * True when a scan needs the server: any step check, a whole-set check,
+     * onCompleted() or autoSubmit(). Without it the browser writes state directly, as before.
+     */
+    public function hasServerSequenceWork(): bool
+    {
+        foreach ($this->getScanSteps() as $step) {
+            if ($step->hasChecks()) {
+                return true;
+            }
+        }
+
+        return $this->onCompletedCallback instanceof Closure || $this->shouldAutoSubmit();
+    }
+
+    /** @return array<string, mixed> */
+    #[ExposedLivewireMethod]
+    public function handleStepScan(string $step, string $code, string $source): array
+    {
+        $input = ScanInput::fromClient($source);
+        $values = $this->getSequenceState();
+        $index = $this->findStepIndex($step);
+
+        if ($index === null) {
+            return (new SequenceScanResult(
+                scan: ScanResult::reject(trim($code), $input, __('filament-qr-code::ui.scan_rejected')),
+                step: null,
+                nextStep: null,
+                values: $values,
+            ))->toClient();
+        }
+
+        $steps = $this->getScanSteps();
+        $code = trim((string) $this->normalizeStepValue($step, trim($code)));
+        $result = $this->checkStep($steps[$index], $code, $input, $values);
+        $skipped = [];
+
+        if (! $result->passes && $steps[$index]->isOptional() && isset($steps[$index + 1])) {
+            // An optional step whose check fails gives way when the code fits the next step.
+            $nextResult = $this->checkStep($steps[$index + 1], $code, $input, $values);
+
+            if ($nextResult->passes) {
+                $skipped = [$step];
+                $result = $nextResult;
+                $index++;
+                $step = $steps[$index]->getKey();
+            }
+        }
+
+        if (! $result->passes) {
+            event(new ScanRejected($result, $step));
+
+            return (new SequenceScanResult(scan: $result, step: $step, nextStep: $step, values: $values))->toClient();
+        }
+
+        foreach ($skipped as $skippedKey) {
+            unset($values[$skippedKey]);
+        }
+
+        $values[$step] = $result->code;
+        $this->writeSequenceValues($values);
+        $this->dispatchAcceptedStep($result, $step);
+
+        $nextStep = $this->findNextStep($index, $values);
+
+        if ($nextStep !== null) {
+            return (new SequenceScanResult(scan: $result, step: $step, nextStep: $nextStep, values: $values, skipped: $skipped))->toClient();
+        }
+
+        return $this->completeSequence($result, $step, $values, $skipped)->toClient();
+    }
+
+    /** @param  array<string, mixed>  $values */
+    protected function checkStep(ScanStep $step, string $code, ScanInput $source, array $values): ScanResult
+    {
+        return $step->checkPipeline()->run(
+            $code,
+            $source,
+            fn (Closure $closure, array $named = [], array $typed = []): mixed => $this->evaluate($closure, $named, $typed),
+            $step->getLabel(),
+            ['step' => $step, 'values' => $values],
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @param  list<string>  $skipped
+     */
+    protected function completeSequence(ScanResult $result, string $step, array $values, array $skipped = []): SequenceScanResult
+    {
+        $this->evaluate($this->onCompletedCallback, ['values' => $values]);
+
+        event(new ScanSequenceCompleted($values, $this->getComponentStatePath()));
+
+        $submitted = $this->shouldAutoSubmit() ? $this->submitSequence() : null;
+
+        return new SequenceScanResult(
+            scan: $result,
+            step: $step,
+            nextStep: null,
+            values: $values,
+            skipped: $skipped,
+            completed: true,
+            submitted: $submitted,
+        );
+    }
+
+    protected function submitSequence(): bool
+    {
+        $livewire = $this->getLivewire();
+
+        try {
+            $livewire->{$this->getAutoSubmitMethod()}();
+        } catch (ValidationException $exception) {
+            $livewire->setErrorBag($exception->validator->errors());
+
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function dispatchAcceptedStep(ScanResult $result, string $step): void
+    {
+        event(new ScanAccepted($result, $step));
+        event(new QrCodeScanned(
+            code: $result->code,
+            source: ($result->source ?? ScanInput::Camera)->value,
+            field: $step,
+            context: ['record_key' => $result->record?->getKey()],
+        ));
+    }
+
+    protected function findStepIndex(string $key): ?int
+    {
+        foreach ($this->getScanSteps() as $index => $step) {
+            if ($step->getKey() === $key) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The first empty step after $index; past the end, the first empty
+     * required step. Null when every required step has a value.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    protected function findNextStep(int $index, array $values): ?string
+    {
+        $steps = $this->getScanSteps();
+
+        foreach (array_slice($steps, $index + 1) as $step) {
+            if (blank($values[$step->getKey()] ?? null)) {
+                return $step->getKey();
+            }
+        }
+
+        foreach ($steps as $step) {
+            if (! $step->isOptional() && blank($values[$step->getKey()] ?? null)) {
+                return $step->getKey();
+            }
+        }
+
+        return null;
+    }
+
+    /** @param  array<string, mixed>  $values */
+    protected function allRequiredFilled(array $values): bool
+    {
+        foreach ($this->getScanSteps() as $step) {
+            if (! $step->isOptional() && blank($values[$step->getKey()] ?? null)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Write values the way the browser always has: the component's own state
+     * path plus the legacy statePathPrefix path per step.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    protected function writeSequenceValues(array $values): void
+    {
+        $livewire = $this->getLivewire();
+
+        if (($statePath = $this->getComponentStatePath()) !== null) {
+            data_set($livewire, $statePath, $values);
+        }
+
+        $prefix = trim($this->getStatePathPrefix(), '.');
+
+        foreach ($this->getScanSteps() as $step) {
+            $key = $step->getKey();
+            $path = $prefix !== '' ? "{$prefix}.{$key}" : $key;
+
+            try {
+                data_set($livewire, $path, $values[$key] ?? null);
+            } catch (Throwable) {
+                // The legacy prefix path may not exist on this Livewire component.
+            }
+        }
+    }
+}

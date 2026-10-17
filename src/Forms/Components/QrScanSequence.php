@@ -10,6 +10,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
+use Mmuqiitf\FilamentQrCode\Concerns\HasSequenceSteps;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
 class QrScanSequence extends Component
@@ -18,6 +19,7 @@ class QrScanSequence extends Component
     use HasFeedback;
     use HasHardwareScanner;
     use HasScanPayload;
+    use HasSequenceSteps;
 
     protected string $view = 'filament-qr-code::components.qr-scan-sequence';
 
