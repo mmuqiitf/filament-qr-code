@@ -33,6 +33,9 @@ export function createInputRouter({ win = window, doc = document } = {}) {
     const targets = new Map();
     let detector = null;
     let listening = false;
+    let burstCount = 0;
+    let burstOrigin = null;
+    let lastKeyAt = 0;
 
     const containsFocus = (target) => {
         const active = doc.activeElement;
@@ -71,17 +74,61 @@ export function createInputRouter({ win = window, doc = document } = {}) {
         return entries.sort((first, second) => compareDomOrder(first.element, second.element));
     };
 
+    const rememberOrigin = (event) => {
+        const now = Date.now();
+        const startsSequence = now - lastKeyAt > detectionFor(focusedTarget() ?? {}).burstThresholdMs;
+        lastKeyAt = now;
+
+        if (!startsSequence) {
+            return;
+        }
+
+        const active = event.target instanceof Element ? event.target : doc.activeElement;
+        const isTextEntry = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+        burstOrigin = isTextEntry && !active.closest('[data-qr-ignore]') ? { element: active, value: active.value } : null;
+    };
+
+    const restoreOrigin = (target, chosen) => {
+        const origin = burstOrigin;
+        burstOrigin = null;
+
+        if (!origin || origin.element === chosen || target.element.contains(origin.element)) {
+            return;
+        }
+
+        if (origin.element.value === origin.value) {
+            return;
+        }
+
+        origin.element.value = origin.value;
+        origin.element.dispatchEvent(new Event('input', { bubbles: true }));
+        origin.element.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
     const deliver = (target, code, reason, element) => {
         if (code.length < detectionFor(target).minBarcodeLength) {
             return false;
         }
 
-        target.deliver(code, { reason, element: element ?? target.element });
+        const chosen = element ?? target.element;
+        burstCount += 1;
+        restoreOrigin(target, chosen);
+        target.deliver(code, { burstId: burstCount, reason, element: chosen });
+        win.dispatchEvent(new CustomEvent('qr-scan-routed', {
+            detail: { value: code, target: target.name ?? null, kind: target.kind ?? 'field', reason, burstId: burstCount },
+        }));
 
         return true;
     };
 
     const routeBurst = (code) => {
+        const modalOwner = [...targets.values()]
+            .find((target) => typeof target.isModalOpen === 'function' && target.isModalOpen() && accepts(target, code));
+
+        if (modalOwner && deliver(modalOwner, code, 'modal')) {
+            return;
+        }
+
         const focused = focusedTarget();
 
         if (focused && accepts(focused, code) && deliver(focused, code, 'focus')) {
@@ -124,6 +171,7 @@ export function createInputRouter({ win = window, doc = document } = {}) {
             buildDetector();
         }
 
+        rememberOrigin(event);
         detector.handleKeyDown(event);
     };
 

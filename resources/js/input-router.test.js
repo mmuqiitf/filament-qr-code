@@ -190,3 +190,78 @@ describe('input router: first listening target', () => {
         expect(unrouted).toEqual([{ value: 'PRD-1001' }]);
     });
 });
+
+describe('input router: modal, events and stray text', () => {
+    it('a target with an open camera modal wins over the focused field', () => {
+        document.body.innerHTML = '<div id="modal-field"></div><div id="field"><input id="field-input"></div>';
+        const modal = makeTarget({ element: document.getElementById('modal-field'), isModalOpen: () => true });
+        const field = makeTarget({ element: document.getElementById('field') });
+        router.register(field.target);
+        router.register(modal.target);
+        document.getElementById('field-input').focus();
+
+        typeBurst('PRD-1001');
+
+        expect(modal.deliveries.map(({ reason }) => reason)).toEqual(['modal']);
+        expect(field.deliveries).toEqual([]);
+    });
+
+    it('dispatches qr-scan-routed with value, target, kind, reason and burstId', () => {
+        document.body.innerHTML = '<div id="a"></div>';
+        const routed = [];
+        const record = (event) => routed.push(event.detail);
+        window.addEventListener('qr-scan-routed', record);
+        const page = makeTarget({ scope: 'page', name: 'sku', element: document.getElementById('a') });
+        router.register(page.target);
+
+        typeBurst('PRD-1001');
+        typeBurst('PRD-1002');
+        window.removeEventListener('qr-scan-routed', record);
+
+        expect(routed).toEqual([
+            { value: 'PRD-1001', target: 'sku', kind: 'field', reason: 'first-listening', burstId: 1 },
+            { value: 'PRD-1002', target: 'sku', kind: 'field', reason: 'first-listening', burstId: 2 },
+        ]);
+        expect(page.deliveries.map(({ burstId }) => burstId)).toEqual([1, 2]);
+    });
+
+    it('restores text typed into a focused search input when the burst goes elsewhere', () => {
+        document.body.innerHTML = '<input id="search" value="milk"><div id="a"></div>';
+        const page = makeTarget({ scope: 'page', element: document.getElementById('a') });
+        router.register(page.target);
+        const search = document.getElementById('search');
+        const inputs = [];
+        search.addEventListener('input', () => inputs.push(search.value));
+        search.focus();
+
+        typeBurst('PRD-1001');
+
+        expect(search.value).toBe('milk');
+        expect(inputs).toEqual(['milk']);
+        expect(page.deliveries).toHaveLength(1);
+    });
+
+    it('leaves text in an input marked data-qr-ignore', () => {
+        document.body.innerHTML = '<div data-qr-ignore><input id="notes"></div><div id="a"></div>';
+        const page = makeTarget({ scope: 'page', element: document.getElementById('a') });
+        router.register(page.target);
+        document.getElementById('notes').focus();
+
+        typeBurst('PRD-1001');
+
+        expect(document.getElementById('notes').value).toBe('PRD-1001');
+        expect(page.deliveries).toHaveLength(1);
+    });
+
+    it('does not restore when the burst goes to the focused target', () => {
+        document.body.innerHTML = '<div id="field"><input id="field-input"></div>';
+        const field = makeTarget({ element: document.getElementById('field') });
+        router.register(field.target);
+        const input = document.getElementById('field-input');
+        input.focus();
+
+        typeBurst('PRD-1001');
+
+        expect(input.value).toBe('PRD-1001');
+    });
+});
