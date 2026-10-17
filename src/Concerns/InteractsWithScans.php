@@ -8,15 +8,13 @@ use Closure;
 use Filament\Support\Components\Attributes\ExposedLivewireMethod;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
 use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
 use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
+use Mmuqiitf\FilamentQrCode\Support\ScanCheckPipeline;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 use Mmuqiitf\FilamentQrCode\Validation\ScanChecksRule;
 use Throwable;
@@ -194,58 +192,23 @@ trait InteractsWithScans
 
     public function runScanChecks(string $code, ?ScanInput $source): ScanResult
     {
-        try {
-            return $this->runScanCheckStages($code, $source);
-        } catch (ValidationException $exception) {
-            return ScanResult::reject($code, $source, $exception->validator->errors()->first());
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_failed'));
-        }
+        return $this->getScanCheckPipeline()->run(
+            $code,
+            $source,
+            fn (Closure $closure, array $named = [], array $typed = []): mixed => $this->evaluate($closure, $named, $typed),
+            $this->getScanAttributeLabel(),
+        );
     }
 
-    protected function runScanCheckStages(string $code, ?ScanInput $source): ScanResult
+    public function getScanCheckPipeline(): ScanCheckPipeline
     {
-        if ($code === '') {
-            return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_empty'));
-        }
-
-        if ($rejection = $this->checkScanRules($code, $source)) {
-            return $rejection;
-        }
-
-        $record = $this->lookUpScanRecord($code, $source);
-
-        if ($record instanceof ScanResult) {
-            return $record;
-        }
-
-        return $this->runScanCheckClosures($code, $source, $record)
-            ?? ScanResult::accept($code, $source, $record);
-    }
-
-    protected function runScanCheckClosures(string $code, ?ScanInput $source, ?Model $record): ?ScanResult
-    {
-        foreach ($this->scanCheckClosures as $check) {
-            $outcome = $this->evaluate($check, [
-                'code' => $code,
-                'record' => $record,
-                'source' => $source,
-            ], [
-                ScanInput::class => $source,
-            ]);
-
-            if ($outcome === false) {
-                return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_rejected'));
-            }
-
-            if (is_string($outcome) && $outcome !== '') {
-                return ScanResult::reject($code, $source, $outcome);
-            }
-        }
-
-        return null;
+        return new ScanCheckPipeline(
+            rules: $this->scanRules,
+            closures: $this->scanCheckClosures,
+            lookupModel: $this->lookupModel,
+            lookupColumn: $this->lookupColumn,
+            modifyLookupQueryUsing: $this->modifyLookupQueryUsing,
+        );
     }
 
     /** @param  class-string<Model>  $model */
@@ -258,46 +221,6 @@ trait InteractsWithScans
         $this->modifyLookupQueryUsing = $modifyQueryUsing;
 
         return $this;
-    }
-
-    protected function lookUpScanRecord(string $code, ?ScanInput $source): Model|ScanResult|null
-    {
-        if ($this->lookupModel === null) {
-            return null;
-        }
-
-        $query = $this->lookupModel::query();
-
-        if ($this->modifyLookupQueryUsing instanceof Closure) {
-            $query = $this->evaluate($this->modifyLookupQueryUsing, ['query' => $query], [Builder::class => $query]) ?? $query;
-        }
-
-        $record = $query->where($this->lookupColumn, $code)->first();
-
-        if ($record instanceof Model) {
-            return $record;
-        }
-
-        return ScanResult::reject($code, $source, __('filament-qr-code::ui.record_not_found', ['code' => $code]));
-    }
-
-    protected function checkScanRules(string $code, ?ScanInput $source): ?ScanResult
-    {
-        if ($this->scanRules === []) {
-            return null;
-        }
-
-        $validator = Validator::make(
-            ['code' => $code],
-            ['code' => $this->scanRules],
-            attributes: ['code' => $this->getScanAttributeLabel()],
-        );
-
-        if ($validator->passes()) {
-            return null;
-        }
-
-        return ScanResult::reject($code, $source, (string) $validator->errors()->first('code'));
     }
 
     protected function getScanAttributeLabel(): string

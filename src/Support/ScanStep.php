@@ -6,7 +6,6 @@ namespace Mmuqiitf\FilamentQrCode\Support;
 
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
