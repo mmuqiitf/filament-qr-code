@@ -80,7 +80,7 @@ it('bridges sequence scans into component state readable via helpers', function 
 });
 
 it('serves lazy modal QR images through the signed route', function () {
-    $url = URL::signedRoute('filament-qr-code.image', [
+    $url = URL::signedRoute('filamentQrCode.image', [
         'data' => 'SIGNED-ROUTE-123',
         'size' => 120,
         'format' => 'svg',

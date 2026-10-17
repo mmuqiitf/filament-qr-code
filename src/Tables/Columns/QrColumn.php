@@ -193,7 +193,7 @@ class QrColumn extends Column
 
         try {
             return URL::signedRoute(
-                'filament-qr-code.image',
+                'filamentQrCode.image',
                 $this->getRenderSpec((int) $this->evaluate($this->modalSize))->toSignedParams($data),
             );
         } catch (\Throwable) {

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The signed QR image route is now named `filamentQrCode.image` (camelCase).
+
+### Deprecated
+- The `filament-qr-code.image` route name still resolves to the same URL but is
+  deprecated and will be removed in 1.0. Replace `route('filament-qr-code.image')` /
+  `URL::signedRoute('filament-qr-code.image', ...)` with `filamentQrCode.image`.
+
 ## [0.4.0] - 2026-10-17
 
 ### Upgrading from 0.3

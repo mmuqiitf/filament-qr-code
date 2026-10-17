@@ -121,13 +121,13 @@ class QrCodeDoctorCommand extends Command
     private function checkSignedRoute(): int
     {
         try {
-            $hasRoute = app('router')->has('filament-qr-code.image');
+            $hasRoute = app('router')->has('filamentQrCode.image');
         } catch (Throwable) {
             $hasRoute = false;
         }
 
         if (! $hasRoute) {
-            $this->error('  [FAIL] Route filament-qr-code.image is not registered: lazy table previews will fall back to inline data-URIs.');
+            $this->error('  [FAIL] Route filamentQrCode.image is not registered: lazy table previews will fall back to inline data-URIs.');
 
             return 1;
         }

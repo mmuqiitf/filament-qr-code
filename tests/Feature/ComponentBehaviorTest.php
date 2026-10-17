@@ -84,7 +84,7 @@ it('exposes a signed lazy modal URL for table columns', function () {
 
     expect($column->isLazyModal())->toBeTrue()
         ->and($column->getModalUrl())->toContain('filament-qr-code/qr-image')
-        ->and(URL::signedRoute('filament-qr-code.image', ['data' => 'x']))->toContain('signature');
+        ->and(URL::signedRoute('filamentQrCode.image', ['data' => 'x']))->toContain('signature');
 
     expect($column->lazyModal(false)->isLazyModal())->toBeFalse();
 });

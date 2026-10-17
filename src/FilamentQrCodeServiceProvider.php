@@ -90,6 +90,15 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
 
         Route::middleware('web')->group(function (): void {
             Route::get('filament-qr-code/qr-image', QrImageController::class)
+                ->name('filamentQrCode.image')
+                ->middleware('signed');
+
+            // @deprecated Kebab-case alias kept for backward compatibility; will be removed in 1.0.
+            // Use `filamentQrCode.image` instead. Laravel keeps a single route per method + URI, so the
+            // alias uses an optional, never-matching `{legacy?}` segment: `route('filament-qr-code.image')`
+            // generates the exact same URL, while incoming requests are matched by the route above.
+            Route::get('filament-qr-code/qr-image/{legacy?}', QrImageController::class)
+                ->where('legacy', '(?!)')
                 ->name('filament-qr-code.image')
                 ->middleware('signed');
         });
