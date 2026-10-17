@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Wedge-driven sequences: hardware bursts fill and advance `QrScanSequence` steps without focus; a focused step input
+  takes the burst for that step; one burst waits during a server check. `qr-sequence-step` gains `source`.
+- `ScanStep::sticky()` keeps a value across `resetAfterSubmit()`, `continuous()` and `Restart` rounds.
+- `ScanStep::repeat(?n)`, `onRepeatComplete(RepeatComplete::Advance|Wait)`, `finishWith()` and `allowDuplicates()`, with
+  config `sequence.repeat_complete` (`'advance'`) and `sequence.finish_code` (`null`), plus a Done control (`finishStep`).
 - `ScanStep` and `QrScanSequence::steps()`: per-step `validateUsing()`, `lookup()` and `optional()`. Checked sequences
   make one `handleStepScan` request per scan; plain `fields()` sequences still make none.
 - `QrScanSequence::validateAllUsing()`, `onInvalidSequence(InvalidSequenceBehavior::JumpToStep|Restart)`,
