@@ -190,7 +190,8 @@ trait HasSequenceSteps
         }
 
         $steps = $this->getScanSteps();
-        $code = trim((string) $this->normalizeStepValue($step, trim($code)));
+        $normalized = $this->normalizeStepValue($step, trim($code));
+        $code = is_scalar($normalized) ? trim((string) $normalized) : trim($code);
         $result = $this->checkStep($steps[$index], $code, $input, $values);
         $skipped = [];
 
@@ -303,9 +304,9 @@ trait HasSequenceSteps
 
     protected function getLastStepKey(): string
     {
-        $steps = $this->getScanSteps();
+        $steps = array_values($this->getScanSteps());
 
-        return $steps[array_key_last($steps)]->getKey();
+        return $steps === [] ? '' : $steps[count($steps) - 1]->getKey();
     }
 
     /**
@@ -337,7 +338,7 @@ trait HasSequenceSteps
                 if (filled($message)) {
                     $key = is_string($key) && $this->findStepIndex($key) !== null ? $key : $lastStep;
 
-                    return [$key, (string) $message];
+                    return [$key, is_scalar($message) ? (string) $message : __('filament-qr-code::ui.scan_rejected')];
                 }
             }
 

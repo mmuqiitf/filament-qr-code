@@ -268,3 +268,21 @@ it('reads autoSubmit and resetAfterSubmit from config', function (): void {
     completeReceipt(Livewire::test(SequenceScanTestComponent::class))
         ->assertReturned(fn (array $result): bool => $result['submitted'] && $result['reset']);
 });
+
+it('asks the browser to use the server path only when there is server work and a key', function (): void {
+    $plain = QrScanSequence::make()->statePath('receipt')->fields(['po', 'sku']);
+    $checked = QrScanSequence::make()->statePath('receipt')->steps([ScanStep::make('po')->validateUsing(['required'])]);
+    $keyless = QrScanSequence::make()->steps([ScanStep::make('po')->validateUsing(['required'])]);
+
+    $test = Livewire::test(SequenceScanTestComponent::class);
+    $schema = $test->instance()->form;
+
+    foreach ([$plain, $checked, $keyless] as $sequence) {
+        $sequence->container($schema);
+    }
+
+    expect($plain->getComponentScanPayload()['serverCheck'])->toBeFalse()
+        ->and($checked->getComponentScanPayload())->toMatchArray(['serverCheck' => true, 'componentKey' => 'form.receipt'])
+        ->and($keyless->getComponentScanPayload()['serverCheck'])->toBeFalse()
+        ->and($keyless->getComponentScanPayload())->not->toHaveKey('componentKey');
+});

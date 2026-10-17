@@ -36,6 +36,9 @@ export default function qrScanSequenceComponent({
     statePrefix = 'data',
     componentStatePath = null,
     editable = true,
+    serverCheck = false,
+    componentKey = null,
+    scanFailedMessage = 'Scan failed.',
     cameraStorageKey = null,
     insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
 } = {}) {
@@ -55,6 +58,8 @@ export default function qrScanSequenceComponent({
         html5Qrcode: null,
         elementId: '',
         unregisterTarget: null,
+        isChecking: false,
+        stepError: null,
 
         init() {
             this.elementId = `qr-sequence-${this.$id('qr-seq')}`;
@@ -68,7 +73,7 @@ export default function qrScanSequenceComponent({
                     scope: 'page',
                     detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs },
                     deliver: (scannedValue) => {
-                        this.processScan(scannedValue);
+                        this.processScan(scannedValue, 'hardware');
                     },
                 });
             }
@@ -151,7 +156,7 @@ export default function qrScanSequenceComponent({
                     this.selectedDeviceId,
                     { fps, qrbox: this.currentQrbox() },
                     (decodedText) => {
-                        this.processScan(decodedText);
+                        this.processScan(decodedText, 'camera');
                     },
                     () => {}
                 );
@@ -167,23 +172,19 @@ export default function qrScanSequenceComponent({
             await stopCameraFeed(this, 'sequence scanner');
         },
 
-        processScan(decodedText) {
+        processScan(decodedText, source = 'camera') {
             const currentField = this.getCurrentField();
             if (!currentField) return;
 
             const trimmed = sanitizeScannedValue(decodedText);
             if (!trimmed) return;
 
+            if (serverCheck && componentKey && this.$wire) {
+                return this.processServerScan(currentField, trimmed, source);
+            }
+
             this.results[currentField.key] = trimmed;
-            // The single beep for this delivery (camera or hardware): the
-            // interceptor that routed hardware bursts never beeps.
-            emitScanFeedback(qrFeedback, {
-                sound,
-                vibrate,
-                beepFrequency,
-                beepDurationMs,
-                vibrateDurationMs,
-            });
+            this.emitFeedback();
 
             // Sync with Livewire form state (bound by statePrefix, default `data.*`)
             // plus the component's own state path when configured, so the
@@ -214,6 +215,98 @@ export default function qrScanSequenceComponent({
                     detail: { results: { ...this.results } },
                 }));
             }
+        },
+
+        emitFeedback() {
+            // The single beep for this delivery (camera or hardware): the
+            // interceptor that routed hardware bursts never beeps.
+            emitScanFeedback(qrFeedback, {
+                sound,
+                vibrate,
+                beepFrequency,
+                beepDurationMs,
+                vibrateDurationMs,
+            });
+        },
+
+        indexOfStep(key) {
+            return this.fields.findIndex((field) => field.key === key);
+        },
+
+        /**
+         * One handleStepScan call per scan: the server checks the step, writes
+         * state and answers with the step to show next. Scans that arrive
+         * while a check is in flight are dropped.
+         */
+        async processServerScan(currentField, code, source) {
+            if (this.isChecking) return;
+
+            this.isChecking = true;
+            let result;
+
+            try {
+                result = await this.$wire.callSchemaComponentMethod(componentKey, 'handleStepScan', {
+                    step: currentField.key,
+                    code,
+                    source,
+                });
+            } catch (error) {
+                console.error('QR sequence check failed:', error);
+                result = null;
+            } finally {
+                this.isChecking = false;
+            }
+
+            if (result === null || typeof result !== 'object' || typeof result.passes !== 'boolean') {
+                result = { passes: false, step: currentField.key, next_step: currentField.key, message: scanFailedMessage, values: { ...this.results } };
+            }
+
+            const completedValues = { ...this.results };
+            (result.skipped || []).forEach((key) => delete completedValues[key]);
+            if (result.passes && result.step) completedValues[result.step] = result.code ?? code;
+
+            this.results = { ...(result.values || {}) };
+
+            const nextIndex = this.indexOfStep(result.next_step);
+            if (nextIndex >= 0) this.currentFieldIndex = nextIndex;
+
+            if (!result.passes) {
+                this.stepError = result.message || scanFailedMessage;
+
+                if (result.invalid_step) {
+                    window.dispatchEvent(new CustomEvent('qr-sequence-invalid', {
+                        detail: { field: result.invalid_step, message: this.stepError, values: { ...(result.values || {}) } },
+                    }));
+                } else {
+                    window.dispatchEvent(new CustomEvent('qr-sequence-rejected', {
+                        detail: { field: result.step ?? currentField.key, value: code, message: this.stepError, source },
+                    }));
+                }
+
+                return result;
+            }
+
+            this.stepError = null;
+            this.emitFeedback();
+
+            window.dispatchEvent(new CustomEvent('qr-sequence-step', {
+                detail: {
+                    field: result.step,
+                    value: result.code ?? code,
+                    index: this.indexOfStep(result.step),
+                    skipped: result.skipped || [],
+                },
+            }));
+
+            if (result.completed) {
+                if (!result.reset) this.stopScanner();
+
+                window.dispatchEvent(new CustomEvent('qr-sequence-completed', {
+                    detail: { results: completedValues, submitted: result.submitted ?? null },
+                }));
+            }
+
+            return result;
         },
 
         /**
@@ -247,6 +340,7 @@ export default function qrScanSequenceComponent({
         resetSequence() {
             this.currentFieldIndex = 0;
             this.results = {};
+            this.stepError = null;
         },
     };
 }

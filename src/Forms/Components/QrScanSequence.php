@@ -341,11 +341,17 @@ class QrScanSequence extends Component
     /** @return array<string, mixed> */
     public function getComponentScanPayload(): array
     {
+        $key = $this->getKey();
+
         return [
             'fields' => $this->getScanFields(),
             'statePrefix' => $this->getStatePathPrefix(),
             'componentStatePath' => $this->getComponentStatePath(),
             'editable' => $this->isEditable(),
+            // Server work needs a key to reach handleStepScan: statePath() or key().
+            'serverCheck' => filled($key) && $this->hasServerSequenceWork(),
+            'scanFailedMessage' => __('filament-qr-code::ui.scan_failed'),
+            ...(filled($key) ? ['componentKey' => $key] : []),
         ];
     }
 }
