@@ -178,3 +178,16 @@ describe('QrScanner on the router', () => {
         expect(inputRouter().isActive()).toBe(false);
     });
 });
+
+describe('QrScanner hardware scope', () => {
+    it('page-scope scanner receives a burst when nothing is focused', () => {
+        document.body.innerHTML = `${scannerMarkup('first')}${scannerMarkup('sku')}`;
+        const { scanner: focusOnly } = mountScanner('first');
+        const { scanner: page } = mountScanner('sku', { hardwareScope: 'page' });
+
+        typeBurst('PRD-1001');
+
+        expect(page.value).toBe('PRD-1001');
+        expect(focusOnly.value).toBeNull();
+    });
+});
