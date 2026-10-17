@@ -76,11 +76,24 @@ return [
     |   fields without checks default to 0. Override per field with cooldown().
     | - clear_on_reject: Clear the field when a live scan is rejected.
     |   Override per field with clearOnReject().
+    | - continuous: Defaults for QrScanner::mode(ScanMode::Continuous).
+    |   display: 'empty' clears the field after each accepted scan,
+    |   'last_code' keeps the code (continuousDisplay()). pause_on_reject:
+    |   false shows the error and keeps scanning, true pauses until dismissed
+    |   (pauseOnReject()). keep_camera_open: false closes the camera after
+    |   each scan (keepCameraOpen()). cooldown_ms: duplicate window for
+    |   continuous fields (cooldown() overrides).
     |
     */
     'scan' => [
         'cooldown_ms' => 1500,
         'clear_on_reject' => true,
+        'continuous' => [
+            'display' => 'empty',
+            'pause_on_reject' => false,
+            'keep_camera_open' => false,
+            'cooldown_ms' => 300,
+        ],
     ],
 
     /*

@@ -12,6 +12,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasOutcomeFeedback;
+use Mmuqiitf\FilamentQrCode\Concerns\HasScanMode;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
 use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScans;
@@ -26,6 +27,7 @@ class QrScanner extends Field
     use HasHardwareScanner;
     use HasOutcomeFeedback;
     use HasPlaceholder;
+    use HasScanMode;
     use HasScanPayload;
     use HasSequentialScan;
     use InteractsWithScans;
@@ -74,6 +76,7 @@ class QrScanner extends Field
     {
         return [
             'hardwareScope' => $this->getHardwareInputScope()->value,
+            ...$this->getScanModeScanPayload(),
         ];
     }
 

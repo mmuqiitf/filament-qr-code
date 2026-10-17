@@ -113,6 +113,25 @@ trait InteractsWithScans
             field: $this->getName(),
             context: ['record_key' => $result->record?->getKey()],
         ));
+
+        // Continuous mode: the field is ready for the next scan straight away.
+        if ($this->usesContinuousScanMode() && $this->shouldEmptyStateAfterAccept()) {
+            $this->state(null);
+        }
+    }
+
+    /** Provided by HasScanMode. */
+    abstract public function isContinuous(): bool;
+
+    /** Provided by HasScanMode. */
+    abstract protected function shouldEmptyStateAfterAccept(): bool;
+
+    /** Provided by HasScanMode. */
+    abstract protected function getContinuousCooldownMs(): int;
+
+    protected function usesContinuousScanMode(): bool
+    {
+        return $this->isContinuous();
     }
 
     public function onScanned(?Closure $callback): static
@@ -298,7 +317,8 @@ trait InteractsWithScans
             || $this->scanCheckClosures !== []
             || $this->lookupModel !== null
             || $this->onScannedCallback !== null
-            || $this->onRejectedCallback !== null;
+            || $this->onRejectedCallback !== null
+            || $this->usesContinuousScanMode();
     }
 
     protected function registerScanChecksRule(): void
@@ -323,6 +343,10 @@ trait InteractsWithScans
     {
         if ($this->cooldownMs !== null) {
             return max(0, (int) $this->evaluate($this->cooldownMs));
+        }
+
+        if ($this->usesContinuousScanMode()) {
+            return $this->getContinuousCooldownMs();
         }
 
         if (! $this->hasServerScanChecks()) {
