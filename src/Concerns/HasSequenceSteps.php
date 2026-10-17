@@ -169,7 +169,7 @@ trait HasSequenceSteps
     public function hasServerSequenceWork(): bool
     {
         foreach ($this->getScanSteps() as $step) {
-            if ($step->hasChecks()) {
+            if ($step->hasChecks() || $step->isSticky()) {
                 return true;
             }
         }
@@ -329,7 +329,7 @@ trait HasSequenceSteps
             $restart = $this->getInvalidSequenceBehavior() === InvalidSequenceBehavior::Restart;
 
             if ($restart) {
-                $values = [];
+                $values = $this->stickyValues($values);
                 $this->writeSequenceValues($values);
             }
 
@@ -338,7 +338,7 @@ trait HasSequenceSteps
             return new SequenceScanResult(
                 scan: ScanResult::reject($result->code, $result->source, $message),
                 step: $step,
-                nextStep: $restart ? $this->getFirstStepKey() : $invalidStep,
+                nextStep: $restart ? $this->getFirstEmptyStepKey($values) : $invalidStep,
                 values: $values,
                 skipped: $skipped,
                 invalidStep: $invalidStep,
@@ -355,20 +355,51 @@ trait HasSequenceSteps
             || ($submitted !== false && $this->isContinuous());
 
         if ($reset) {
-            $values = [];
+            $values = $this->stickyValues($values);
             $this->writeSequenceValues($values);
         }
 
         return new SequenceScanResult(
             scan: $result,
             step: $step,
-            nextStep: $reset ? $this->getFirstStepKey() : null,
+            nextStep: $reset ? $this->getFirstEmptyStepKey($values) : null,
             values: $values,
             skipped: $skipped,
             completed: true,
             submitted: $submitted,
             reset: $reset,
         );
+    }
+
+    /**
+     * The values a reset keeps: sticky steps only.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    protected function stickyValues(array $values): array
+    {
+        $kept = [];
+
+        foreach ($this->getScanSteps() as $step) {
+            if ($step->isSticky() && filled($values[$step->getKey()] ?? null)) {
+                $kept[$step->getKey()] = $values[$step->getKey()];
+            }
+        }
+
+        return $kept;
+    }
+
+    /** @param  array<string, mixed>  $values */
+    protected function getFirstEmptyStepKey(array $values): ?string
+    {
+        foreach ($this->getScanSteps() as $step) {
+            if (blank($values[$step->getKey()] ?? null)) {
+                return $step->getKey();
+            }
+        }
+
+        return $this->getFirstStepKey();
     }
 
     protected function getFirstStepKey(): ?string

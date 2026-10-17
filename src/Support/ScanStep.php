@@ -31,6 +31,8 @@ final class ScanStep
 
     private bool|Closure $isOptional = false;
 
+    private bool|Closure $isSticky = false;
+
     private function __construct(private readonly string $key) {}
 
     public static function make(string $key): self
@@ -95,6 +97,19 @@ final class ScanStep
         $this->isOptional = $condition;
 
         return $this;
+    }
+
+    /** Keep the value across resetAfterSubmit(), continuous() and Restart rounds. */
+    public function sticky(bool|Closure $condition = true): self
+    {
+        $this->isSticky = $condition;
+
+        return $this;
+    }
+
+    public function isSticky(): bool
+    {
+        return (bool) value($this->isSticky);
     }
 
     public function getKey(): string

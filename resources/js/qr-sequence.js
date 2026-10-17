@@ -202,6 +202,7 @@ export default function qrScanSequenceComponent({
                     field: currentField.key,
                     value: trimmed,
                     index: this.currentFieldIndex,
+                    source,
                 },
             }));
 
@@ -298,6 +299,7 @@ export default function qrScanSequenceComponent({
                     value: result.code ?? code,
                     index: this.indexOfStep(result.step),
                     skipped: result.skipped || [],
+                    source,
                 },
             }));
 
