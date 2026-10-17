@@ -456,3 +456,61 @@ describe('input router: refusal and focus ownership', () => {
         expect(router.hasTargetOfKind('collector')).toBe(false);
     });
 });
+
+describe('input router: hold', () => {
+    it('offers a busy target the burst only after every other target declined', () => {
+        document.body.innerHTML = '<div id="busy"></div><div id="free"></div>';
+        const held = [];
+        const busy = makeTarget({
+            scope: 'page',
+            element: document.getElementById('busy'),
+            accept: () => false,
+            hold: (code) => held.push(code) > 0,
+        });
+        const free = makeTarget({ scope: 'page', element: document.getElementById('free') });
+        router.register(busy.target);
+        router.register(free.target);
+
+        typeBurst('PRD-1001');
+
+        expect(free.deliveries).toHaveLength(1);
+        expect(held).toEqual([]);
+    });
+
+    it('a held burst dispatches qr-scan-routed with reason queued', () => {
+        document.body.innerHTML = '<div id="busy"></div>';
+        const held = [];
+        const routed = [];
+        const record = (event) => routed.push(event.detail.reason);
+        window.addEventListener('qr-scan-routed', record);
+        router.register(makeTarget({
+            scope: 'page',
+            name: 'sku',
+            element: document.getElementById('busy'),
+            accept: () => false,
+            hold: (code) => held.push(code) > 0,
+        }).target);
+
+        typeBurst('PRD-1001');
+        window.removeEventListener('qr-scan-routed', record);
+
+        expect(held).toEqual(['PRD-1001']);
+        expect(routed).toEqual(['queued']);
+    });
+
+    it('dispatches qr-scan-unrouted when the busy target does not hold', () => {
+        document.body.innerHTML = '<div id="busy"></div>';
+        const unrouted = [];
+        window.addEventListener('qr-scan-unrouted', (event) => unrouted.push(event.detail), { once: true });
+        router.register(makeTarget({
+            scope: 'page',
+            element: document.getElementById('busy'),
+            accept: () => false,
+            hold: () => false,
+        }).target);
+
+        typeBurst('PRD-1001');
+
+        expect(unrouted).toEqual([{ value: 'PRD-1001' }]);
+    });
+});
