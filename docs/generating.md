@@ -31,7 +31,7 @@ QrColumn::make('sku')
     ->downloadable();
 ```
 
-Thumbnails and modal previews share a capped in-process render cache plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filament-qr-code.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
+Thumbnails and modal previews share a capped in-process render cache plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filamentQrCode.image` route (the old `filament-qr-code.image` name is a deprecated alias until 1.0), so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
 
 #### In Infolists:
 
