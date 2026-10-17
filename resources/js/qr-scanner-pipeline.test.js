@@ -62,9 +62,9 @@ describe('qrScanner server checks', () => {
         expect(wire.calls).toEqual([]);
         expect(result.passes).toBe(true);
         expect(scanner.value).toBe('SKU-1');
-        expect(acceptedEvents).toEqual([{ value: 'SKU-1', field: 'sku', source: 'hardware', recordKey: 7 }]);
+        expect(acceptedEvents).toEqual([{ value: 'SKU-1', field: 'sku', source: 'hardware', recordKey: 7, mode: 'single' }]);
         expect(scannedEvents).toEqual([
-            { value: 'SKU-1', field: 'sku', nextField: null, source: 'hardware', recordKey: 7 },
+            { value: 'SKU-1', field: 'sku', nextField: null, source: 'hardware', recordKey: 7, mode: 'single' },
         ]);
     });
 
@@ -99,7 +99,7 @@ describe('qrScanner server checks', () => {
         expect(result.passes).toBe(false);
         expect(scanner.value).toBe('');
         expect(rejectedEvents).toEqual([
-            { value: 'SKU-404', field: 'sku', source: 'camera', message: 'No record found for "SKU-404".' },
+            { value: 'SKU-404', field: 'sku', source: 'camera', message: 'No record found for "SKU-404".', mode: 'single' },
         ]);
         expect(scannedEvents).toEqual([]);
     });
@@ -149,7 +149,7 @@ describe('qrScanner server checks', () => {
         await scanner.handleScanResult('SKU-1');
 
         expect(wire.methodCalls).toHaveLength(1);
-        expect(duplicates).toEqual([{ value: 'SKU-1', field: 'sku', source: 'camera' }]);
+        expect(duplicates).toEqual([{ value: 'SKU-1', field: 'sku', source: 'camera', mode: 'single' }]);
     });
 
     it('ignores a second scan while a check is in flight', async () => {

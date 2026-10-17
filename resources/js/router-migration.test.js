@@ -4,7 +4,8 @@ import { inputRouter } from './input-router.js';
 import { qrHardwareScannerListenerComponent } from './qr-hardware-scanner.js';
 import qrCollectorComponent from './qr-collector.js';
 import qrScanSequenceComponent from './qr-sequence.js';
-import { mountComponent } from './alpine-test-harness.js';
+import qrScannerComponent from './qr-scanner.js';
+import { createWireSpy, mountComponent } from './alpine-test-harness.js';
 
 vi.mock('./qr-camera-core.js', async (importOriginal) => ({
     ...(await importOriginal()),
@@ -82,5 +83,98 @@ describe('router migration', () => {
 
         expect(add.mock.calls.filter(([type]) => type === 'keydown')).toHaveLength(1);
         add.mockRestore();
+    });
+});
+
+function mountScanner(id, options = {}, wire = createWireSpy()) {
+    const scanner = mountComponent(qrScannerComponent({
+        statePath: `data.${id}`,
+        sound: false,
+        vibrate: false,
+        ...options,
+    }), { element: document.querySelector(`[data-field-name="${id}"]`), wire });
+
+    return { scanner, wire };
+}
+
+function captureEvents(name) {
+    const seen = [];
+    const record = (event) => seen.push(event.detail);
+    window.addEventListener(name, record);
+    cleanups.push(() => window.removeEventListener(name, record));
+
+    return seen;
+}
+
+const cleanups = [];
+
+afterEach(() => {
+    cleanups.splice(0).forEach((cleanup) => cleanup());
+});
+
+const scannerMarkup = (name) => `<div data-field-name="${name}"><input type="text" name="${name}" wire:model="data.${name}"></div>`;
+
+describe('QrScanner on the router', () => {
+    it('focused scanner field wins over a listener that registers it', () => {
+        document.body.innerHTML = `<form>${scannerMarkup('sku')}<input type="text" name="other"></form><div id="listener"></div>`;
+        mountInto('listener', qrHardwareScannerListenerComponent({
+            fields: ['other', 'sku'],
+            sound: false,
+            vibrate: false,
+            autoFocusNext: false,
+        }));
+        const { scanner, wire } = mountScanner('sku');
+        const hardware = captureEvents('qr-hardware-scanned');
+        document.querySelector('[name="sku"]').focus();
+
+        typeBurst('PRD-1001');
+
+        expect(scanner.value).toBe('PRD-1001');
+        expect(wire.calls).toEqual([['data.sku', 'PRD-1001']]);
+        expect(document.querySelector('[name="other"]').value).toBe('');
+        expect(hardware).toEqual([{ value: 'PRD-1001', field: 'sku' }]);
+    });
+
+    it('a checking scanner refuses the burst so it falls through', () => {
+        document.body.innerHTML = `${scannerMarkup('sku')}<div id="collector"></div>`;
+        const { scanner } = mountScanner('sku');
+        const collector = mountInto('collector', qrCollectorComponent({ sound: false, vibrate: false, delayBetweenScansMs: 0 }));
+        scanner.isChecking = true;
+        document.querySelector('[name="sku"]').focus();
+
+        typeBurst('PRD-1001');
+
+        expect(collector.items.map(({ code }) => code)).toEqual(['PRD-1001']);
+    });
+
+    it('scanner events carry mode single', () => {
+        document.body.innerHTML = scannerMarkup('sku');
+        mountScanner('sku');
+        const scanned = captureEvents('qr-scanned');
+        document.querySelector('[name="sku"]').focus();
+
+        typeBurst('PRD-1001');
+
+        expect(scanned).toEqual([expect.objectContaining({ value: 'PRD-1001', source: 'hardware', mode: 'single' })]);
+    });
+
+    it('open camera modal owns hardware bursts', () => {
+        document.body.innerHTML = `${scannerMarkup('first')}${scannerMarkup('second')}`;
+        const { scanner: first } = mountScanner('first');
+        const { scanner: second } = mountScanner('second');
+        second.isModalOpen = true;
+        document.querySelector('[name="first"]').focus();
+
+        typeBurst('PRD-1001');
+
+        expect(second.value).toBe('PRD-1001');
+        expect(first.value).toBeNull();
+    });
+
+    it('does not register when the hardware scanner is disabled', () => {
+        document.body.innerHTML = scannerMarkup('sku');
+        mountScanner('sku', { hardwareScanner: false });
+
+        expect(inputRouter().isActive()).toBe(false);
     });
 });
