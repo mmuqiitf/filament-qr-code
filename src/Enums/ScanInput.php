@@ -9,6 +9,7 @@ enum ScanInput: string
     case Camera = 'camera';
     case Hardware = 'hardware';
     case Upload = 'upload';
+    case Manual = 'manual';
 
     public static function fromClient(string $value): self
     {

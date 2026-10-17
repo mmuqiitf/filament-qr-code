@@ -155,6 +155,41 @@ The container writes via `$wire.set`, syncing both the component state and the l
 
 Every step is a plain input: scans fill it, and operators can type or fix any value by hand — handy for unreadable labels. Every change syncs to the bound Livewire state and dispatches `qr-sequence-edited`. Pass `->editable(false)` to render locked read-only values instead. To flip modes live without a re-render wiping the running feed, dispatch `qr-sequence-editable` with `{ enabled }` on `window`; the component listens for it (its DOM is `wire:ignore`d so scans survive Livewire morphs).
 
+#### Checked steps and auto-submit
+
+Describe each step with `ScanStep` to check scans on the server and submit the form once the whole set is in:
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+
+QrScanSequence::make()
+    ->statePath('receipt') // recommended: the key server checks use (or ->key('receipt'))
+    ->steps([
+        ScanStep::make('po')->label('Purchase order')->validateUsing(['regex:/^PO-\d+$/']),
+        ScanStep::make('sku')->lookup(Product::class, 'sku'),
+        ScanStep::make('lot')->validateUsing(['regex:/^L\d{3}$/'])->optional(),
+        ScanStep::make('serial')->validateUsing(fn (string $code): ?string => str_starts_with($code, 'SN') ? null : 'Not a serial.'),
+    ])
+    ->validateAllUsing(fn (array $values): array => $values['po'] === $values['serial'] ? ['serial' => 'Serial repeats the PO.'] : [])
+    ->onInvalidSequence(InvalidSequenceBehavior::JumpToStep) // or Restart
+    ->onCompleted(fn (array $values) => /* ... */)
+    ->autoSubmit()          // calls the Livewire submit() method
+    ->resetAfterSubmit();   // or ->continuous() to start over after every set
+```
+
+- **One request per scan.** Each scan calls `handleStepScan` once. The server checks the step (rules, then lookup, then closures, the same pipeline as `QrScanner`), writes the value, and answers with the step to show next. A rejected scan keeps the operator on that step and shows the message.
+- **Optional steps.** An optional step whose check fails gives way when the code fits the next step: the next step takes the code and the optional one stays empty. An optional step without checks accepts everything, so it never gives way.
+- **Whole-set checks.** `validateAllUsing()` runs once every required step has a value. Rules are keyed by step (`['po' => 'different:serial']`); unkeyed rules apply to the last step. A closure returns `null` or `[]` to pass, a message (last step) or `[step => message]`. On failure the default (`jump_to_step`) keeps every value and asks for the failing step again; `Restart` clears the steps.
+- **Completion.** `onCompleted($values)` runs and `ScanSequenceCompleted` fires, then `autoSubmit()` calls your submit method (`autoSubmit(method: 'save')` for another name). A `ValidationException` from it lands in the error bag and the values stay.
+- **Defaults** live in config `sequence`: `on_invalid` `'jump_to_step'`, `auto_submit` `false`, `submit_method` `'submit'`, `reset_after_submit` `false`, `continuous` `false`.
+- **Plain sequences don't change.** Without checks, `validateAllUsing()`, `onCompleted()`, `autoSubmit()` or `continuous()`, the browser writes state itself as before and makes no request. `fields([...])` is shorthand for steps without checks.
+- **Browser events.** `qr-sequence-step` (now with `skipped`), `qr-sequence-completed` (now with `submitted`), plus `qr-sequence-rejected` `{ field, value, message, source }` and `qr-sequence-invalid` `{ field, message, values }`.
+
+- **Normal submits check too.** `$this->form->getState()` re-runs every step check (on the step's state path) and `validateAllUsing()` (reported on the last step once every required step has a value). Empty steps pass; add `required` yourself if you need it.
+- **Typed corrections.** In an editable sequence with server work, an edited step is checked like a scan with source `ScanInput::Manual` (`'manual'`). It never skips an optional step or moves the current step, and a rejected edit stays visible with its message.
+- **Keys.** Server checks reach the component by its key. Give the sequence `statePath()` or `key()`; if it has neither, it gets an automatic key from its step keys (`qr-scan-sequence-po-sku`) and logs a warning in the local environment, so two identical sequences on one page need explicit keys.
+
 ### 4. Focus Handoff Between Fields
 
 Move focus to the next field after each scan (a two-field handoff — distinct from sequential scanning above):

@@ -60,6 +60,14 @@
             </div>
         </div>
 
+        <p
+            x-show="stepError"
+            x-text="stepError"
+            class="rounded-lg border border-danger-300 bg-danger-50 px-3 py-2 text-xs font-medium text-danger-700 dark:border-danger-800 dark:bg-danger-950 dark:text-danger-200"
+            role="alert"
+            x-cloak
+        ></p>
+
         <div class="filament-qr-viewfinder">
             <div :id="elementId" class="w-full h-full"></div>
 

@@ -5,23 +5,27 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Forms\Components;
 
 use Closure;
+use Filament\Forms\Components\Contracts\HasValidationRules;
 use Filament\Schemas\Components\Component;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
+use Mmuqiitf\FilamentQrCode\Concerns\HasSequenceSteps;
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
-class QrScanSequence extends Component
+class QrScanSequence extends Component implements HasValidationRules
 {
     use HasCameraScanning;
     use HasFeedback;
     use HasHardwareScanner;
     use HasScanPayload;
+    use HasSequenceSteps;
 
     protected string $view = 'filament-qr-code::components.qr-scan-sequence';
 
     /**
-     * @var array<int, array{key: string, label: string}|string>|Closure
+     * @var array<int|string, array{key: string, label: string}|string|ScanStep>|Closure
      */
     protected array|Closure $scanFields = [];
 
@@ -49,6 +53,8 @@ class QrScanSequence extends Component
     {
         $static = app(static::class);
         $static->fields($fields);
+        // Only used without statePath(): a key() call replaces it.
+        $static->key(fn (QrScanSequence $component): ?string => $component->getAutomaticKey());
 
         return $static;
     }
@@ -64,34 +70,47 @@ class QrScanSequence extends Component
     }
 
     /**
-     * @return array<int, array{key: string, label: string}>
+     * @param  array<int, ScanStep>|Closure  $steps
      */
-    public function getScanFields(): array
+    public function steps(array|Closure $steps): static
+    {
+        $this->scanFields = $steps;
+
+        return $this;
+    }
+
+    /**
+     * Steps from steps() or adapted from the legacy fields() shapes.
+     *
+     * @return array<int, ScanStep>
+     */
+    public function getScanSteps(): array
     {
         $raw = $this->evaluate($this->scanFields);
+
         if (! is_array($raw)) {
             return [];
         }
 
-        $formatted = [];
-        foreach ($raw as $key => $item) {
-            if (is_string($item)) {
-                $formatted[] = [
-                    'key' => is_string($key) ? $key : $item,
-                    'label' => ucwords(str_replace(['_', '-'], ' ', $item)),
-                ];
-            } elseif (is_array($item)) {
-                $itemKey = isset($item['key']) && is_string($item['key']) ? $item['key'] : (string) $key;
-                $itemLabel = isset($item['label']) && is_string($item['label']) ? $item['label'] : ucwords(str_replace(['_', '-'], ' ', $itemKey));
+        $steps = [];
 
-                $formatted[] = [
-                    'key' => $itemKey,
-                    'label' => $itemLabel,
-                ];
+        foreach ($raw as $index => $item) {
+            $step = $item instanceof ScanStep ? $item : ScanStep::fromField($index, $item);
+
+            if ($step instanceof ScanStep) {
+                $steps[] = $step;
             }
         }
 
-        return $formatted;
+        return $steps;
+    }
+
+    /**
+     * @return array<int, array{key: string, label: string}>
+     */
+    public function getScanFields(): array
+    {
+        return array_map(fn (ScanStep $step): array => $step->toField(), $this->getScanSteps());
     }
 
     public function statePathPrefix(string|Closure $prefix): static
@@ -325,11 +344,17 @@ class QrScanSequence extends Component
     /** @return array<string, mixed> */
     public function getComponentScanPayload(): array
     {
+        $key = $this->getKey();
+
         return [
             'fields' => $this->getScanFields(),
             'statePrefix' => $this->getStatePathPrefix(),
             'componentStatePath' => $this->getComponentStatePath(),
             'editable' => $this->isEditable(),
+            // Server work needs a key to reach handleStepScan: statePath() or key().
+            'serverCheck' => filled($key) && $this->hasServerSequenceWork(),
+            'scanFailedMessage' => __('filament-qr-code::ui.scan_failed'),
+            ...(filled($key) ? ['componentKey' => $key] : []),
         ];
     }
 }
