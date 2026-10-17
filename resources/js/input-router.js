@@ -163,6 +163,42 @@ export function createInputRouter({ win = window, doc = document } = {}) {
         return true;
     };
 
+    // Last resort before unrouted: a busy target (accept() false) may queue the burst.
+    const holdBurst = (code) => {
+        const focused = focusedTarget();
+        const candidates = [
+            ...[...targets.values()].filter((target) => typeof target.isModalOpen === 'function' && target.isModalOpen()),
+            ...(focused ? [focused] : []),
+            ...byDomOrder([...targets.values()].filter((target) => target.scope === 'page')),
+        ];
+
+        for (const target of new Set(candidates)) {
+            if (typeof target.hold !== 'function' || accepts(target, code)) {
+                continue;
+            }
+
+            if (code.length < detectionFor(target).minBarcodeLength) {
+                continue;
+            }
+
+            const burstId = burstCount + 1;
+
+            if (target.hold(code, { burstId, reason: 'queued', element: target.element }) !== true) {
+                continue;
+            }
+
+            burstCount = burstId;
+            restoreOrigin(target, target.element);
+            win.dispatchEvent(new CustomEvent('qr-scan-routed', {
+                detail: { value: code, target: target.name ?? null, kind: target.kind ?? 'field', reason: 'queued', burstId },
+            }));
+
+            return true;
+        }
+
+        return false;
+    };
+
     const routeBurst = (code) => {
         const modalOwner = [...targets.values()]
             .find((target) => typeof target.isModalOpen === 'function' && target.isModalOpen() && accepts(target, code));
@@ -196,6 +232,10 @@ export function createInputRouter({ win = window, doc = document } = {}) {
             .find((target) => accepts(target, code));
 
         if (fallback && deliver(fallback, code, 'fallback')) {
+            return;
+        }
+
+        if (holdBurst(code)) {
             return;
         }
 

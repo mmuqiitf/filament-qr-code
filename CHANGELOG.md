@@ -14,7 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `QrScanner::hardwareInput(scope: HardwareInputScope::Focus|Page)` and config
   `hardware_scanner.default_scope` (`'focus'`, today's behaviour).
 - `qr-scan-routed` browser event; `data-qr-ignore` keeps wedge text in an input.
-- `mode` (`'single'`) in `qr-scanned`, `qr-scan-accepted`, `qr-scan-rejected` and `qr-scan-duplicate`.
+- `mode` (`'single'` or `'continuous'`) in `qr-scanned`, `qr-scan-accepted`, `qr-scan-rejected` and `qr-scan-duplicate`.
+- Continuous mode for `QrScanner`: `mode(ScanMode::Continuous)`, `continuousDisplay(ContinuousDisplay::Empty|LastCode)`,
+  `pauseOnReject()` and `keepCameraOpen()`, with defaults in config `scan.continuous` (`display` `'empty'`,
+  `pause_on_reject` `false`, `keep_camera_open` `false`, `cooldown_ms` `300`). `onScanned()` runs once per accepted code.
+- One-slot queue for scans that arrive while a continuous field is checking; extra scans fire `qr-scan-dropped`.
+  New `qr-scan-paused` and `qr-scan-resumed` events, and a `queued` reason on `qr-scan-routed`.
+- `required()` on a continuous field logs a warning once in the local environment.
+- POS recipe: `docs/recipes/pos.md`.
 
 ### Changed
 - The signed QR image route is now named `filamentQrCode.image` (camelCase).

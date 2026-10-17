@@ -46,5 +46,7 @@ return [
     'scan_empty' => 'The scanned code is empty.',
     'scan_rejected' => 'This code was rejected.',
     'record_not_found' => 'No record found for ":code".',
+    'scanning_paused' => 'Scanning paused.',
+    'resume_scanning' => 'Resume scanning',
     'scan_failed' => 'The scan could not be checked. Please try again.',
 ];
