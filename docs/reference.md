@@ -90,6 +90,17 @@ QrHardwareScannerListener::make(['sku'])
 | `qrbox`              | `250`   | _maximum_ decode-box edge; the real box scales to the viewfinder (wide band for 1D)      |
 | `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins                                |
 
+### `scan`
+
+| Key                            | Default   | Meaning |
+| ------------------------------ | --------- | ------- |
+| `cooldown_ms`                  | `1500`    | repeat window for fields with server checks (`cooldown()`) |
+| `clear_on_reject`              | `true`    | clear the field on a rejected live scan (`clearOnReject()`) |
+| `continuous.display`           | `'empty'` | continuous fields after an accepted scan: `'empty'` or `'last_code'` (`continuousDisplay()`) |
+| `continuous.pause_on_reject`   | `false`   | `false` shows the error and keeps scanning; `true` pauses until dismissed (`pauseOnReject()`) |
+| `continuous.keep_camera_open`  | `false`   | `false` closes the camera after each scan (`keepCameraOpen()`) |
+| `continuous.cooldown_ms`       | `300`     | repeat window for continuous fields (`cooldown()` wins) |
+
 ### `generator`
 
 `size` (300), `margin` (2), `format` (`svg`), `foreground_color`, `background_color`, `error_correction` (`M`), `cache_ttl` (86400; `null` = forever, `false` = L2 off), `cache_store` (`null` = default store).
@@ -106,13 +117,16 @@ QrHardwareScannerListener::make(['sku'])
 | `qr-scan-duplicate`       | `{ value, field, source, mode }` | same code again within the field's cooldown |
 | `qr-hardware-scanned`     | `{ value, field }`            | page-global hardware burst         |
 | `qr-scan-unrouted`        | `{ value }`                   | page-global burst found no target field |
-| `qr-scan-routed`          | `{ value, target, kind, reason, burstId }` | the input router delivered a burst; `reason` is `modal`, `focus`, `first-listening` or `fallback` |
+| `qr-scan-routed`          | `{ value, target, kind, reason, burstId }` | the input router delivered a burst; `reason` is `modal`, `focus`, `first-listening`, `fallback` or `queued` |
+| `qr-scan-dropped`         | `{ value, field, source }`    | a continuous field was busy and already held one queued scan |
+| `qr-scan-paused`          | `{ field }`                   | a continuous field with `pauseOnReject()` paused after a rejection |
+| `qr-scan-resumed`         | `{ field }`                   | the operator resumed a paused field |
 | `qr-sequence-step`        | `{ field, value, index }`     | each container step                |
 | `qr-sequence-completed`   | `{ results }`                 | last container step                |
 | `qr-sequence-edited`      | `{ field, value }`            | operator edits a step              |
 | `qr-collector-item-added` | `{ code }`                    | each batch-collector scan          |
 
-`mode` is `'single'` for now; continuous mode arrives in a later release.
+`mode` is `'single'` or `'continuous'` (see [Continuous mode](scanning.md#continuous-mode)).
 
 ---
 

@@ -267,6 +267,36 @@ QrScanner::make('sku')
 - The same code scanned again within the cooldown is ignored and fires `qr-scan-duplicate`.
 - A page-level `QrHardwareScannerListener` hands bursts to a server-checked field, so wedge scans are checked too.
 
+### Continuous mode
+
+For POS line entry (scan, scan, scan) put the field in continuous mode. Every accepted code runs `onScanned()` once, and the field is ready for the next code straight away.
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\ContinuousDisplay;
+use Mmuqiitf\FilamentQrCode\Enums\HardwareInputScope;
+use Mmuqiitf\FilamentQrCode\Enums\ScanMode;
+
+QrScanner::make('scan')
+    ->mode(ScanMode::Continuous)
+    ->hardwareInput(scope: HardwareInputScope::Page) // catch wedge scans anywhere on the page
+    ->lookup(Product::class, 'sku')
+    ->onScanned(fn (Product $record, Get $get, Set $set) => $set('lines', addLine($get('lines'), $record)))
+    ->continuousDisplay(ContinuousDisplay::Empty) // default; LastCode keeps the code in the field
+    ->pauseOnReject(false)                         // default: show the error and keep scanning
+    ->keepCameraOpen(false)                        // default: close the camera after each scan
+    ->dehydrated(false);
+```
+
+- Each code is one server call (`handleScan`), even without rules or a lookup, because that is where `onScanned()` runs. Merging lines (same SKU twice = quantity 2) is your job in `onScanned()`.
+- After an accepted scan the server clears the field (`continuousDisplay(ContinuousDisplay::Empty)`, the default) or keeps the code (`LastCode`). A `$set()` on the field's own path inside `onScanned()` is overwritten by the clear.
+- A rejected scan shows its message under the field. By default scanning carries on. With `pauseOnReject()` the field stops taking scans until the operator presses **Resume scanning** (or Escape); `qr-scan-paused` and `qr-scan-resumed` fire.
+- The camera closes after each accepted scan by default; `keepCameraOpen()` keeps it running for the next code.
+- A repeat of the same code within 300 ms is ignored (`qr-code.scan.continuous.cooldown_ms`; `cooldown()` overrides). Raise it if a camera re-reads codes; lower it if cashiers scan the same item twice very quickly.
+- A wedge scan that arrives while the field is still checking the previous one is queued (one slot) and checked next. Any further scan in that window is dropped and fires `qr-scan-dropped`.
+- A continuous field is usually empty at submit, so don't make it `required()`. If you do, a warning is logged once in the local environment.
+
+See the [POS recipe](recipes/pos.md) for a full page.
+
 ### Feedback
 
 Fields with server checks give a different cue for each outcome:
