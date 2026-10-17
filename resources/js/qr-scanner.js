@@ -50,10 +50,14 @@ export default function qrScannerComponent({
     scanFailedMessage = 'The scan could not be checked. Please try again.',
     successFeedback = null,
     errorFeedback = null,
+    mode = 'single',
+    continuousDisplay = 'empty',
+    pauseOnReject = false,
+    keepCameraOpen = false,
 } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('scanner');
     const deduper = createScanDeduper();
-    const mode = 'single';
+    const isContinuous = mode === 'continuous';
 
     return {
         // State
@@ -71,6 +75,9 @@ export default function qrScannerComponent({
         scannerElementId: '',
         unregisterTarget: null,
         isChecking: false,
+        isPaused: false,
+        rejectionMessage: '',
+        queuedScan: null,
         boundDeliverHandler: null,
 
         init() {
@@ -84,7 +91,8 @@ export default function qrScannerComponent({
                     kind: 'field',
                     scope: hardwareScope === 'page' ? 'page' : 'focus',
                     detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs, preventSubmit },
-                    accept: () => !this.isChecking,
+                    accept: () => !this.isChecking && !this.isPaused,
+                    hold: (scannedValue) => this.holdScan(scannedValue, 'hardware'),
                     isModalOpen: () => this.isModalOpen,
                     deliver: (scannedValue) => {
                         this.handleScanResult(scannedValue, 'hardware');
@@ -255,7 +263,7 @@ export default function qrScannerComponent({
         async handleScanResult(scannedText, source = 'camera') {
             const code = sanitizeScannedValue(scannedText);
 
-            if (!code || this.isChecking) {
+            if (!code || this.isChecking || this.isPaused) {
                 return { passes: false, ignored: true };
             }
 
@@ -287,6 +295,67 @@ export default function qrScannerComponent({
                 return result;
             } finally {
                 this.isChecking = false;
+                this.replayQueuedScan();
+            }
+        },
+
+        // Continuous mode keeps one burst that arrived during a check; any more are dropped.
+        holdScan(scannedText, source = 'hardware') {
+            const code = sanitizeScannedValue(scannedText);
+
+            if (!isContinuous || this.isPaused || !code) {
+                return false;
+            }
+
+            if (this.queuedScan) {
+                this.dispatchDropped(code, source);
+
+                return true;
+            }
+
+            this.queuedScan = { code, source };
+
+            return true;
+        },
+
+        replayQueuedScan() {
+            const queued = this.queuedScan;
+            this.queuedScan = null;
+
+            if (!queued) {
+                return;
+            }
+
+            if (this.isPaused) {
+                this.dispatchDropped(queued.code, queued.source);
+
+                return;
+            }
+
+            this.$nextTick(() => this.handleScanResult(queued.code, queued.source));
+        },
+
+        dispatchDropped(code, source) {
+            window.dispatchEvent(new CustomEvent('qr-scan-dropped', {
+                detail: { value: code, field: this.fieldName(), source },
+            }));
+        },
+
+        fieldName() {
+            return this.fieldElement().getAttribute('data-field-name') || null;
+        },
+
+        resumeScanning() {
+            if (!this.isPaused) {
+                return;
+            }
+
+            this.isPaused = false;
+            this.rejectionMessage = '';
+            window.dispatchEvent(new CustomEvent('qr-scan-resumed', { detail: { field: this.fieldName() } }));
+
+            if (this.isModalOpen) {
+                this.resumeCamera();
             }
         },
 
@@ -298,7 +367,7 @@ export default function qrScannerComponent({
                 return;
             }
 
-            if (this.isChecking) {
+            if (this.isChecking || this.isPaused) {
                 return;
             }
 
@@ -313,12 +382,20 @@ export default function qrScannerComponent({
             }
 
             if (result.passes) {
+                if (isContinuous && keepCameraOpen) {
+                    this.resumeCamera();
+
+                    return;
+                }
+
                 this.closeScannerModal();
 
                 return;
             }
 
-            this.resumeCamera();
+            if (!this.isPaused) {
+                this.resumeCamera();
+            }
         },
 
         pauseCamera() {
@@ -361,7 +438,8 @@ export default function qrScannerComponent({
 
         applyAccepted({ code, source, recordKey }, field) {
             // The server already wrote the state; this keeps the deferred entangle in step without a request.
-            this.value = code;
+            this.value = isContinuous && continuousDisplay === 'empty' ? '' : code;
+            this.rejectionMessage = '';
 
             if (successFeedback) {
                 playOutcomeFeedback('success', successFeedback, {
@@ -397,6 +475,15 @@ export default function qrScannerComponent({
         applyRejected({ code, source, message }, field) {
             if (clearOnReject) {
                 this.value = '';
+            }
+
+            if (isContinuous) {
+                this.rejectionMessage = message ?? '';
+            }
+
+            if (isContinuous && pauseOnReject) {
+                this.isPaused = true;
+                window.dispatchEvent(new CustomEvent('qr-scan-paused', { detail: { field } }));
             }
 
             playOutcomeFeedback('error', errorFeedback, {

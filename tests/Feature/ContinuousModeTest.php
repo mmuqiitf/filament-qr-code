@@ -208,3 +208,9 @@ it('does not warn outside the local env', function (): void {
 
     Log::shouldNotHaveReceived('warning');
 });
+
+it('renders the paused banner controls', function (): void {
+    Livewire::test(ContinuousModeTestComponent::class)
+        ->assertSeeHtml('resumeScanning()')
+        ->assertSee(__('filament-qr-code::ui.resume_scanning'));
+});
