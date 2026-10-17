@@ -238,7 +238,7 @@ export default function qrScanSequenceComponent({
          * state and answers with the step to show next. Scans that arrive
          * while a check is in flight are dropped.
          */
-        async processServerScan(currentField, code, source) {
+        async processServerScan(currentField, code, source, { keepStep = false } = {}) {
             if (this.isChecking) return;
 
             this.isChecking = true;
@@ -267,8 +267,11 @@ export default function qrScanSequenceComponent({
 
             this.results = { ...(result.values || {}) };
 
+            // A rejected typed correction stays visible so the operator can fix it.
+            if (!result.passes && keepStep) this.results[currentField.key] = code;
+
             const nextIndex = this.indexOfStep(result.next_step);
-            if (nextIndex >= 0) this.currentFieldIndex = nextIndex;
+            if (nextIndex >= 0 && !keepStep) this.currentFieldIndex = nextIndex;
 
             if (!result.passes) {
                 this.stepError = result.message || scanFailedMessage;
@@ -287,7 +290,7 @@ export default function qrScanSequenceComponent({
             }
 
             this.stepError = null;
-            this.emitFeedback();
+            if (source !== 'manual') this.emitFeedback();
 
             window.dispatchEvent(new CustomEvent('qr-sequence-step', {
                 detail: {
@@ -314,6 +317,14 @@ export default function qrScanSequenceComponent({
          */
         syncEditedValue(fieldKey) {
             const trimmed = ((this.results[fieldKey] || '') + '').trim();
+
+            // Typed corrections go through the same server checks as scans.
+            if (trimmed && serverCheck && componentKey && this.$wire) {
+                const field = this.fields[this.indexOfStep(fieldKey)] ?? { key: fieldKey };
+                this.results[fieldKey] = trimmed;
+
+                return this.processServerScan(field, trimmed, 'manual', { keepStep: true });
+            }
 
             if (!trimmed) {
                 delete this.results[fieldKey];

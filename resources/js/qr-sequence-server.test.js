@@ -141,4 +141,43 @@ describe('sequence server path', () => {
         expect(wire.methodCalls).toEqual([]);
         expect(wire.calls).toEqual([['data.po', 'PO-1'], ['data.receipt', { po: 'PO-1' }]]);
     });
+
+    it('checks a typed correction on the server as a manual scan without moving the step', async () => {
+        const { wire, sequence } = mountSequence((key, method, args) => result({
+            code: args.code, source: 'manual', step: 'po', next_step: 'serial', values: { po: args.code, sku: 'SKU-1' },
+        }));
+        sequence.setCurrentField(2);
+        sequence.results = { po: ' PO-9 ', sku: 'SKU-1' };
+
+        await sequence.syncEditedValue('po');
+
+        expect(wire.methodCalls).toEqual([['form.receipt', 'handleStepScan', { step: 'po', code: 'PO-9', source: 'manual' }]]);
+        expect(wire.calls).toEqual([]);
+        expect(sequence.getCurrentField().key).toBe('serial');
+        expect(sequence.results).toEqual({ po: 'PO-9', sku: 'SKU-1' });
+    });
+
+    it('keeps a rejected typed correction visible with its error', async () => {
+        const events = captureEvents('qr-sequence-rejected');
+        const { sequence } = mountSequence(() => result({
+            passes: false, code: 'oops', source: 'manual', step: 'po', next_step: 'po', message: 'Bad PO', values: { po: 'PO-1' },
+        }));
+        sequence.results = { po: 'oops' };
+
+        await sequence.syncEditedValue('po');
+
+        expect(sequence.results.po).toBe('oops');
+        expect(sequence.stepError).toBe('Bad PO');
+        expect(events[0][1]).toMatchObject({ field: 'po', source: 'manual' });
+    });
+
+    it('clears an emptied step through state without a check', async () => {
+        const { wire, sequence } = mountSequence(() => null);
+        sequence.results = { po: '' };
+
+        await sequence.syncEditedValue('po');
+
+        expect(wire.methodCalls).toEqual([]);
+        expect(wire.calls).toEqual([['data.po', ''], ['data.receipt', {}]]);
+    });
 });
