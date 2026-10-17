@@ -61,10 +61,31 @@ export function createInputRouter({ win = window, doc = document } = {}) {
 
     const accepts = (target, code) => typeof target.accept !== 'function' || target.accept(code) !== false;
 
-    const focusedTarget = () => [...targets.values()].find(containsFocus) ?? null;
+    const focusedEntry = () => {
+        const containing = [...targets.values()].find(containsFocus);
 
-    const insideOtherTarget = (element, owner) => [...targets.values()]
-        .some((target) => target !== owner && target.element.contains(element));
+        if (containing) {
+            return { target: containing, element: containing.element };
+        }
+
+        const active = doc.activeElement;
+
+        if (!active || active === doc.body) {
+            return null;
+        }
+
+        const owner = [...targets.values()]
+            .find((target) => typeof target.ownsFocus === 'function' && target.ownsFocus(active));
+
+        return owner ? { target: owner, element: active } : null;
+    };
+
+    const focusedTarget = () => focusedEntry()?.target ?? null;
+
+    // A candidate inside a page-scope target belongs to that target; one inside a
+    // focus-scope target stays with the listener (its scanner handoff path).
+    const insidePageTarget = (element, owner) => [...targets.values()]
+        .some((target) => target !== owner && target.scope === 'page' && target.element.contains(element));
 
     const listeningEntries = (code) => {
         const entries = [];
@@ -81,7 +102,7 @@ export function createInputRouter({ win = window, doc = document } = {}) {
             }
 
             for (const element of target.candidates()) {
-                if (element && !insideOtherTarget(element, target)) {
+                if (element && !insidePageTarget(element, target)) {
                     entries.push({ target, element });
                 }
             }
@@ -127,11 +148,16 @@ export function createInputRouter({ win = window, doc = document } = {}) {
         }
 
         const chosen = element ?? target.element;
-        burstCount += 1;
+        const burstId = burstCount + 1;
+
+        if (target.deliver(code, { burstId, reason, element: chosen }) === false) {
+            return false;
+        }
+
+        burstCount = burstId;
         restoreOrigin(target, chosen);
-        target.deliver(code, { burstId: burstCount, reason, element: chosen });
         win.dispatchEvent(new CustomEvent('qr-scan-routed', {
-            detail: { value: code, target: target.name ?? null, kind: target.kind ?? 'field', reason, burstId: burstCount },
+            detail: { value: code, target: target.name ?? null, kind: target.kind ?? 'field', reason, burstId },
         }));
 
         return true;
@@ -145,13 +171,22 @@ export function createInputRouter({ win = window, doc = document } = {}) {
             return;
         }
 
-        const focused = focusedTarget();
+        const tried = new Set(modalOwner ? [modalOwner] : []);
+        const focused = focusedEntry();
 
-        if (focused && accepts(focused, code) && deliver(focused, code, 'focus')) {
-            return;
+        if (focused && accepts(focused.target, code)) {
+            if (deliver(focused.target, code, 'focus', focused.element)) {
+                return;
+            }
+
+            tried.add(focused.element);
         }
 
         for (const { target, element } of listeningEntries(code)) {
+            if (tried.has(target) || tried.has(element)) {
+                continue;
+            }
+
             if (deliver(target, code, 'first-listening', element)) {
                 return;
             }
@@ -171,7 +206,11 @@ export function createInputRouter({ win = window, doc = document } = {}) {
     const currentSettings = () => {
         const focused = focusedTarget();
 
-        return focused ? detectionFor(focused) : mostPermissive([...targets.values()].map(detectionFor));
+        const all = [...targets.values()].map(detectionFor);
+        const shortest = Math.min(...all.map((settings) => settings.minBarcodeLength));
+
+        // Keep the shortest minimum so a refused burst can still fall through to another target.
+        return focused ? { ...detectionFor(focused), minBarcodeLength: shortest } : mostPermissive(all);
     };
 
     const ensureDetector = () => {
@@ -242,6 +281,10 @@ export function createInputRouter({ win = window, doc = document } = {}) {
                     stopListening();
                 }
             };
+        },
+
+        hasTargetOfKind(kind) {
+            return [...targets.values()].some((target) => target.kind === kind);
         },
 
         isActive() {

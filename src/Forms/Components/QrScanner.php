@@ -15,6 +15,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasOutcomeFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
 use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScans;
+use Mmuqiitf\FilamentQrCode\Enums\HardwareInputScope;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 
 class QrScanner extends Field
@@ -36,6 +37,45 @@ class QrScanner extends Field
     protected ?Closure $scanFormatter = null;
 
     protected ?Closure $onScanCallback = null;
+
+    protected HardwareInputScope|Closure|null $hardwareInputScope = null;
+
+    /**
+     * Focus: wedge scans reach this field only while it has focus (default).
+     * Page: the field also catches wedge scans when no scan field has focus.
+     */
+    public function hardwareInput(
+        HardwareInputScope|Closure $scope = HardwareInputScope::Focus,
+        bool|Closure $enabled = true,
+    ): static {
+        $this->hardwareInputScope = $scope;
+        $this->isHardwareScannerEnabled = $enabled;
+
+        return $this;
+    }
+
+    public function getHardwareInputScope(): HardwareInputScope
+    {
+        if ($this->hardwareInputScope === null) {
+            $configured = function_exists('config') ? config('qr-code.hardware_scanner.default_scope', 'focus') : 'focus';
+
+            return is_string($configured)
+                ? (HardwareInputScope::tryFrom($configured) ?? HardwareInputScope::Focus)
+                : HardwareInputScope::Focus;
+        }
+
+        $scope = $this->evaluate($this->hardwareInputScope);
+
+        return $scope instanceof HardwareInputScope ? $scope : HardwareInputScope::Focus;
+    }
+
+    /** @return array<string, mixed> */
+    public function getComponentScanPayload(): array
+    {
+        return [
+            'hardwareScope' => $this->getHardwareInputScope()->value,
+        ];
+    }
 
     public function allowUpload(bool|Closure $condition = true): static
     {

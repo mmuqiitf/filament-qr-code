@@ -119,9 +119,9 @@ describe('input router: first listening target', () => {
         expect(field.deliveries).toEqual([]);
     });
 
-    it('skips candidates that sit inside another registered target', () => {
+    it('leaves a listener candidate to the page-scope target that contains it', () => {
         document.body.innerHTML = '<div id="field"><input id="inner"></div><input id="other"><div id="listener"></div>';
-        const field = makeTarget({ scope: 'focus', element: document.getElementById('field') });
+        const field = makeTarget({ scope: 'page', element: document.getElementById('field') });
         const listener = makeTarget({
             kind: 'listener',
             scope: 'page',
@@ -133,7 +133,25 @@ describe('input router: first listening target', () => {
 
         typeBurst('PRD-1001');
 
-        expect(listener.deliveries.map(({ element }) => element.id)).toEqual(['other']);
+        expect(field.deliveries).toHaveLength(1);
+        expect(listener.deliveries).toEqual([]);
+    });
+
+    it('keeps a listener candidate that sits inside a focus-scope target', () => {
+        document.body.innerHTML = '<div id="field"><input id="inner"></div><div id="listener"></div>';
+        const field = makeTarget({ element: document.getElementById('field') });
+        const listener = makeTarget({
+            kind: 'listener',
+            scope: 'page',
+            element: document.getElementById('listener'),
+            candidates: () => [document.getElementById('inner')],
+        });
+        router.register(field.target);
+        router.register(listener.target);
+
+        typeBurst('PRD-1001');
+
+        expect(listener.deliveries.map(({ element }) => element.id)).toEqual(['inner']);
         expect(field.deliveries).toEqual([]);
     });
 
@@ -366,5 +384,75 @@ describe('input router: lifecycle and settings', () => {
         typeBurst('PRD-1001', { gapMs: 200 });
 
         expect(page.deliveries).toEqual([]);
+    });
+});
+
+describe('input router: refusal and focus ownership', () => {
+    it('falls through to the next target when the chosen one refuses the burst', () => {
+        document.body.innerHTML = '<div id="a"></div><div id="b"></div>';
+        const refusing = makeTarget({ scope: 'page', element: document.getElementById('a') });
+        refusing.target.deliver = (code) => {
+            refusing.deliveries.push({ code });
+
+            return false;
+        };
+        const next = makeTarget({ scope: 'page', element: document.getElementById('b') });
+        const routed = [];
+        const record = (event) => routed.push(event.detail.burstId);
+        window.addEventListener('qr-scan-routed', record);
+        router.register(refusing.target);
+        router.register(next.target);
+
+        typeBurst('PRD-1001');
+        window.removeEventListener('qr-scan-routed', record);
+
+        expect(refusing.deliveries).toHaveLength(1);
+        expect(next.deliveries.map(({ code, burstId }) => [code, burstId])).toEqual([['PRD-1001', 1]]);
+        expect(routed).toEqual([1]);
+    });
+
+    it("falls through when the focused target's minimum length rejects the burst", () => {
+        document.body.innerHTML = '<div id="field"><input id="field-input"></div><div id="page"></div>';
+        const strict = makeTarget({
+            element: document.getElementById('field'),
+            detection: { ...detection, minBarcodeLength: 8 },
+        });
+        const page = makeTarget({ scope: 'page', element: document.getElementById('page') });
+        router.register(strict.target);
+        router.register(page.target);
+        document.getElementById('field-input').focus();
+
+        typeBurst('ABCD');
+
+        expect(strict.deliveries).toEqual([]);
+        expect(page.deliveries.map(({ code }) => code)).toEqual(['ABCD']);
+    });
+
+    it('a target that owns the focused element wins as the focused target', () => {
+        document.body.innerHTML = '<div id="page"></div><input id="sku"><div id="listener"></div>';
+        const page = makeTarget({ scope: 'page', element: document.getElementById('page') });
+        const listener = makeTarget({
+            kind: 'listener',
+            scope: 'page',
+            element: document.getElementById('listener'),
+            ownsFocus: (element) => element.id === 'sku',
+        });
+        router.register(page.target);
+        router.register(listener.target);
+        const sku = document.getElementById('sku');
+        sku.focus();
+
+        typeBurst('PRD-1001');
+
+        expect(listener.deliveries.map(({ reason, element }) => [reason, element.id])).toEqual([['focus', 'sku']]);
+        expect(page.deliveries).toEqual([]);
+    });
+
+    it('hasTargetOfKind reports registered kinds', () => {
+        document.body.innerHTML = '<div id="a"></div>';
+        router.register(makeTarget({ kind: 'listener', element: document.getElementById('a') }).target);
+
+        expect(router.hasTargetOfKind('listener')).toBe(true);
+        expect(router.hasTargetOfKind('collector')).toBe(false);
     });
 });

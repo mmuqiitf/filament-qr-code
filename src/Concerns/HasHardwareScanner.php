@@ -138,9 +138,9 @@ trait HasHardwareScanner
     }
 
     /**
-     * When a page-global QrHardwareScannerListener is mounted, field-scoped
-     * burst handlers stand down by default so the same gun burst is not
-     * handled twice. Pass false to force the field listener to stay active.
+     * @deprecated since 0.5, removal planned for 1.0. The input router gives
+     * every wedge burst exactly one owner, so this setting no longer changes
+     * routing. It is still accepted and still sent in the scan payload.
      */
     public function suppressWhenGlobalListener(bool|Closure $condition = true): static
     {
@@ -149,7 +149,14 @@ trait HasHardwareScanner
         return $this;
     }
 
+    /** @deprecated since 0.5, see suppressWhenGlobalListener(). */
     public function isSuppressedWhenGlobalListenerActive(): bool
+    {
+        return $this->getSuppressWhenGlobalListenerPayloadValue();
+    }
+
+    /** Payload value kept for backward compatibility; the browser no longer reads it. */
+    protected function getSuppressWhenGlobalListenerPayloadValue(): bool
     {
         return (bool) $this->evaluate($this->suppressWhenGlobalListenerActive);
     }
@@ -164,7 +171,7 @@ trait HasHardwareScanner
             'minBarcodeLength' => $this->getMinBarcodeLength(),
             'minFastKeys' => $this->getMinFastKeys(),
             'scanTimeoutMs' => $this->getScanTimeoutMs(),
-            'suppressWhenGlobalListenerActive' => $this->isSuppressedWhenGlobalListenerActive(),
+            'suppressWhenGlobalListenerActive' => $this->getSuppressWhenGlobalListenerPayloadValue(),
             'preventSubmit' => $this->shouldPreventFormSubmit(),
         ];
     }

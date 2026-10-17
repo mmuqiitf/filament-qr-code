@@ -1,5 +1,6 @@
 import { qrFeedback } from './audio-feedback.js';
-import { createHardwareScannerHandler, sanitizeScannedValue } from './qr-hardware-scanner.js';
+import { sanitizeScannedValue } from './qr-hardware-scanner.js';
+import { inputRouter } from './input-router.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -28,7 +29,6 @@ export default function qrScanSequenceComponent({
     minBarcodeLength = 2,
     minFastKeys = 1,
     scanTimeoutMs = 150,
-    suppressWhenGlobalListenerActive = true,
     fps = 25,
     qrbox = 250,
     preferRearCamera = true,
@@ -54,39 +54,31 @@ export default function qrScanSequenceComponent({
         selectedDeviceId: null,
         html5Qrcode: null,
         elementId: '',
-        hardwareScannerHandler: null,
-        boundHardwareScannerHandler: null,
+        unregisterTarget: null,
 
         init() {
             this.elementId = `qr-sequence-${this.$id('qr-seq')}`;
 
             if (hardwareScanner) {
-                this.hardwareScannerHandler = createHardwareScannerHandler({
-                    burstThresholdMs,
-                    minBarcodeLength,
-                    minFastKeys,
-                    terminators,
-                    scanTimeoutMs,
-                    suppressWhenGlobalListenerActive,
-                    onScan: (scannedValue) => {
+                this.unregisterTarget = inputRouter().register({
+                    id: `sequence-${this.elementId}-${Math.random().toString(36).slice(2)}`,
+                    element: this.$root ?? this.$el,
+                    name: null,
+                    kind: 'sequence',
+                    scope: 'page',
+                    detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs },
+                    deliver: (scannedValue) => {
                         this.processScan(scannedValue);
                     },
                 });
-
-                this.boundHardwareScannerHandler = (e) => {
-                    this.hardwareScannerHandler.handleKeyDown(e);
-                };
-                window.addEventListener('keydown', this.boundHardwareScannerHandler);
             }
 
             this.loadCameras();
         },
 
         destroy() {
-            if (this.boundHardwareScannerHandler) {
-                window.removeEventListener('keydown', this.boundHardwareScannerHandler);
-                this.boundHardwareScannerHandler = null;
-            }
+            this.unregisterTarget?.();
+            this.unregisterTarget = null;
             this.stopScanner();
         },
 

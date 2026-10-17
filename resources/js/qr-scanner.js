@@ -1,5 +1,6 @@
 import { qrFeedback } from './audio-feedback.js';
-import { createHardwareScannerHandler, sanitizeScannedValue } from './qr-hardware-scanner.js';
+import { sanitizeScannedValue } from './qr-hardware-scanner.js';
+import { inputRouter } from './input-router.js';
 import { findFieldInput, readWireModelPath } from './field-locator.js';
 import {
     emitScanFeedback,
@@ -33,7 +34,8 @@ export default function qrScannerComponent({
     minBarcodeLength = 2,
     minFastKeys = 1,
     scanTimeoutMs = 150,
-    suppressWhenGlobalListenerActive = true,
+    hardwareScope = 'focus',
+    preventSubmit = true,
     fps = 25,
     qrbox = 250,
     preferRearCamera = true,
@@ -51,6 +53,7 @@ export default function qrScannerComponent({
 } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('scanner');
     const deduper = createScanDeduper();
+    const mode = 'single';
 
     return {
         // State
@@ -66,33 +69,27 @@ export default function qrScannerComponent({
         selectedDeviceId: null,
         html5Qrcode: null,
         scannerElementId: '',
-        hardwareScannerHandler: null,
+        unregisterTarget: null,
         isChecking: false,
         boundDeliverHandler: null,
-        boundHardwareScannerHandler: null,
 
         init() {
             this.scannerElementId = `qr-reader-${this.$id('qr-reader')}`;
 
             if (hardwareScanner) {
-                this.hardwareScannerHandler = createHardwareScannerHandler({
-                    burstThresholdMs,
-                    minBarcodeLength,
-                    minFastKeys,
-                    terminators,
-                    scanTimeoutMs,
-                    suppressWhenGlobalListenerActive,
-                    onScan: (scannedValue) => {
+                this.unregisterTarget = inputRouter().register({
+                    id: `${this.scannerElementId}-${Math.random().toString(36).slice(2)}`,
+                    element: this.fieldElement(),
+                    name: this.fieldElement().getAttribute('data-field-name') || null,
+                    kind: 'field',
+                    scope: hardwareScope === 'page' ? 'page' : 'focus',
+                    detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs, preventSubmit },
+                    accept: () => !this.isChecking,
+                    isModalOpen: () => this.isModalOpen,
+                    deliver: (scannedValue) => {
                         this.handleScanResult(scannedValue, 'hardware');
                     },
                 });
-
-                // Field-scoped on purpose: pair with QrHardwareScannerListener for
-                // page-global cashier capture to avoid double handling.
-                this.boundHardwareScannerHandler = (e) => {
-                    this.hardwareScannerHandler.handleKeyDown(e);
-                };
-                this.fieldElement().addEventListener('keydown', this.boundHardwareScannerHandler);
             }
 
             this.boundDeliverHandler = (event) => {
@@ -112,10 +109,8 @@ export default function qrScannerComponent({
                 this.boundDeliverHandler = null;
             }
 
-            if (this.boundHardwareScannerHandler) {
-                this.fieldElement().removeEventListener('keydown', this.boundHardwareScannerHandler);
-                this.boundHardwareScannerHandler = null;
-            }
+            this.unregisterTarget?.();
+            this.unregisterTarget = null;
             this.stopScan();
         },
 
@@ -267,7 +262,7 @@ export default function qrScannerComponent({
             const field = this.fieldElement().getAttribute('data-field-name') || null;
 
             if (deduper.isDuplicate(code, cooldownMs)) {
-                window.dispatchEvent(new CustomEvent('qr-scan-duplicate', { detail: { value: code, field, source } }));
+                window.dispatchEvent(new CustomEvent('qr-scan-duplicate', { detail: { value: code, field, source, mode } }));
 
                 return { passes: false, ignored: true };
             }
@@ -355,8 +350,9 @@ export default function qrScannerComponent({
             emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
 
             window.dispatchEvent(new CustomEvent('qr-scanned', {
-                detail: { value: code, field, nextField, source },
+                detail: { value: code, field, nextField, source, mode },
             }));
+            this.announceListenerDelivery(code, source, field);
 
             if (nextField) {
                 this.$nextTick(() => this.advanceFocus(nextField));
@@ -377,14 +373,25 @@ export default function qrScannerComponent({
                 emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
             }
 
-            window.dispatchEvent(new CustomEvent('qr-scan-accepted', { detail: { value: code, field, source, recordKey } }));
+            window.dispatchEvent(new CustomEvent('qr-scan-accepted', { detail: { value: code, field, source, recordKey, mode } }));
             window.dispatchEvent(new CustomEvent('qr-scanned', {
-                detail: { value: code, field, nextField, source, recordKey },
+                detail: { value: code, field, nextField, source, recordKey, mode },
             }));
+            this.announceListenerDelivery(code, source, field);
 
             if (nextField) {
                 this.$nextTick(() => this.advanceFocus(nextField));
             }
+        },
+
+        // Before the router, a page listener wrote hardware scans into this field and
+        // announced them with qr-hardware-scanned. Keep that event for listener pages.
+        announceListenerDelivery(code, source, field) {
+            if (source !== 'hardware' || !inputRouter().hasTargetOfKind('listener')) {
+                return;
+            }
+
+            window.dispatchEvent(new CustomEvent('qr-hardware-scanned', { detail: { value: code, field } }));
         },
 
         applyRejected({ code, source, message }, field) {
@@ -398,7 +405,7 @@ export default function qrScannerComponent({
                 beepDurationMs,
             });
 
-            window.dispatchEvent(new CustomEvent('qr-scan-rejected', { detail: { value: code, field, source, message } }));
+            window.dispatchEvent(new CustomEvent('qr-scan-rejected', { detail: { value: code, field, source, message, mode } }));
         },
 
         advanceFocus(targetFieldName) {

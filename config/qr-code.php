@@ -19,6 +19,9 @@ return [
     | - fallback_to_any_input: When the page-global listener finds no focused
     |   or registered empty field, write into the first empty form input
     |   (v0.2 behaviour). Set false to dispatch `qr-scan-unrouted` instead.
+    | - default_scope: Where a QrScanner field catches wedge scans. 'focus'
+    |   (only while focused) or 'page' (also when no scan field has focus).
+    |   Override per field with hardwareInput(scope:).
     |
     */
     'hardware_scanner' => [
@@ -30,6 +33,7 @@ return [
         'scan_timeout_ms' => 150,
         'prevent_form_submit' => true,
         'default_terminators' => ['Enter', 'Tab'],
+        'default_scope' => 'focus',
     ],
 
     /*
