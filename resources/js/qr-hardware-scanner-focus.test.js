@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { qrHardwareScannerListenerComponent } from './qr-hardware-scanner.js';
+import { inputRouter } from './input-router.js';
 import { mountComponent } from './alpine-test-harness.js';
 
 function mountListener(options = {}) {
@@ -48,6 +49,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    inputRouter().destroy();
     vi.useRealTimers();
     document.body.innerHTML = '';
 });

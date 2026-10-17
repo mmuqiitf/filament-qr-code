@@ -1,6 +1,7 @@
 import { qrFeedback } from './audio-feedback.js';
 import { emitScanFeedback } from './qr-camera-core.js';
 import { readWireModelPath, findFieldInput } from './field-locator.js';
+import { inputRouter } from './input-router.js';
 
 const GLOBAL_LISTENER_KEY = '__filamentQrCodeGlobalHardwareListeners';
 
@@ -31,6 +32,10 @@ export function sanitizeScannedValue(value) {
     return String(value ?? '').replace(/^[\u0000-\u0020\u007F]+|[\u0000-\u0020\u007F]+$/g, '');
 }
 
+/**
+ * @deprecated since 0.5: every hardware consumer now registers with the input
+ * router, which gives each burst a single owner. Kept for apps that read it.
+ */
 export function isGlobalHardwareListenerActive() {
     return globalListenerCount() > 0;
 }
@@ -189,6 +194,14 @@ function isTextEntry(element) {
     return Boolean(element) && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA');
 }
 
+function isWritable(element) {
+    return Boolean(element) && !element.disabled && !element.readOnly;
+}
+
+function fieldNameOf(element) {
+    return element.getAttribute('name') || element.closest('[data-field-name]')?.getAttribute('data-field-name');
+}
+
 /**
  * Alpine component for QrHardwareScannerListener.
  */
@@ -213,60 +226,38 @@ export function qrHardwareScannerListenerComponent({
 
     return {
         registeredFields: fields,
-        hardwareScannerHandler: null,
-        boundKeyHandler: null,
-        // Focused input and its value when a keystroke sequence started, so
-        // a burst routed elsewhere can undo the keys it typed into it.
-        burstOrigin: null,
-        lastKeyAt: 0,
+        unregisterTarget: null,
 
         init() {
             trackGlobalListener(1);
 
-            this.hardwareScannerHandler = createHardwareScannerHandler({
-                burstThresholdMs,
-                minBarcodeLength,
-                minFastKeys,
-                preventFormSubmit: preventSubmit,
-                terminators,
-                scanTimeoutMs,
-                isGlobalListener: true,
-                onScan: (scannedValue) => {
-                    this.handleGlobalScan(scannedValue);
+            this.unregisterTarget = inputRouter().register({
+                id: `listener-${this.$id('qr-listener')}-${Math.random().toString(36).slice(2)}`,
+                element: this.$root ?? this.$el,
+                name: null,
+                kind: 'listener',
+                scope: 'page',
+                fallback: fallbackToAnyInput,
+                detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs, preventSubmit },
+                candidates: () => this.registeredFields
+                    .map((fieldName) => this.findFieldElement(fieldName))
+                    .filter((element) => isWritable(element) && !element.value),
+                ownsFocus: (element) => isTextEntry(element)
+                    && (this.registeredFields.length === 0 || this.isRegisteredField(element)),
+                deliver: (scannedValue, { element }) => {
+                    this.handleGlobalScan(scannedValue, isTextEntry(element) ? element : null);
                 },
             });
-
-            this.boundKeyHandler = (e) => {
-                this.rememberBurstOrigin();
-                this.hardwareScannerHandler.handleKeyDown(e);
-            };
-            window.addEventListener('keydown', this.boundKeyHandler);
         },
 
         destroy() {
             trackGlobalListener(-1);
-
-            if (this.boundKeyHandler) {
-                window.removeEventListener('keydown', this.boundKeyHandler);
-                this.boundKeyHandler = null;
-            }
+            this.unregisterTarget?.();
+            this.unregisterTarget = null;
         },
 
         findFieldElement(fieldName) {
             return findFieldInput(fieldName);
-        },
-
-        rememberBurstOrigin() {
-            const now = Date.now();
-            const startsSequence = now - this.lastKeyAt > burstThresholdMs;
-            this.lastKeyAt = now;
-
-            if (!startsSequence) {
-                return;
-            }
-
-            const active = document.activeElement;
-            this.burstOrigin = isTextEntry(active) ? { element: active, value: active.value } : null;
         },
 
         isRegisteredField(element) {
@@ -275,27 +266,19 @@ export function qrHardwareScannerListenerComponent({
             return this.registeredFields.some((fieldName) => findFieldInput(fieldName) === element || fieldName === name);
         },
 
-        restoreBurstOrigin(targetInput) {
-            const origin = this.burstOrigin;
-            this.burstOrigin = null;
-
-            if (!origin || origin.element === targetInput || origin.element.value === origin.value) {
-                return;
-            }
-
-            origin.element.value = origin.value;
-            origin.element.dispatchEvent(new Event('input', { bubbles: true }));
-            origin.element.dispatchEvent(new Event('change', { bubbles: true }));
-        },
-
-        handleGlobalScan(scannedValue) {
+        handleGlobalScan(scannedValue, preferredInput = null) {
             let targetInput = null;
             let targetFieldName = null;
             const active = document.activeElement;
 
+            if (preferredInput) {
+                targetInput = preferredInput;
+                targetFieldName = fieldNameOf(preferredInput);
+            }
+
             // With registered fields, a focused input only receives the scan
             // when it is one of them (a focused search/member box is not).
-            if (isTextEntry(active) && (this.registeredFields.length === 0 || this.isRegisteredField(active))) {
+            if (!targetInput && isTextEntry(active) && (this.registeredFields.length === 0 || this.isRegisteredField(active))) {
                 targetInput = active;
                 targetFieldName = active.getAttribute('name') || active.closest('[data-field-name]')?.getAttribute('data-field-name');
             }
@@ -303,7 +286,7 @@ export function qrHardwareScannerListenerComponent({
             if (!targetInput && this.registeredFields.length > 0) {
                 for (const fieldName of this.registeredFields) {
                     const el = this.findFieldElement(fieldName);
-                    if (el && !el.value && !el.disabled && !el.readOnly) {
+                    if (isWritable(el) && !el.value) {
                         targetInput = el;
                         targetFieldName = fieldName;
                         break;
@@ -331,7 +314,6 @@ export function qrHardwareScannerListenerComponent({
             }
 
             if (targetInput) {
-                this.restoreBurstOrigin(targetInput);
                 targetInput.focus();
                 const deliverEvent = new CustomEvent('qr-scan-deliver', {
                     bubbles: true,

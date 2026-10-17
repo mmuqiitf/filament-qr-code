@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from 'vitest';
 import { qrHardwareScannerListenerComponent } from './qr-hardware-scanner.js';
+import { inputRouter } from './input-router.js';
 import { createWireSpy, mountComponent } from './alpine-test-harness.js';
 
 function mountListener(options = {}) {
@@ -21,6 +22,7 @@ function captureUnrouted() {
 }
 
 afterEach(() => {
+    inputRouter().destroy();
     document.body.innerHTML = '';
 });
 
