@@ -13,6 +13,18 @@ function detectionFor(target) {
     return { ...DEFAULT_DETECTION, ...(target.detection ?? {}) };
 }
 
+function compareDomOrder(first, second) {
+    if (first === second) {
+        return 0;
+    }
+
+    return first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+}
+
+function byDomOrder(targets) {
+    return [...targets].sort((first, second) => compareDomOrder(first.element, second.element));
+}
+
 /**
  * Page-wide keyboard-wedge router: one keydown listener, one burst detector,
  * and exactly one owner per burst (spec P1b section 4).
@@ -32,6 +44,33 @@ export function createInputRouter({ win = window, doc = document } = {}) {
 
     const focusedTarget = () => [...targets.values()].find(containsFocus) ?? null;
 
+    const insideOtherTarget = (element, owner) => [...targets.values()]
+        .some((target) => target !== owner && target.element.contains(element));
+
+    const listeningEntries = (code) => {
+        const entries = [];
+
+        for (const target of targets.values()) {
+            if (target.scope !== 'page' || !accepts(target, code)) {
+                continue;
+            }
+
+            if (typeof target.candidates !== 'function') {
+                entries.push({ target, element: target.element });
+
+                continue;
+            }
+
+            for (const element of target.candidates()) {
+                if (element && !insideOtherTarget(element, target)) {
+                    entries.push({ target, element });
+                }
+            }
+        }
+
+        return entries.sort((first, second) => compareDomOrder(first.element, second.element));
+    };
+
     const deliver = (target, code, reason, element) => {
         if (code.length < detectionFor(target).minBarcodeLength) {
             return false;
@@ -46,6 +85,19 @@ export function createInputRouter({ win = window, doc = document } = {}) {
         const focused = focusedTarget();
 
         if (focused && accepts(focused, code) && deliver(focused, code, 'focus')) {
+            return;
+        }
+
+        for (const { target, element } of listeningEntries(code)) {
+            if (deliver(target, code, 'first-listening', element)) {
+                return;
+            }
+        }
+
+        const fallback = byDomOrder([...targets.values()].filter((target) => target.fallback === true))
+            .find((target) => accepts(target, code));
+
+        if (fallback && deliver(fallback, code, 'fallback')) {
             return;
         }
 
