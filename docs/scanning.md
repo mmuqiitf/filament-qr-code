@@ -164,7 +164,7 @@ use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
 QrScanSequence::make()
-    ->statePath('receipt') // required for server checks (or ->key('receipt'))
+    ->statePath('receipt') // recommended: the key server checks use (or ->key('receipt'))
     ->steps([
         ScanStep::make('po')->label('Purchase order')->validateUsing(['regex:/^PO-\d+$/']),
         ScanStep::make('sku')->lookup(Product::class, 'sku'),
@@ -186,7 +186,9 @@ QrScanSequence::make()
 - **Plain sequences don't change.** Without checks, `validateAllUsing()`, `onCompleted()`, `autoSubmit()` or `continuous()`, the browser writes state itself as before and makes no request. `fields([...])` is shorthand for steps without checks.
 - **Browser events.** `qr-sequence-step` (now with `skipped`), `qr-sequence-completed` (now with `submitted`), plus `qr-sequence-rejected` `{ field, value, message, source }` and `qr-sequence-invalid` `{ field, message, values }`.
 
-Typed corrections in editable steps are not checked on the server; validate them on submit.
+- **Normal submits check too.** `$this->form->getState()` re-runs every step check (on the step's state path) and `validateAllUsing()` (reported on the last step once every required step has a value). Empty steps pass; add `required` yourself if you need it.
+- **Typed corrections.** In an editable sequence with server work, an edited step is checked like a scan with source `ScanInput::Manual` (`'manual'`). It never skips an optional step or moves the current step, and a rejected edit stays visible with its message.
+- **Keys.** Server checks reach the component by its key. Give the sequence `statePath()` or `key()`; if it has neither, it gets an automatic key from its step keys (`qr-scan-sequence-po-sku`) and logs a warning in the local environment, so two identical sequences on one page need explicit keys.
 
 ### 4. Focus Handoff Between Fields
 

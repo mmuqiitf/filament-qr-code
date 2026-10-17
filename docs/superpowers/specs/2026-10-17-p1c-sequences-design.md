@@ -250,10 +250,13 @@ enum RepeatComplete: string { case Advance = 'advance'; case Wait = 'wait'; }   
 | A | P1.8 + P1.9: `ScanStep`, `steps()`, `fields()` adapter, `ScanCheckPipeline` extraction, `handleStepScan`, optional skip, `validateAllUsing`, `onInvalidSequence`, `onCompleted`, `autoSubmit`, `resetAfterSubmit`, `continuous`, `ScanSequenceCompleted`, config `sequence.*` (minus `repeat_complete`), JS server path, docs | "fields(['a','b']) yields the same payload as steps([ScanStep::make('a'), …])", then "invalid step 2 blocks advance; complete valid sequence calls submit once" |
 | B | P1.10: router step ownership, `sticky()`, `repeat(n)`, `RepeatComplete`, `sequence.repeat_complete`, example warehouse/BOM demo hooks, docs | "three bursts fill steps po, sku, lot in order; sticky po survives reset" |
 
-## 12. Open questions
+## 12. Resolved decisions
 
-1. **Unkeyed `validateAllUsing` failure:** jump to the last step (proposed) or the first step?
-2. **`autoSubmit` method:** call a Livewire method by name (`'submit'` default, proposed) or dispatch the browser form submit (`requestSubmit()`)? The server call keeps it one request and testable in Pest.
-3. **Normal submit:** should PR A add an opt-in rule so a manual form submit re-runs step checks and `validateAllUsing` (like P1a's `ScanChecksRule`)?
-4. **Typed corrections:** new `ScanInput::Manual` source for edited values, or reuse `Hardware`?
-5. **`resetAfterSubmit` default:** `false` (proposed, matches today) or `true` when `autoSubmit` is on?
+Approved on PR #31 (2026-10-17):
+
+1. **Unkeyed `validateAllUsing` failure:** points at the **last** step.
+2. **`autoSubmit` method:** calls the Livewire method by name on the server (`'submit'` default, config `sequence.submit_method`). Same request as the scan, testable in Pest.
+3. **Normal submit:** always re-runs the checks, like P1a's `ScanChecksRule`. `QrScanSequence` implements `HasValidationRules`: each step with checks gets a `SequenceStepRule` on its value path (`{statePath}.{step}`, or `{statePathPrefix}.{step}` without a state path). `validateAllUsing` gets a `SequenceSetRule` on the last step's path that runs once every required step has a value. Empty steps are skipped; `required` stays the app's job.
+4. **Typed corrections:** new `ScanInput::Manual` (`'manual'`). With server work, an edited step calls `handleStepScan(step, code, 'manual')`: same checks, no optional skip, no step change, no beep. A rejected edit stays visible with its message. Clearing a step still writes state directly.
+5. **`resetAfterSubmit` default:** `false`.
+6. **Missing key:** a sequence with server work but no `statePath()` or `key()` gets an automatic key `qr-scan-sequence-{step keys}` (so `form.qr-scan-sequence-po-sku` under a form), and logs a warning once in the local environment. Plain sequences keep a null key. An explicit `key()` replaces the automatic one.

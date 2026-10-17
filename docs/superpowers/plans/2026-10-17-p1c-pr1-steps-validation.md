@@ -70,5 +70,10 @@
 - [ ] Failing Vitest tests: plain sequence keeps `$wire.set` and makes no server call; server sequence calls `handleStepScan` once per scan; pointer moves to `next_step` (skip); rejection keeps pointer and shows message; invalid jumps; completed + reset clears results; duplicate inside cooldown dropped; router refuses while checking.
 - [ ] Implement `requestSequenceScan()` and `qr-sequence.js` changes, Blade message line; `npm run build`. Commit `feat: sequence server path in the browser`.
 
-### Task 8: Docs and verification
+### Task 8: Resolved decisions (PR #31 review)
+- [ ] Failing Pest tests: a normal submit with an invalid step errors on `data.receipt.sku`; the whole-set check errors on the last step on submit; empty optional/missing steps pass; a `manual` correction is checked and recorded with `ScanInput::Manual`; no optional skip for `manual`; a keyless checked sequence gets `form.qr-scan-sequence-po-sku-lot-serial`, a payload `componentKey`, a working `handleStepScan` and a local warning; a plain keyless sequence keeps a null key; `ScanInput` cases include `manual`.
+- [ ] Failing Vitest tests: an edit calls `handleStepScan` with `source: 'manual'` and keeps the step; a rejected edit stays visible with its error; an emptied step writes state without a check.
+- [ ] Implement `SequenceStepRule`, `SequenceSetRule`, `HasValidationRules` on `QrScanSequence`, `ScanInput::Manual`, the automatic key (set in `make()`, since the component never runs `setUp()`), JS edit path; rebuild dist. Commit.
+
+### Task 9: Docs and verification
 - [ ] `docs/scanning.md` sequence steps section, `reference.md` config/events, CHANGELOG; full verification; example app feature tests via a local path repo (not committed).
