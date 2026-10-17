@@ -159,6 +159,7 @@ target); the listener skips candidates already registered as targets to avoid tw
 |---|---|---|
 | `qr-scan-routed` (new) | a burst was delivered | `{ value, target: field name or null, kind, reason: 'modal' \| 'focus' \| 'first-listening' \| 'fallback', burstId }` |
 | `qr-scan-unrouted` (existing) | no target | `{ value }` |
+| `qr-scan-dropped` (new) | a scan arrived while the target was busy and its one-slot queue was full | `{ value, field, source }` |
 | `qr-hardware-scanned` (existing) | listener wrote a value | unchanged |
 | `qr-scan-accepted` / `qr-scan-rejected` / `qr-scan-duplicate` / `qr-scanned` (existing) | per scan | gain `mode: 'single' \| 'continuous'` |
 | `qr-scan-paused` / `qr-scan-resumed` (new) | continuous with `pauseOnReject` | `{ field }` |
