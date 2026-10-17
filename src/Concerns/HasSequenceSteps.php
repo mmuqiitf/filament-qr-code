@@ -6,7 +6,9 @@ namespace Mmuqiitf\FilamentQrCode\Concerns;
 
 use Closure;
 use Filament\Support\Components\Attributes\ExposedLivewireMethod;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
@@ -30,6 +32,15 @@ trait HasSequenceSteps
 
     protected string|Closure|null $autoSubmitMethod = null;
 
+    /** @var array<int|string, mixed>|Closure|null */
+    protected array|Closure|null $validateAllUsing = null;
+
+    protected InvalidSequenceBehavior|Closure|null $invalidSequenceBehavior = null;
+
+    protected bool|Closure|null $shouldResetAfterSubmit = null;
+
+    protected bool|Closure|null $isContinuousSequence = null;
+
     /** @return array<int, ScanStep> */
     abstract public function getScanSteps(): array;
 
@@ -49,7 +60,75 @@ trait HasSequenceSteps
         return $this;
     }
 
-    public function autoSubmit(bool|Closure $condition = true, string|Closure|null $method = null): static
+    /**
+     * Check the whole set once every required step has a value. Rules are keyed
+     * by step; unkeyed rules apply to the last step. A closure receives
+     * $values and returns null or [] to pass, a message (last step) or [step => message].
+     *
+     * @param  array<int|string, mixed>|Closure|null  $rules
+     */
+    public function validateAllUsing(array|Closure|null $rules): static
+    {
+        $this->validateAllUsing = $rules;
+
+        return $this;
+    }
+
+    public function onInvalidSequence(InvalidSequenceBehavior|Closure|null $behavior): static
+    {
+        $this->invalidSequenceBehavior = $behavior;
+
+        return $this;
+    }
+
+    public function getInvalidSequenceBehavior(): InvalidSequenceBehavior
+    {
+        $behavior = $this->evaluate($this->invalidSequenceBehavior)
+            ?? (function_exists('config') ? config('qr-code.sequence.on_invalid') : null);
+
+        if ($behavior instanceof InvalidSequenceBehavior) {
+            return $behavior;
+        }
+
+        return is_string($behavior)
+            ? (InvalidSequenceBehavior::tryFrom($behavior) ?? InvalidSequenceBehavior::JumpToStep)
+            : InvalidSequenceBehavior::JumpToStep;
+    }
+
+    public function resetAfterSubmit(bool|Closure|null $condition = true): static
+    {
+        $this->shouldResetAfterSubmit = $condition;
+
+        return $this;
+    }
+
+    public function shouldResetAfterSubmit(): bool
+    {
+        if ($this->shouldResetAfterSubmit === null) {
+            return ConfigValue::bool('qr-code.sequence.reset_after_submit', false);
+        }
+
+        return (bool) $this->evaluate($this->shouldResetAfterSubmit);
+    }
+
+    /** Start over after every completed sequence, ready for the next item. */
+    public function continuous(bool|Closure|null $condition = true): static
+    {
+        $this->isContinuousSequence = $condition;
+
+        return $this;
+    }
+
+    public function isContinuous(): bool
+    {
+        if ($this->isContinuousSequence === null) {
+            return ConfigValue::bool('qr-code.sequence.continuous', false);
+        }
+
+        return (bool) $this->evaluate($this->isContinuousSequence);
+    }
+
+    public function autoSubmit(bool|Closure|null $condition = true, string|Closure|null $method = null): static
     {
         $this->shouldAutoSubmit = $condition;
         $this->autoSubmitMethod = $method;
@@ -87,7 +166,10 @@ trait HasSequenceSteps
             }
         }
 
-        return $this->onCompletedCallback instanceof Closure || $this->shouldAutoSubmit();
+        return $this->validateAllUsing !== null
+            || $this->onCompletedCallback instanceof Closure
+            || $this->shouldAutoSubmit()
+            || $this->isContinuous();
     }
 
     /** @return array<string, mixed> */
@@ -165,21 +247,134 @@ trait HasSequenceSteps
      */
     protected function completeSequence(ScanResult $result, string $step, array $values, array $skipped = []): SequenceScanResult
     {
+        if (($failure = $this->findInvalidStep($values)) !== null) {
+            [$invalidStep, $message] = $failure;
+            $restart = $this->getInvalidSequenceBehavior() === InvalidSequenceBehavior::Restart;
+
+            if ($restart) {
+                $values = [];
+                $this->writeSequenceValues($values);
+            }
+
+            event(new ScanRejected(ScanResult::reject($result->code, $result->source, $message), $invalidStep));
+
+            return new SequenceScanResult(
+                scan: ScanResult::reject($result->code, $result->source, $message),
+                step: $step,
+                nextStep: $restart ? $this->getFirstStepKey() : $invalidStep,
+                values: $values,
+                skipped: $skipped,
+                invalidStep: $invalidStep,
+                reset: $restart,
+            );
+        }
+
         $this->evaluate($this->onCompletedCallback, ['values' => $values]);
 
         event(new ScanSequenceCompleted($values, $this->getComponentStatePath()));
 
         $submitted = $this->shouldAutoSubmit() ? $this->submitSequence() : null;
+        $reset = ($submitted === true && $this->shouldResetAfterSubmit())
+            || ($submitted !== false && $this->isContinuous());
+
+        if ($reset) {
+            $values = [];
+            $this->writeSequenceValues($values);
+        }
 
         return new SequenceScanResult(
             scan: $result,
             step: $step,
-            nextStep: null,
+            nextStep: $reset ? $this->getFirstStepKey() : null,
             values: $values,
             skipped: $skipped,
             completed: true,
             submitted: $submitted,
+            reset: $reset,
         );
+    }
+
+    protected function getFirstStepKey(): ?string
+    {
+        $steps = $this->getScanSteps();
+
+        return isset($steps[0]) ? $steps[0]->getKey() : null;
+    }
+
+    protected function getLastStepKey(): string
+    {
+        $steps = $this->getScanSteps();
+
+        return $steps[array_key_last($steps)]->getKey();
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @return array{0: string, 1: string}|null
+     */
+    protected function findInvalidStep(array $values): ?array
+    {
+        $check = $this->validateAllUsing;
+
+        if ($check === null) {
+            return null;
+        }
+
+        $lastStep = $this->getLastStepKey();
+
+        if ($check instanceof Closure) {
+            $failures = $this->evaluate($check, ['values' => $values]);
+
+            if (is_string($failures) && $failures !== '') {
+                return [$lastStep, $failures];
+            }
+
+            if (! is_array($failures)) {
+                return null;
+            }
+
+            foreach ($failures as $key => $message) {
+                if (filled($message)) {
+                    $key = is_string($key) && $this->findStepIndex($key) !== null ? $key : $lastStep;
+
+                    return [$key, (string) $message];
+                }
+            }
+
+            return null;
+        }
+
+        $rules = [];
+
+        foreach ($check as $key => $rule) {
+            if (is_int($key)) {
+                $rules[$lastStep][] = $rule;
+
+                continue;
+            }
+
+            $rules[$key] = array_merge($rules[$key] ?? [], is_string($rule) ? explode('|', $rule) : (array) $rule);
+        }
+
+        $attributes = [];
+
+        foreach ($this->getScanSteps() as $scanStep) {
+            $attributes[$scanStep->getKey()] = $scanStep->getLabel();
+        }
+
+        $validator = Validator::make($values, $rules, [], $attributes);
+
+        if (! $validator->fails()) {
+            return null;
+        }
+
+        foreach ($this->getScanSteps() as $scanStep) {
+            if (filled($message = $validator->errors()->first($scanStep->getKey()))) {
+                return [$scanStep->getKey(), $message];
+            }
+        }
+
+        return [$lastStep, (string) $validator->errors()->first()];
     }
 
     protected function submitSequence(): bool

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Livewire;
+use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
 use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
 use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
 use Mmuqiitf\FilamentQrCode\Events\ScanSequenceCompleted;
@@ -170,4 +171,100 @@ it('rejects on the optional step when the code fits neither step', function (): 
     sequenceScan($test, 'lot', 'junk')
         ->assertReturned(fn (array $result): bool => ! $result['passes'] && $result['step'] === 'lot' && $result['skipped'] === [])
         ->assertSet('submissions', 0);
+});
+
+function completeReceipt(mixed $test, string $serial = 'SN1'): mixed
+{
+    sequenceScan($test, 'po', 'PO-1');
+    sequenceScan($test, 'sku', 'SKU-1');
+
+    return sequenceScan($test, 'serial', $serial);
+}
+
+it('keeps the values and jumps to the failing step when the whole set is invalid', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence
+        ->validateAllUsing(fn (array $values): array => $values['serial'] === 'SN1' ? ['sku' => 'Serial does not match SKU.'] : []);
+    $test = Livewire::test(SequenceScanTestComponent::class);
+
+    completeReceipt($test)
+        ->assertReturned(fn (array $result): bool => ! $result['passes']
+            && $result['completed'] === false
+            && $result['invalid_step'] === 'sku'
+            && $result['next_step'] === 'sku'
+            && $result['message'] === 'Serial does not match SKU.')
+        ->assertSet('data.receipt', ['po' => 'PO-1', 'sku' => 'SKU-1', 'serial' => 'SN1'])
+        ->assertSet('submissions', 0);
+
+    sequenceScan($test, 'serial', 'SN2')
+        ->assertReturned(fn (array $result): bool => $result['completed'] && $result['submitted'])
+        ->assertSet('submissions', 1);
+});
+
+it('validates the whole set with keyed and unkeyed rules', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence
+        ->validateAllUsing(['po' => 'different:serial', 'not_in:SN9']);
+
+    completeReceipt(Livewire::test(SequenceScanTestComponent::class), 'SN9')
+        ->assertReturned(fn (array $result): bool => ! $result['passes'] && $result['invalid_step'] === 'serial');
+});
+
+it('restarts the sequence on an invalid set when configured', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence
+        ->validateAllUsing(fn (): string => 'Mismatch.')
+        ->onInvalidSequence(InvalidSequenceBehavior::Restart);
+
+    completeReceipt(Livewire::test(SequenceScanTestComponent::class))
+        ->assertReturned(fn (array $result): bool => $result['invalid_step'] === 'serial'
+            && $result['next_step'] === 'po'
+            && $result['reset'] === true
+            && $result['values'] === [])
+        ->assertSet('data.receipt', []);
+});
+
+it('reads the invalid behaviour from config', function (): void {
+    config()->set('qr-code.sequence.on_invalid', 'restart');
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->validateAllUsing(fn (): string => 'Mismatch.');
+
+    completeReceipt(Livewire::test(SequenceScanTestComponent::class))
+        ->assertReturned(fn (array $result): bool => $result['next_step'] === 'po');
+});
+
+it('resets after a successful submit when asked', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->resetAfterSubmit();
+    $test = Livewire::test(SequenceScanTestComponent::class);
+
+    completeReceipt($test)
+        ->assertReturned(fn (array $result): bool => $result['submitted'] && $result['reset'] && $result['next_step'] === 'po')
+        ->assertSet('data.receipt', []);
+
+    completeReceipt($test)->assertSet('submissions', 2);
+});
+
+it('starts over after each completion in continuous mode', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->autoSubmit(false)->continuous();
+    $test = Livewire::test(SequenceScanTestComponent::class);
+
+    completeReceipt($test)
+        ->assertReturned(fn (array $result): bool => $result['completed'] && $result['reset'] && $result['next_step'] === 'po')
+        ->assertSet('data.receipt', [])
+        ->assertCount('completed', 1);
+});
+
+it('keeps the values and reports when the submit fails validation', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->resetAfterSubmit();
+    SequenceScanTestComponent::$failSubmit = true;
+
+    completeReceipt(Livewire::test(SequenceScanTestComponent::class))
+        ->assertReturned(fn (array $result): bool => $result['completed'] && $result['submitted'] === false && $result['reset'] === false)
+        ->assertSet('data.receipt', ['po' => 'PO-1', 'sku' => 'SKU-1', 'serial' => 'SN1'])
+        ->assertHasErrors(['data.note']);
+});
+
+it('reads autoSubmit and resetAfterSubmit from config', function (): void {
+    config()->set('qr-code.sequence.auto_submit', true);
+    config()->set('qr-code.sequence.reset_after_submit', true);
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->autoSubmit(null);
+
+    completeReceipt(Livewire::test(SequenceScanTestComponent::class))
+        ->assertReturned(fn (array $result): bool => $result['submitted'] && $result['reset']);
 });

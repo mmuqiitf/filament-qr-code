@@ -98,6 +98,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Scan Sequence Defaults
+    |--------------------------------------------------------------------------
+    |
+    | Defaults for QrScanSequence steps. on_invalid: what a failed
+    | validateAllUsing() check does: 'jump_to_step' keeps the values and asks
+    | for the failing step again, 'restart' clears every step
+    | (onInvalidSequence()). auto_submit: call the Livewire submit_method
+    | once the sequence completes (autoSubmit()). reset_after_submit: clear
+    | the steps after a successful submit (resetAfterSubmit()). continuous:
+    | start over after every completed sequence (continuous()).
+    |
+    */
+    'sequence' => [
+        'on_invalid' => 'jump_to_step',
+        'auto_submit' => false,
+        'submit_method' => 'submit',
+        'reset_after_submit' => false,
+        'continuous' => false,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Camera Scanner Defaults
     |--------------------------------------------------------------------------
     |
