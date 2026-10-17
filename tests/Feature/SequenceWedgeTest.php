@@ -11,6 +11,7 @@ use Filament\Schemas\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
+use Mmuqiitf\FilamentQrCode\Enums\RepeatComplete;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
@@ -60,6 +61,11 @@ class SequenceWedgeTestComponent extends Component implements HasForms
     public function submit(): void
     {
         $this->submissions++;
+    }
+
+    public function validateForm(): void
+    {
+        $this->form->getState();
     }
 
     public function render(): string
@@ -133,4 +139,140 @@ it('treats sticky steps as server work', function (): void {
         ->and(QrScanSequence::make()->steps([ScanStep::make('po'), ScanStep::make('sku')])->hasServerSequenceWork())->toBeFalse()
         ->and(ScanStep::make('po')->sticky()->isSticky())->toBeTrue()
         ->and(ScanStep::make('po')->isSticky())->toBeFalse();
+});
+
+function bomSteps(Closure $configureParts): Closure
+{
+    return fn (): array => [
+        ScanStep::make('order'),
+        $configureParts(ScanStep::make('parts')->validateUsing(['regex:/^P\d+$/'])),
+        ScanStep::make('box'),
+    ];
+}
+
+it('collects repeat(n) codes into a list and advances when full', function (): void {
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(3));
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+
+    wedgeScan($test, 'order', 'WO-1');
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'P1')))->toMatchArray(['passes' => true, 'next_step' => 'parts', 'values' => ['order' => 'WO-1', 'parts' => ['P1']]])
+        ->and(wedgeResult(wedgeScan($test, 'parts', 'X9')))->toMatchArray(['passes' => false, 'next_step' => 'parts'])
+        ->and(wedgeResult(wedgeScan($test, 'parts', 'P2')))->toMatchArray(['next_step' => 'parts'])
+        ->and(wedgeResult(wedgeScan($test, 'parts', 'P3')))->toMatchArray(['next_step' => 'box', 'values' => ['order' => 'WO-1', 'parts' => ['P1', 'P2', 'P3']]]);
+
+    expect(wedgeResult(wedgeScan($test, 'box', 'BOX-1')))->toMatchArray(['completed' => true]);
+    $test->assertSet('completed.0.parts', ['P1', 'P2', 'P3']);
+});
+
+it('rejects a duplicate inside a repeat step unless allowed', function (): void {
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(3));
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'parts', 'P1');
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'P1')))->toMatchArray([
+        'passes' => false,
+        'message' => __('filament-qr-code::ui.duplicate_in_step', ['code' => 'P1']),
+    ]);
+
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(3)->allowDuplicates());
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'parts', 'P1');
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'P1')))->toMatchArray(['passes' => true, 'values' => ['parts' => ['P1', 'P1']]]);
+});
+
+it('reads the repeat count from a closure over the other steps', function (): void {
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(fn (array $values): int => $values['order'] === 'WO-2' ? 2 : 5));
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'order', 'WO-2');
+    wedgeScan($test, 'parts', 'P1');
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'P2')))->toMatchArray(['next_step' => 'box']);
+});
+
+it('waits on a full step when repeat_complete is wait and rejects more codes', function (): void {
+    config()->set('qr-code.sequence.repeat_complete', 'wait');
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(2));
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'parts', 'P1');
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'P2')))->toMatchArray(['passes' => true, 'next_step' => 'parts'])
+        ->and(wedgeResult(wedgeScan($test, 'parts', 'P3')))->toMatchArray([
+            'passes' => false,
+            'message' => __('filament-qr-code::ui.repeat_full', ['count' => 2]),
+        ]);
+});
+
+it('lets a step override the repeat completion from config', function (): void {
+    config()->set('qr-code.sequence.repeat_complete', 'wait');
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(1)->onRepeatComplete(RepeatComplete::Advance));
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'P1')))->toMatchArray(['next_step' => 'box']);
+});
+
+it('ends an open-ended repeat with the step finish code without storing it', function (): void {
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat()->finishWith('DONE'));
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'order', 'WO-1');
+
+    foreach (['P1', 'P2', 'P3', 'P4'] as $code) {
+        expect(wedgeResult(wedgeScan($test, 'parts', $code)))->toMatchArray(['passes' => true, 'next_step' => 'parts']);
+    }
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'DONE')))->toMatchArray([
+        'passes' => true,
+        'finished' => true,
+        'next_step' => 'box',
+        'values' => ['order' => 'WO-1', 'parts' => ['P1', 'P2', 'P3', 'P4']],
+    ]);
+});
+
+it('uses the config finish code and rejects finishing an empty step', function (): void {
+    config()->set('qr-code.sequence.finish_code', 'END');
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat());
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'END')))->toMatchArray([
+        'passes' => false,
+        'message' => __('filament-qr-code::ui.repeat_needs_codes', ['count' => 1]),
+    ]);
+
+    wedgeScan($test, 'parts', 'P1');
+    expect(wedgeResult(wedgeScan($test, 'parts', 'END')))->toMatchArray(['passes' => true, 'next_step' => 'box']);
+});
+
+it('finishes a waiting step from the Done control and completes the sequence', function (): void {
+    config()->set('qr-code.sequence.repeat_complete', 'wait');
+    SequenceWedgeTestComponent::$steps = fn (): array => [
+        ScanStep::make('order'),
+        ScanStep::make('parts')->repeat(2),
+    ];
+    SequenceWedgeTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->autoSubmit();
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'order', 'WO-1');
+    wedgeScan($test, 'parts', 'P1');
+
+    $test->call('callSchemaComponentMethod', 'form.receipt', 'finishStep', ['step' => 'parts']);
+    expect(wedgeResult($test))->toMatchArray(['passes' => false, 'message' => __('filament-qr-code::ui.repeat_needs_codes', ['count' => 2])]);
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'P2')))->toMatchArray(['completed' => false, 'next_step' => 'parts']);
+    $test->assertSet('submissions', 0);
+
+    $test->call('callSchemaComponentMethod', 'form.receipt', 'finishStep', ['step' => 'parts']);
+    expect(wedgeResult($test))->toMatchArray(['passes' => true, 'completed' => true, 'submitted' => true]);
+    $test->assertSet('submissions', 1);
+});
+
+it('treats repeat steps as server work and checks every code on submit', function (): void {
+    expect(QrScanSequence::make()->steps([ScanStep::make('parts')->repeat(2)])->hasServerSequenceWork())->toBeTrue();
+
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(2));
+    SequenceWedgeTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence;
+
+    Livewire::test(SequenceWedgeTestComponent::class)
+        ->set('data.receipt', ['order' => 'WO-1', 'parts' => ['P1', 'bad'], 'box' => 'B1'])
+        ->call('validateForm')
+        ->assertHasErrors(['data.receipt.parts']);
 });
