@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Forms\Components;
 
 use Closure;
+use Filament\Forms\Components\Contracts\HasValidationRules;
 use Filament\Schemas\Components\Component;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
@@ -13,7 +14,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequenceSteps;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
-class QrScanSequence extends Component
+class QrScanSequence extends Component implements HasValidationRules
 {
     use HasCameraScanning;
     use HasFeedback;
@@ -52,6 +53,8 @@ class QrScanSequence extends Component
     {
         $static = app(static::class);
         $static->fields($fields);
+        // Only used without statePath(): a key() call replaces it.
+        $static->key(fn (QrScanSequence $component): ?string => $component->getAutomaticKey());
 
         return $static;
     }

@@ -6,7 +6,9 @@ namespace Mmuqiitf\FilamentQrCode\Concerns;
 
 use Closure;
 use Filament\Support\Components\Attributes\ExposedLivewireMethod;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
@@ -18,6 +20,8 @@ use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 use Mmuqiitf\FilamentQrCode\Support\SequenceScanResult;
+use Mmuqiitf\FilamentQrCode\Validation\SequenceSetRule;
+use Mmuqiitf\FilamentQrCode\Validation\SequenceStepRule;
 use Throwable;
 
 /**
@@ -37,6 +41,8 @@ trait HasSequenceSteps
 
     protected InvalidSequenceBehavior|Closure|null $invalidSequenceBehavior = null;
 
+    protected bool $hasWarnedAboutAutomaticKey = false;
+
     protected bool|Closure|null $shouldResetAfterSubmit = null;
 
     protected bool|Closure|null $isContinuousSequence = null;
@@ -52,6 +58,8 @@ trait HasSequenceSteps
     abstract public function getStatePathPrefix(): string;
 
     abstract public function getComponentStatePath(): ?string;
+
+    abstract public function hasStatePath(): bool;
 
     public function onCompleted(?Closure $callback): static
     {
@@ -172,6 +180,74 @@ trait HasSequenceSteps
             || $this->isContinuous();
     }
 
+    /**
+     * Where each step's value lives in Livewire state: the component's own
+     * state path when it has one, else the legacy statePathPrefix paths.
+     */
+    public function getStepValuePath(string $key): string
+    {
+        if (($statePath = $this->getComponentStatePath()) !== null) {
+            return "{$statePath}.{$key}";
+        }
+
+        $prefix = trim($this->getStatePathPrefix(), '.');
+
+        return $prefix !== '' ? "{$prefix}.{$key}" : $key;
+    }
+
+    /**
+     * A normal form submit re-runs every step check and the whole-set check,
+     * like ScanChecksRule does for QrScanner.
+     *
+     * @param  array<string, array<mixed>>  $rules
+     */
+    public function dehydrateValidationRules(array &$rules): void
+    {
+        foreach ($this->getScanSteps() as $step) {
+            if ($step->hasChecks()) {
+                $rules[$this->getStepValuePath($step->getKey())][] = new SequenceStepRule($this, $step);
+            }
+        }
+
+        if ($this->validateAllUsing !== null && $this->getScanSteps() !== []) {
+            $rules[$this->getStepValuePath($this->getLastStepKey())][] = new SequenceSetRule($this);
+        }
+    }
+
+    /** @param  array<string, string>  $attributes */
+    public function dehydrateValidationAttributes(array &$attributes): void
+    {
+        foreach ($this->getScanSteps() as $step) {
+            $attributes[$this->getStepValuePath($step->getKey())] = $step->getLabel();
+        }
+    }
+
+    /** @param  array<string, array<string, string>>  $messages */
+    public function dehydrateValidationMessages(array &$messages): void {}
+
+    /**
+     * Key for a sequence that needs the server but has neither statePath()
+     * nor key(): without one its checks could not run.
+     */
+    public function getAutomaticKey(): ?string
+    {
+        if ($this->hasStatePath() || ! $this->hasServerSequenceWork()) {
+            return null;
+        }
+
+        $key = 'qr-scan-sequence-'.implode('-', array_map(
+            fn (ScanStep $step): string => Str::slug($step->getKey()),
+            $this->getScanSteps(),
+        ));
+
+        if (! $this->hasWarnedAboutAutomaticKey && app()->isLocal()) {
+            $this->hasWarnedAboutAutomaticKey = true;
+            Log::warning("QrScanSequence has server checks but no statePath() or key(); using the automatic key [{$key}]. Give it a statePath() or key() so two sequences never share one.");
+        }
+
+        return $key;
+    }
+
     /** @return array<string, mixed> */
     #[ExposedLivewireMethod]
     public function handleStepScan(string $step, string $code, string $source): array
@@ -195,7 +271,7 @@ trait HasSequenceSteps
         $result = $this->checkStep($steps[$index], $code, $input, $values);
         $skipped = [];
 
-        if (! $result->passes && $steps[$index]->isOptional() && isset($steps[$index + 1])) {
+        if (! $result->passes && $input !== ScanInput::Manual && $steps[$index]->isOptional() && isset($steps[$index + 1])) {
             // An optional step whose check fails gives way when the code fits the next step.
             $nextResult = $this->checkStep($steps[$index + 1], $code, $input, $values);
 
@@ -231,7 +307,7 @@ trait HasSequenceSteps
     }
 
     /** @param  array<string, mixed>  $values */
-    protected function checkStep(ScanStep $step, string $code, ScanInput $source, array $values): ScanResult
+    public function checkStep(ScanStep $step, string $code, ?ScanInput $source, array $values): ScanResult
     {
         return $step->checkPipeline()->run(
             $code,
@@ -313,7 +389,7 @@ trait HasSequenceSteps
      * @param  array<string, mixed>  $values
      * @return array{0: string, 1: string}|null
      */
-    protected function findInvalidStep(array $values): ?array
+    public function findInvalidStep(array $values): ?array
     {
         $check = $this->validateAllUsing;
 
@@ -441,7 +517,7 @@ trait HasSequenceSteps
     }
 
     /** @param  array<string, mixed>  $values */
-    protected function allRequiredFilled(array $values): bool
+    public function allRequiredFilled(array $values): bool
     {
         foreach ($this->getScanSteps() as $step) {
             if (! $step->isOptional() && blank($values[$step->getKey()] ?? null)) {

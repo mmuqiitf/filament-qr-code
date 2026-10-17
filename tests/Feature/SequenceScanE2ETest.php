@@ -9,10 +9,12 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
+use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
 use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
 use Mmuqiitf\FilamentQrCode\Events\ScanSequenceCompleted;
@@ -36,6 +38,10 @@ class SequenceScanTestComponent extends Component implements HasForms
 
     public static bool $failSubmit = false;
 
+    public static bool $keyless = false;
+
+    public int $saves = 0;
+
     public function mount(): void
     {
         $this->form->fill();
@@ -43,8 +49,13 @@ class SequenceScanTestComponent extends Component implements HasForms
 
     public function form(Schema $form): Schema
     {
-        $sequence = QrScanSequence::make()
-            ->statePath('receipt')
+        $sequence = QrScanSequence::make();
+
+        if (! self::$keyless) {
+            $sequence->statePath('receipt');
+        }
+
+        $sequence
             ->steps([
                 ScanStep::make('po')->validateUsing(['regex:/^PO-\d+$/']),
                 ScanStep::make('sku')->lookup(ScanCheckProduct::class, 'sku'),
@@ -72,6 +83,12 @@ class SequenceScanTestComponent extends Component implements HasForms
         $this->submissions++;
     }
 
+    public function save(): void
+    {
+        $this->form->getState();
+        $this->saves++;
+    }
+
     public function render(): string
     {
         return '<div>{{ $this->form }}</div>';
@@ -87,6 +104,7 @@ beforeEach(function (): void {
     ScanCheckProduct::createTableWithProducts();
     SequenceScanTestComponent::$configure = null;
     SequenceScanTestComponent::$failSubmit = false;
+    SequenceScanTestComponent::$keyless = false;
 });
 
 it('invalid step 2 blocks advance; complete valid sequence calls submit once', function (): void {
@@ -269,7 +287,7 @@ it('reads autoSubmit and resetAfterSubmit from config', function (): void {
         ->assertReturned(fn (array $result): bool => $result['submitted'] && $result['reset']);
 });
 
-it('asks the browser to use the server path only when there is server work and a key', function (): void {
+it('asks the browser to use the server path only when there is server work', function (): void {
     $plain = QrScanSequence::make()->statePath('receipt')->fields(['po', 'sku']);
     $checked = QrScanSequence::make()->statePath('receipt')->steps([ScanStep::make('po')->validateUsing(['required'])]);
     $keyless = QrScanSequence::make()->steps([ScanStep::make('po')->validateUsing(['required'])]);
@@ -283,6 +301,81 @@ it('asks the browser to use the server path only when there is server work and a
 
     expect($plain->getComponentScanPayload()['serverCheck'])->toBeFalse()
         ->and($checked->getComponentScanPayload())->toMatchArray(['serverCheck' => true, 'componentKey' => 'form.receipt'])
-        ->and($keyless->getComponentScanPayload()['serverCheck'])->toBeFalse()
-        ->and($keyless->getComponentScanPayload())->not->toHaveKey('componentKey');
+        ->and($keyless->getComponentScanPayload())->toMatchArray(['serverCheck' => true, 'componentKey' => 'form.qr-scan-sequence-po']);
+});
+
+it('re-runs the step checks on a normal submit', function (): void {
+    Livewire::test(SequenceScanTestComponent::class)
+        ->set('data.receipt', ['po' => 'PO-1', 'sku' => 'SKU-404', 'serial' => 'SN1'])
+        ->call('save')
+        ->assertHasErrors(['data.receipt.sku'])
+        ->assertSet('saves', 0)
+        ->set('data.receipt', ['po' => 'PO-1', 'sku' => 'SKU-1', 'serial' => 'SN1'])
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertSet('saves', 1);
+});
+
+it('re-runs the whole-set check on a normal submit', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence
+        ->validateAllUsing(fn (array $values): ?string => $values['serial'] === 'SN1' ? 'Mismatch.' : null);
+
+    Livewire::test(SequenceScanTestComponent::class)
+        ->set('data.receipt', ['po' => 'PO-1', 'sku' => 'SKU-1', 'serial' => 'SN1'])
+        ->call('save')
+        ->assertHasErrors(['data.receipt.serial' => 'Mismatch.'])
+        ->assertSet('saves', 0);
+});
+
+it('leaves an empty optional step and missing steps to the form', function (): void {
+    Livewire::test(SequenceScanTestComponent::class)
+        ->set('data.receipt', ['po' => 'PO-1'])
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertSet('saves', 1);
+});
+
+it('checks a typed correction like a scan', function (): void {
+    Event::fake([ScanAccepted::class, ScanRejected::class]);
+    $test = Livewire::test(SequenceScanTestComponent::class);
+
+    sequenceScan($test, 'po', 'PO-1');
+    $test->call('callSchemaComponentMethod', 'form.receipt', 'handleStepScan', ['step' => 'po', 'code' => 'oops', 'source' => 'manual'])
+        ->assertReturned(fn (array $result): bool => ! $result['passes'] && $result['source'] === 'manual')
+        ->assertSet('data.receipt.po', 'PO-1');
+
+    Event::assertDispatched(ScanRejected::class, fn (ScanRejected $event): bool => $event->result->source === ScanInput::Manual);
+});
+
+it('does not skip an optional step on a typed correction', function (): void {
+    $test = Livewire::test(SequenceScanTestComponent::class);
+
+    $test->call('callSchemaComponentMethod', 'form.receipt', 'handleStepScan', ['step' => 'lot', 'code' => 'SN5', 'source' => 'manual'])
+        ->assertReturned(fn (array $result): bool => ! $result['passes'] && $result['step'] === 'lot' && $result['skipped'] === []);
+});
+
+it('gives a checked sequence without a key an automatic key and warns in local dev', function (): void {
+    SequenceScanTestComponent::$keyless = true;
+    app()->detectEnvironment(fn (): string => 'local');
+    Log::spy();
+
+    $test = Livewire::test(SequenceScanTestComponent::class);
+    $sequence = collect($test->instance()->form->getFlatComponents())->first(fn ($component): bool => $component instanceof QrScanSequence);
+    $key = $sequence->getKey();
+
+    expect($key)->toBe('form.qr-scan-sequence-po-sku-lot-serial')
+        ->and($sequence->getComponentScanPayload())->toMatchArray(['serverCheck' => true, 'componentKey' => $key]);
+
+    $test->call('callSchemaComponentMethod', $key, 'handleStepScan', ['step' => 'po', 'code' => 'PO-1', 'source' => 'hardware'])
+        ->assertReturned(fn (array $result): bool => $result['passes'])
+        ->assertSet('data.po', 'PO-1');
+
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message): bool => str_contains($message, 'QrScanSequence'));
+});
+
+it('keeps plain keyless sequences without a key', function (): void {
+    $sequence = QrScanSequence::make()->fields(['po', 'sku']);
+    $sequence->container(Livewire::test(SequenceScanTestComponent::class)->instance()->form);
+
+    expect($sequence->getKey())->toBeNull();
 });

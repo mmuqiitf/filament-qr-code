@@ -16,5 +16,5 @@ it('maps client source strings to scan inputs', function (string $value, ScanInp
 
 it('exposes the wire values used by the browser', function (): void {
     expect(array_map(fn (ScanInput $input): string => $input->value, ScanInput::cases()))
-        ->toBe(['camera', 'hardware', 'upload']);
+        ->toBe(['camera', 'hardware', 'upload', 'manual']);
 });
