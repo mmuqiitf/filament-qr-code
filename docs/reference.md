@@ -43,8 +43,23 @@ QrScanner::make('sku')
 | `scan_timeout_ms`     | `150`              | flush window for terminator-less guns (0 disables) |
 | `prevent_form_submit` | `true`             | swallow the terminator key during bursts           |
 | `default_terminators` | `['Enter', 'Tab']` | gun suffix keys ending a scan                      |
+| `default_scope`       | `'focus'`          | where a `QrScanner` catches wedge scans: `'focus'` (only while focused) or `'page'` (also when no scan field has focus); override with `->hardwareInput(scope:)` |
 
 Auto-repeat keystrokes (a held-down key) never count toward a burst.
+
+#### Hardware routing
+
+Every wedge consumer (`QrScanner`, `QrHardwareScannerListener`, `QrCollector`, `QrScanSequence`) registers with one page-wide input router, so each burst is handled exactly once. The router picks the owner in this order:
+
+1. the `QrScanner` whose camera modal is open;
+2. the focused scan field (a focused `QrScanner`, or a focused field registered with a listener);
+3. the first listening target on the page, in page order: page-scope `QrScanner` fields (`->hardwareInput(scope: HardwareInputScope::Page)`), collectors, sequences and each empty field registered with a listener (ranked by the field's own position);
+4. the listener's `fallback_to_any_input`;
+5. otherwise `qr-scan-unrouted`.
+
+A field that can't take the burst (busy checking a scan, too short for its `min_barcode_length`) is skipped and the next target gets it. When the burst lands somewhere other than the focused input, the characters the gun typed into that input are removed again, unless the input (or an ancestor) has the `data-qr-ignore` attribute.
+
+`suppressWhenGlobalListener()` and the JS `isGlobalHardwareListenerActive()` are deprecated: the router makes them unnecessary.
 
 These values are the defaults behind every scan surface (`QrScanner`, `QrScanSequence`, `QrCollector`, `QrHardwareScannerListener`, `QrCollectAction`): each component ships them to the browser as one payload (`getScanPayload()`), and any explicit setter (`->fps()`, `->sound()`, `->hardwareScanner()`, …) wins over config.
 
@@ -85,16 +100,19 @@ QrHardwareScannerListener::make(['sku'])
 
 | Event                     | Detail                        | Fired when                         |
 | ------------------------- | ----------------------------- | ---------------------------------- |
-| `qr-scanned`              | `{ value, field, nextField, source, recordKey? }` | any accepted `QrScanner` scan |
-| `qr-scan-accepted`        | `{ value, field, source, recordKey }` | a server-checked scan passed |
-| `qr-scan-rejected`        | `{ message, value?, field?, source? }` | a server-checked scan failed, or a `rejectWhen()` predicate matched |
-| `qr-scan-duplicate`       | `{ value, field, source }`    | same code again within the field's cooldown |
+| `qr-scanned`              | `{ value, field, nextField, source, recordKey?, mode }` | any accepted `QrScanner` scan |
+| `qr-scan-accepted`        | `{ value, field, source, recordKey, mode }` | a server-checked scan passed |
+| `qr-scan-rejected`        | `{ message, value?, field?, source?, mode? }` | a server-checked scan failed, or a `rejectWhen()` predicate matched |
+| `qr-scan-duplicate`       | `{ value, field, source, mode }` | same code again within the field's cooldown |
 | `qr-hardware-scanned`     | `{ value, field }`            | page-global hardware burst         |
 | `qr-scan-unrouted`        | `{ value }`                   | page-global burst found no target field |
+| `qr-scan-routed`          | `{ value, target, kind, reason, burstId }` | the input router delivered a burst; `reason` is `modal`, `focus`, `first-listening` or `fallback` |
 | `qr-sequence-step`        | `{ field, value, index }`     | each container step                |
 | `qr-sequence-completed`   | `{ results }`                 | last container step                |
 | `qr-sequence-edited`      | `{ field, value }`            | operator edits a step              |
 | `qr-collector-item-added` | `{ code }`                    | each batch-collector scan          |
+
+`mode` is `'single'` for now; continuous mode arrives in a later release.
 
 ---
 

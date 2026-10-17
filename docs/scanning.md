@@ -40,7 +40,7 @@ Option reference:
 - `scanFormat()` / `onScan()` — programmatic-only hooks; they do **not** run on live camera or hardware scans. Normalize live values with `normalizeUsing()` — see [Normalize live scans](reference.md#normalize-live-scans).
 - `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning. Buffers are sanitized (STX/ETX/CR/LF stripped, mirroring `HasHardwareScanner::sanitizeScannedValue()`), IME compositions never count, and terminator-less guns flush after `scanTimeoutMs` (default 150).
 - `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify.
-- Field burst handlers stand down while a page-global `QrHardwareScannerListener` is mounted (`->suppressWhenGlobalListener(false)` forces the field listener to stay active).
+- `hardwareInput(scope: HardwareInputScope::Page)` — also catch wedge scans when no scan field has focus (default `Focus`: only while focused; config `hardware_scanner.default_scope`). A focused scan field always wins.
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
 - `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a _maximum_: the actual decode box scales to the viewfinder and the green reticle follows it.
 - `preferRearCamera()` — rear heuristic, but the operator's last camera choice (stored in `localStorage`) always wins.
@@ -49,7 +49,7 @@ Option reference:
 
 The modal lists every detected camera (switching restarts the feed and is remembered) and closes automatically after a successful camera scan. Upload scans reuse the same decoder instance.
 
-> Hardware scanner note: `QrScanner`'s burst listener is field-scoped on purpose. Mount `QrHardwareScannerListener` on the page for global capture, otherwise both listeners will double-handle the same burst.
+> Hardware scanner note: all hardware consumers share one page-wide input router, so a burst is never handled twice, even with a `QrScanner`, a `QrHardwareScannerListener` and a `QrCollector` on the same page. See [Hardware routing](reference.md#hardware-routing).
 
 ### 2. Hands-Free Station Mode (`QrHardwareScannerListener`)
 

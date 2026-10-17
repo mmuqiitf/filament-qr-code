@@ -7,13 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- One page-wide hardware input router: every keyboard-wedge burst gets exactly one owner
+  (open camera modal, then the focused scan field, then the first listening field on the page).
+  A field that can't take a burst (busy, too short) passes it on to the next one.
+- `QrScanner::hardwareInput(scope: HardwareInputScope::Focus|Page)` and config
+  `hardware_scanner.default_scope` (`'focus'`, today's behaviour).
+- `qr-scan-routed` browser event; `data-qr-ignore` keeps wedge text in an input.
+- `mode` (`'single'`) in `qr-scanned`, `qr-scan-accepted`, `qr-scan-rejected` and `qr-scan-duplicate`.
+
 ### Changed
 - The signed QR image route is now named `filamentQrCode.image` (camelCase).
+
+### Fixed
+- A burst is no longer handled twice when several hardware consumers share a page (for example
+  two collectors, or a `QrScanner` with `suppressWhenGlobalListener(false)` next to a listener).
 
 ### Deprecated
 - The `filament-qr-code.image` route name still resolves to the same URL but is
   deprecated and will be removed in 1.0. Replace `route('filament-qr-code.image')` /
   `URL::signedRoute('filament-qr-code.image', ...)` with `filamentQrCode.image`.
+- `suppressWhenGlobalListener()`, `isSuppressedWhenGlobalListenerActive()` and the JS
+  `isGlobalHardwareListenerActive()` no longer affect routing; removal planned for 1.0.
 
 ## [0.4.0] - 2026-10-17
 
