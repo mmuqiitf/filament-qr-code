@@ -140,4 +140,41 @@ describe('wedge-driven sequences', () => {
         expect(wire.methodCalls).toEqual([]);
         expect(sequence.results).toEqual({ po: 'PO-1', sku: 'SKU-1' });
     });
+
+    it('shows repeat progress and finishes a step with the Done control', async () => {
+        const events = [];
+        window.addEventListener('qr-sequence-completed', (event) => events.push(event.detail));
+        const { wire, sequence } = mountSequence((key, method, args) => (method === 'finishStep'
+            ? { passes: true, code: '', source: 'manual', step: 'sku', skipped: [], next_step: null, completed: true, submitted: true, reset: true, finished: true, values: { po: 'PO-1' } }
+            : { passes: true, code: args.code, source: 'hardware', step: 'sku', skipped: [], next_step: 'sku', completed: false, reset: false, values: { po: 'PO-1', sku: ['A1', args.code] } }), {
+            steps: [
+                { key: 'po', optional: false, sticky: true, repeat: null, repeating: false },
+                { key: 'sku', optional: false, sticky: false, repeat: 3, repeating: true },
+                { key: 'lot', optional: false, sticky: false, repeat: null, repeating: false },
+            ],
+        });
+        sequence.results = { po: 'PO-1', sku: ['A1'] };
+        sequence.setCurrentField(1);
+
+        expect(sequence.stepProgress('sku')).toBe('1 / 3');
+        await sequence.processScan('A2', 'hardware');
+        expect(sequence.stepProgress('sku')).toBe('2 / 3');
+        expect(sequence.isRepeating('sku')).toBe(true);
+        expect(sequence.stepProgress('po')).toBe(null);
+
+        await sequence.finishStep('sku');
+
+        expect(wire.methodCalls.at(-1)).toEqual(['form.receipt', 'finishStep', { step: 'sku' }]);
+        expect(events).toEqual([{ results: { po: 'PO-1', sku: ['A1', 'A2'] }, submitted: true }]);
+        expect(sequence.results).toEqual({ po: 'PO-1' });
+    });
+
+    it('shows open-ended progress as a plain count', () => {
+        const { sequence } = mountSequence(() => null, {
+            steps: [{ key: 'po', optional: false, sticky: false, repeat: null, repeating: true }],
+        });
+        sequence.results = { po: ['A', 'B'] };
+
+        expect(sequence.stepProgress('po')).toBe('2');
+    });
 });

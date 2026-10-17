@@ -29,6 +29,22 @@
     "serverCheck": false,
     "sound": true,
     "statePrefix": "data",
+    "steps": [
+        {
+            "key": "step",
+            "optional": false,
+            "sticky": false,
+            "repeating": false,
+            "repeat": null
+        },
+        {
+            "key": "employee",
+            "optional": false,
+            "sticky": false,
+            "repeating": false,
+            "repeat": null
+        }
+    ],
     "suppressWhenGlobalListenerActive": true,
     "terminators": [
         "Enter",

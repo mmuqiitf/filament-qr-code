@@ -183,7 +183,7 @@ it('rejects a duplicate inside a repeat step unless allowed', function (): void 
 });
 
 it('reads the repeat count from a closure over the other steps', function (): void {
-    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(fn (array $values): int => $values['order'] === 'WO-2' ? 2 : 5));
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(fn (array $values): int => ($values['order'] ?? null) === 'WO-2' ? 2 : 5));
     $test = Livewire::test(SequenceWedgeTestComponent::class);
     wedgeScan($test, 'order', 'WO-2');
     wedgeScan($test, 'parts', 'P1');
@@ -275,4 +275,21 @@ it('treats repeat steps as server work and checks every code on submit', functio
         ->set('data.receipt', ['order' => 'WO-1', 'parts' => ['P1', 'bad'], 'box' => 'B1'])
         ->call('validateForm')
         ->assertHasErrors(['data.receipt.parts']);
+});
+
+it('describes sticky and repeat steps in the payload', function (): void {
+    $sequence = QrScanSequence::make()->statePath('receipt')->steps([
+        ScanStep::make('po')->sticky(),
+        ScanStep::make('parts')->repeat(3),
+        ScanStep::make('extras')->repeat(),
+        ScanStep::make('note')->optional(),
+    ]);
+    $sequence->container(Livewire::test(SequenceWedgeTestComponent::class)->instance()->form);
+
+    expect($sequence->getComponentScanPayload()['steps'])->toBe([
+        ['key' => 'po', 'optional' => false, 'sticky' => true, 'repeating' => false, 'repeat' => null],
+        ['key' => 'parts', 'optional' => false, 'sticky' => false, 'repeating' => true, 'repeat' => 3],
+        ['key' => 'extras', 'optional' => false, 'sticky' => false, 'repeating' => true, 'repeat' => null],
+        ['key' => 'note', 'optional' => true, 'sticky' => false, 'repeating' => false, 'repeat' => null],
+    ]);
 });

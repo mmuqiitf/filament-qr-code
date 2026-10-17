@@ -354,7 +354,22 @@ class QrScanSequence extends Component implements HasValidationRules
             // Server work needs a key to reach handleStepScan: statePath() or key().
             'serverCheck' => filled($key) && $this->hasServerSequenceWork(),
             'scanFailedMessage' => __('filament-qr-code::ui.scan_failed'),
+            'steps' => $this->getStepsPayload(),
             ...(filled($key) ? ['componentKey' => $key] : []),
         ];
+    }
+
+    /** @return list<array{key: string, optional: bool, sticky: bool, repeating: bool, repeat: ?int}> */
+    public function getStepsPayload(): array
+    {
+        $values = $this->getSequenceState();
+
+        return array_values(array_map(fn (ScanStep $step): array => [
+            'key' => $step->getKey(),
+            'optional' => $step->isOptional(),
+            'sticky' => $step->isSticky(),
+            'repeating' => $step->isRepeating(),
+            'repeat' => $step->isRepeating() ? $this->getRepeatLimit($step, $values) : null,
+        ], $this->getScanSteps()));
     }
 }
