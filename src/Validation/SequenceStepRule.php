@@ -22,16 +22,22 @@ final readonly class SequenceStepRule implements ValidationRule
             return;
         }
 
-        if (! is_scalar($value)) {
-            $fail(__('filament-qr-code::ui.scan_rejected'));
+        $codes = is_array($value) && $this->step->isRepeating() ? $value : [$value];
 
-            return;
-        }
+        foreach ($codes as $code) {
+            if (! is_scalar($code)) {
+                $fail(__('filament-qr-code::ui.scan_rejected'));
 
-        $result = $this->component->checkStep($this->step, trim((string) $value), null, $this->component->getSequenceState());
+                return;
+            }
 
-        if (! $result->passes) {
-            $fail((string) $result->message);
+            $result = $this->component->checkStep($this->step, trim((string) $code), null, $this->component->getSequenceState());
+
+            if (! $result->passes) {
+                $fail((string) $result->message);
+
+                return;
+            }
         }
     }
 }

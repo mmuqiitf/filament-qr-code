@@ -108,6 +108,10 @@ return [
     | once the sequence completes (autoSubmit()). reset_after_submit: clear
     | the steps after a successful submit (resetAfterSubmit()). continuous:
     | start over after every completed sequence (continuous()).
+    | repeat_complete: what a full repeat(n) step does, 'advance' to the
+    | next step or 'wait' for a finish scan or the Done control
+    | (onRepeatComplete()). finish_code: the scan that finishes a waiting or
+    | open-ended repeat step (finishWith() overrides it per step).
     |
     */
     'sequence' => [
@@ -116,6 +120,8 @@ return [
         'submit_method' => 'submit',
         'reset_after_submit' => false,
         'continuous' => false,
+        'repeat_complete' => 'advance',
+        'finish_code' => null,
     ],
 
     /*

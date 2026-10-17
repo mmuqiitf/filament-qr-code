@@ -37,6 +37,7 @@ export default function qrScanSequenceComponent({
     componentStatePath = null,
     editable = true,
     serverCheck = false,
+    steps = [],
     componentKey = null,
     scanFailedMessage = 'Scan failed.',
     cameraStorageKey = null,
@@ -58,6 +59,7 @@ export default function qrScanSequenceComponent({
         html5Qrcode: null,
         elementId: '',
         unregisterTarget: null,
+        queuedScan: null,
         isChecking: false,
         stepError: null,
 
@@ -72,7 +74,11 @@ export default function qrScanSequenceComponent({
                     kind: 'sequence',
                     scope: 'page',
                     detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs },
+                    // While a server check runs, refuse bursts so the router can hold one for us.
+                    accept: () => !this.isChecking,
+                    hold: (scannedValue) => this.holdScan(scannedValue),
                     deliver: (scannedValue) => {
+                        this.focusStepFromInput();
                         this.processScan(scannedValue, 'hardware');
                     },
                 });
@@ -180,7 +186,8 @@ export default function qrScanSequenceComponent({
             if (!trimmed) return;
 
             if (serverCheck && componentKey && this.$wire) {
-                return this.processServerScan(currentField, trimmed, source);
+                return this.processServerScan(currentField, trimmed, source)
+                    .finally(() => this.replayQueuedScan());
             }
 
             this.results[currentField.key] = trimmed;
@@ -202,6 +209,7 @@ export default function qrScanSequenceComponent({
                     field: currentField.key,
                     value: trimmed,
                     index: this.currentFieldIndex,
+                    source,
                 },
             }));
 
@@ -215,6 +223,40 @@ export default function qrScanSequenceComponent({
                     detail: { results: { ...this.results } },
                 }));
             }
+        },
+
+        // A focused step input owns the burst: scan into that step.
+        focusStepFromInput() {
+            const stepKey = document.activeElement?.closest?.('[data-qr-step]')?.getAttribute('data-qr-step');
+            const index = stepKey ? this.indexOfStep(stepKey) : -1;
+
+            if (index >= 0) this.currentFieldIndex = index;
+        },
+
+        // One burst that arrives during a server check waits; any more are dropped.
+        holdScan(scannedValue) {
+            const code = sanitizeScannedValue(scannedValue);
+
+            if (!code) return false;
+
+            if (this.queuedScan) {
+                window.dispatchEvent(new CustomEvent('qr-scan-dropped', {
+                    detail: { value: code, field: this.getCurrentField()?.key ?? null, source: 'hardware' },
+                }));
+
+                return true;
+            }
+
+            this.queuedScan = code;
+
+            return true;
+        },
+
+        replayQueuedScan() {
+            const queued = this.queuedScan;
+            this.queuedScan = null;
+
+            if (queued) return this.processScan(queued, 'hardware');
         },
 
         emitFeedback() {
@@ -238,18 +280,46 @@ export default function qrScanSequenceComponent({
          * state and answers with the step to show next. Scans that arrive
          * while a check is in flight are dropped.
          */
-        async processServerScan(currentField, code, source, { keepStep = false } = {}) {
+        stepOptions(key) {
+            return steps.find((step) => step.key === key) ?? null;
+        },
+
+        isRepeating(key) {
+            return Boolean(this.stepOptions(key)?.repeating);
+        },
+
+        // "k / n" for a counted repeat step, "k" when open-ended, null otherwise.
+        stepProgress(key) {
+            const options = this.stepOptions(key);
+
+            if (!options?.repeating) return null;
+
+            const count = Array.isArray(this.results[key]) ? this.results[key].length : 0;
+
+            return options.repeat ? `${count} / ${options.repeat}` : `${count}`;
+        },
+
+        async finishStep(key) {
+            const field = this.fields[this.indexOfStep(key)];
+
+            if (!field || !serverCheck || !componentKey || !this.$wire) return;
+
+            return this.processServerScan(field, '', 'manual', { method: 'finishStep' })
+                .finally(() => this.replayQueuedScan());
+        },
+
+        async processServerScan(currentField, code, source, { keepStep = false, method = 'handleStepScan' } = {}) {
             if (this.isChecking) return;
 
             this.isChecking = true;
             let result;
 
             try {
-                result = await this.$wire.callSchemaComponentMethod(componentKey, 'handleStepScan', {
-                    step: currentField.key,
-                    code,
-                    source,
-                });
+                result = await this.$wire.callSchemaComponentMethod(
+                    componentKey,
+                    method,
+                    method === 'finishStep' ? { step: currentField.key } : { step: currentField.key, code, source },
+                );
             } catch (error) {
                 console.error('QR sequence check failed:', error);
                 result = null;
@@ -263,12 +333,19 @@ export default function qrScanSequenceComponent({
 
             const completedValues = { ...this.results };
             (result.skipped || []).forEach((key) => delete completedValues[key]);
-            if (result.passes && result.step) completedValues[result.step] = result.code ?? code;
+            if (result.passes && result.step && !result.finished) {
+                const value = result.code ?? code;
+                const previous = completedValues[result.step];
+
+                completedValues[result.step] = this.isRepeating(result.step)
+                    ? [...(Array.isArray(previous) ? previous : []), value]
+                    : value;
+            }
 
             this.results = { ...(result.values || {}) };
 
             // A rejected typed correction stays visible so the operator can fix it.
-            if (!result.passes && keepStep) this.results[currentField.key] = code;
+            if (!result.passes && keepStep && code !== '') this.results[currentField.key] = code;
 
             const nextIndex = this.indexOfStep(result.next_step);
             if (nextIndex >= 0 && !keepStep) this.currentFieldIndex = nextIndex;
@@ -292,12 +369,13 @@ export default function qrScanSequenceComponent({
             this.stepError = null;
             if (source !== 'manual') this.emitFeedback();
 
-            window.dispatchEvent(new CustomEvent('qr-sequence-step', {
+            if (!result.finished) window.dispatchEvent(new CustomEvent('qr-sequence-step', {
                 detail: {
                     field: result.step,
                     value: result.code ?? code,
                     index: this.indexOfStep(result.step),
                     skipped: result.skipped || [],
+                    source,
                 },
             }));
 

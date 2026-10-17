@@ -123,13 +123,27 @@
                             </svg>
                         </div>
                         <span class="font-medium" x-text="f.label"></span>
+                        <span
+                            x-show="stepProgress(f.key) !== null"
+                            x-text="stepProgress(f.key)"
+                            class="rounded-full bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                        ></span>
+                        <button
+                            x-show="isRepeating(f.key) && currentFieldIndex === idx && stepProgress(f.key) !== null"
+                            type="button"
+                            @click.stop="finishStep(f.key)"
+                            class="rounded-md bg-primary-600 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-primary-700"
+                        >
+                            {{ __('filament-qr-code::ui.done') }}
+                        </button>
                     </div>
 
                     <div class="text-right">
                         {{-- Edited mode: every step is an input — scans fill it, operators can type or correct freely --}}
-                        <template x-if="editable">
+                        <template x-if="editable && !isRepeating(f.key)">
                             <input
                                 type="text"
+                                :data-qr-step="f.key"
                                 :value="results[f.key] || ''"
                                 @input="results[f.key] = $event.target.value"
                                 @change="syncEditedValue(f.key)"
@@ -139,9 +153,9 @@
                         </template>
 
                         {{-- Unedited (locked) mode: captured values are read-only --}}
-                        <template x-if="!editable">
+                        <template x-if="!editable || isRepeating(f.key)">
                             <div class="flex items-center justify-end gap-1.5">
-                                <span class="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700" x-text="results[f.key] || ''"></span>
+                                <span class="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700" x-text="Array.isArray(results[f.key]) ? results[f.key].join(', ') : (results[f.key] || '')"></span>
                                 <span x-show="!results[f.key] && currentFieldIndex === idx" class="text-xs font-semibold text-primary-600 dark:text-primary-400 animate-pulse">
                                     {{ __('filament-qr-code::ui.ready_to_scan') }}
                                 </span>

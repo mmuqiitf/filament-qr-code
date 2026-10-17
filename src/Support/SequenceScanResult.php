@@ -20,10 +20,11 @@ final readonly class SequenceScanResult
         public ?string $invalidStep = null,
         public ?bool $submitted = null,
         public bool $reset = false,
+        public bool $finished = false,
     ) {}
 
     /**
-     * @return array{passes: bool, code: string, source: ?string, message: ?string, record_key: mixed, step: ?string, skipped: list<string>, next_step: ?string, completed: bool, invalid_step: ?string, submitted: ?bool, reset: bool, values: array<string, mixed>}
+     * @return array{passes: bool, code: string, source: ?string, message: ?string, record_key: mixed, step: ?string, skipped: list<string>, next_step: ?string, completed: bool, invalid_step: ?string, submitted: ?bool, reset: bool, finished: bool, values: array<string, mixed>}
      */
     public function toClient(): array
     {
@@ -36,6 +37,7 @@ final readonly class SequenceScanResult
             'invalid_step' => $this->invalidStep,
             'submitted' => $this->submitted,
             'reset' => $this->reset,
+            'finished' => $this->finished,
             'values' => $this->values,
         ];
     }
