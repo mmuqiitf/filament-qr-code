@@ -25,6 +25,21 @@ function byDomOrder(targets) {
     return [...targets].sort((first, second) => compareDomOrder(first.element, second.element));
 }
 
+function mostPermissive(detections) {
+    if (detections.length === 0) {
+        return { ...DEFAULT_DETECTION };
+    }
+
+    return {
+        burstThresholdMs: Math.max(...detections.map((settings) => settings.burstThresholdMs)),
+        minFastKeys: Math.min(...detections.map((settings) => settings.minFastKeys)),
+        minBarcodeLength: Math.min(...detections.map((settings) => settings.minBarcodeLength)),
+        terminators: [...new Set(detections.flatMap((settings) => settings.terminators))],
+        scanTimeoutMs: Math.max(...detections.map((settings) => settings.scanTimeoutMs)),
+        preventSubmit: detections.some((settings) => settings.preventSubmit),
+    };
+}
+
 /**
  * Page-wide keyboard-wedge router: one keydown listener, one burst detector,
  * and exactly one owner per burst (spec P1b section 4).
@@ -32,6 +47,7 @@ function byDomOrder(targets) {
 export function createInputRouter({ win = window, doc = document } = {}) {
     const targets = new Map();
     let detector = null;
+    let detectorSettingsKey = null;
     let listening = false;
     let burstCount = 0;
     let burstOrigin = null;
@@ -76,7 +92,7 @@ export function createInputRouter({ win = window, doc = document } = {}) {
 
     const rememberOrigin = (event) => {
         const now = Date.now();
-        const startsSequence = now - lastKeyAt > detectionFor(focusedTarget() ?? {}).burstThresholdMs;
+        const startsSequence = now - lastKeyAt > currentSettings().burstThresholdMs;
         lastKeyAt = now;
 
         if (!startsSequence) {
@@ -148,11 +164,30 @@ export function createInputRouter({ win = window, doc = document } = {}) {
             return;
         }
 
+        burstOrigin = null;
         win.dispatchEvent(new CustomEvent('qr-scan-unrouted', { detail: { value: code } }));
     };
 
-    const buildDetector = () => {
-        const settings = detectionFor(focusedTarget() ?? {});
+    const currentSettings = () => {
+        const focused = focusedTarget();
+
+        return focused ? detectionFor(focused) : mostPermissive([...targets.values()].map(detectionFor));
+    };
+
+    const ensureDetector = () => {
+        if (detector && detector.getBuffer() !== '') {
+            return;
+        }
+
+        const settings = currentSettings();
+        const settingsKey = JSON.stringify(settings);
+
+        if (detector && settingsKey === detectorSettingsKey) {
+            return;
+        }
+
+        detector?.reset();
+        detectorSettingsKey = settingsKey;
 
         detector = createHardwareScannerHandler({
             burstThresholdMs: settings.burstThresholdMs,
@@ -167,10 +202,7 @@ export function createInputRouter({ win = window, doc = document } = {}) {
     };
 
     const handleKeyDown = (event) => {
-        if (!detector) {
-            buildDetector();
-        }
-
+        ensureDetector();
         rememberOrigin(event);
         detector.handleKeyDown(event);
     };
@@ -193,6 +225,7 @@ export function createInputRouter({ win = window, doc = document } = {}) {
         listening = false;
         detector?.reset();
         detector = null;
+        detectorSettingsKey = null;
     };
 
     return {
@@ -224,4 +257,18 @@ export function createInputRouter({ win = window, doc = document } = {}) {
             stopListening();
         },
     };
+}
+
+const ROUTER_KEY = '__filamentQrCodeInputRouter';
+
+/**
+ * The shared router for this page. Stored on window so two bundles on one
+ * page still share a single owner per burst.
+ */
+export function inputRouter() {
+    if (!window[ROUTER_KEY]) {
+        window[ROUTER_KEY] = createInputRouter();
+    }
+
+    return window[ROUTER_KEY];
 }

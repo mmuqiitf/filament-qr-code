@@ -96,7 +96,9 @@
   - "adds one window keydown listener for the first target and removes it after the last"
   - "register is idempotent by id"
   - "inputRouter() returns the same instance for every call"
-  - "uses the focused target's detection settings" (focused target `minBarcodeLength: 8` rejects a 4-char burst that a permissive page target would accept)
+  - "uses the focused target's detection settings" (focused `burstThresholdMs: 100`, 70 ms gaps → delivered)
+  - "uses the most permissive settings across targets when nothing is focused"
+  - "re-checks the chosen target's minimum length"
   - "prevents the terminator's default action when a burst completes"
   - "never routes slow human typing"
 - [ ] **Step 2–4:** run (FAIL), implement, run (PASS).

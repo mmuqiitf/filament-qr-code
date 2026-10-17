@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createInputRouter } from './input-router.js';
+import { createInputRouter, inputRouter } from './input-router.js';
 
 const detection = {
     burstThresholdMs: 50,
@@ -263,5 +263,108 @@ describe('input router: modal, events and stray text', () => {
         typeBurst('PRD-1001');
 
         expect(input.value).toBe('PRD-1001');
+    });
+});
+
+describe('input router: lifecycle and settings', () => {
+    it('adds one window keydown listener for the first target and removes it after the last', () => {
+        document.body.innerHTML = '<div id="a"></div><div id="b"></div>';
+        const add = vi.spyOn(window, 'addEventListener');
+        const remove = vi.spyOn(window, 'removeEventListener');
+        const keydownCalls = (spy) => spy.mock.calls.filter(([type]) => type === 'keydown');
+
+        const unregisterFirst = router.register(makeTarget({ element: document.getElementById('a') }).target);
+        const unregisterSecond = router.register(makeTarget({ element: document.getElementById('b') }).target);
+        unregisterFirst();
+
+        expect(keydownCalls(add)).toHaveLength(1);
+        expect(keydownCalls(remove)).toHaveLength(0);
+        expect(router.isActive()).toBe(true);
+
+        unregisterSecond();
+
+        expect(keydownCalls(remove)).toHaveLength(1);
+        expect(router.isActive()).toBe(false);
+        add.mockRestore();
+        remove.mockRestore();
+    });
+
+    it('register is idempotent by id', () => {
+        document.body.innerHTML = '<div id="a"></div>';
+        const page = makeTarget({ id: 'same', scope: 'page', element: document.getElementById('a') });
+        router.register(page.target);
+        router.register(page.target);
+
+        typeBurst('PRD-1001');
+
+        expect(router.targetCount()).toBe(1);
+        expect(page.deliveries).toHaveLength(1);
+    });
+
+    it('inputRouter() returns the same instance for every call', () => {
+        expect(inputRouter()).toBe(inputRouter());
+    });
+
+    it("uses the focused target's detection settings", () => {
+        document.body.innerHTML = '<div id="field"><input id="field-input"></div>';
+        const slowGun = makeTarget({
+            element: document.getElementById('field'),
+            detection: { ...detection, burstThresholdMs: 100 },
+        });
+        router.register(slowGun.target);
+        document.getElementById('field-input').focus();
+
+        typeBurst('PRD-1001', { gapMs: 70 });
+
+        expect(slowGun.deliveries.map(({ code }) => code)).toEqual(['PRD-1001']);
+    });
+
+    it('uses the most permissive settings across targets when nothing is focused', () => {
+        document.body.innerHTML = '<div id="a"></div><div id="b"></div>';
+        const strict = makeTarget({ scope: 'page', element: document.getElementById('a') });
+        const slowGun = makeTarget({
+            scope: 'page',
+            element: document.getElementById('b'),
+            detection: { ...detection, burstThresholdMs: 100 },
+        });
+        router.register(strict.target);
+        router.register(slowGun.target);
+
+        typeBurst('PRD-1001', { gapMs: 70 });
+
+        expect(strict.deliveries).toHaveLength(1);
+    });
+
+    it("re-checks the chosen target's minimum length", () => {
+        document.body.innerHTML = '<div id="field"><input id="field-input"></div>';
+        const strict = makeTarget({
+            element: document.getElementById('field'),
+            detection: { ...detection, minBarcodeLength: 8 },
+        });
+        router.register(strict.target);
+        document.getElementById('field-input').focus();
+
+        typeBurst('ABCD');
+
+        expect(strict.deliveries).toEqual([]);
+    });
+
+    it("prevents the terminator's default action when a burst completes", () => {
+        document.body.innerHTML = '<div id="a"></div>';
+        router.register(makeTarget({ scope: 'page', element: document.getElementById('a') }).target);
+
+        const events = typeBurst('PRD-1001');
+
+        expect(events.at(-1).defaultPrevented).toBe(true);
+    });
+
+    it('never routes slow human typing', () => {
+        document.body.innerHTML = '<div id="a"></div>';
+        const page = makeTarget({ scope: 'page', element: document.getElementById('a') });
+        router.register(page.target);
+
+        typeBurst('PRD-1001', { gapMs: 200 });
+
+        expect(page.deliveries).toEqual([]);
     });
 });
