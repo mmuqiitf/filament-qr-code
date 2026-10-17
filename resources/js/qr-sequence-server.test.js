@@ -108,7 +108,7 @@ describe('sequence server path', () => {
 
         await sequence.processScan('SN1', 'hardware');
 
-        expect(events[0]).toEqual(['qr-sequence-step', { field: 'serial', value: 'SN1', index: 2, skipped: ['sku'] }]);
+        expect(events[0]).toEqual(['qr-sequence-step', { field: 'serial', value: 'SN1', index: 2, skipped: ['sku'], source: 'hardware' }]);
     });
 
     it('drops a scan while a check is in flight', async () => {

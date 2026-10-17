@@ -58,6 +58,7 @@ export default function qrScanSequenceComponent({
         html5Qrcode: null,
         elementId: '',
         unregisterTarget: null,
+        queuedScan: null,
         isChecking: false,
         stepError: null,
 
@@ -72,7 +73,11 @@ export default function qrScanSequenceComponent({
                     kind: 'sequence',
                     scope: 'page',
                     detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs },
+                    // While a server check runs, refuse bursts so the router can hold one for us.
+                    accept: () => !this.isChecking,
+                    hold: (scannedValue) => this.holdScan(scannedValue),
                     deliver: (scannedValue) => {
+                        this.focusStepFromInput();
                         this.processScan(scannedValue, 'hardware');
                     },
                 });
@@ -180,7 +185,8 @@ export default function qrScanSequenceComponent({
             if (!trimmed) return;
 
             if (serverCheck && componentKey && this.$wire) {
-                return this.processServerScan(currentField, trimmed, source);
+                return this.processServerScan(currentField, trimmed, source)
+                    .finally(() => this.replayQueuedScan());
             }
 
             this.results[currentField.key] = trimmed;
@@ -216,6 +222,40 @@ export default function qrScanSequenceComponent({
                     detail: { results: { ...this.results } },
                 }));
             }
+        },
+
+        // A focused step input owns the burst: scan into that step.
+        focusStepFromInput() {
+            const stepKey = document.activeElement?.closest?.('[data-qr-step]')?.getAttribute('data-qr-step');
+            const index = stepKey ? this.indexOfStep(stepKey) : -1;
+
+            if (index >= 0) this.currentFieldIndex = index;
+        },
+
+        // One burst that arrives during a server check waits; any more are dropped.
+        holdScan(scannedValue) {
+            const code = sanitizeScannedValue(scannedValue);
+
+            if (!code) return false;
+
+            if (this.queuedScan) {
+                window.dispatchEvent(new CustomEvent('qr-scan-dropped', {
+                    detail: { value: code, field: this.getCurrentField()?.key ?? null, source: 'hardware' },
+                }));
+
+                return true;
+            }
+
+            this.queuedScan = code;
+
+            return true;
+        },
+
+        replayQueuedScan() {
+            const queued = this.queuedScan;
+            this.queuedScan = null;
+
+            if (queued) return this.processScan(queued, 'hardware');
         },
 
         emitFeedback() {

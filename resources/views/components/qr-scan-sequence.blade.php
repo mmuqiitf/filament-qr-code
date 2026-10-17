@@ -130,6 +130,7 @@
                         <template x-if="editable">
                             <input
                                 type="text"
+                                :data-qr-step="f.key"
                                 :value="results[f.key] || ''"
                                 @input="results[f.key] = $event.target.value"
                                 @change="syncEditedValue(f.key)"

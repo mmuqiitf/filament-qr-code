@@ -88,4 +88,56 @@ describe('wedge-driven sequences', () => {
         expect(sequence.results).toEqual({ po: 'PO-1' });
         expect(sequence.getCurrentField().key).toBe('sku');
     });
+
+    it('gives a burst to the step whose input has focus', async () => {
+        const { wire, sequence } = mountSequence(fakeServer());
+        const input = document.createElement('input');
+        input.setAttribute('data-qr-step', 'lot');
+        document.getElementById('sequence').appendChild(input);
+        input.focus();
+
+        typeBurst('L009');
+        await settle();
+
+        expect(wire.methodCalls[0][2]).toMatchObject({ step: 'lot', code: 'L009' });
+        expect(input.value).toBe('');
+        expect(sequence.results.lot).toBe('L009');
+    });
+
+    it('holds one burst while a check is in flight and replays it', async () => {
+        let release;
+        const pending = [];
+        const server = fakeServer();
+        const { wire } = mountSequence((key, method, args) => {
+            pending.push(args);
+
+            return pending.length === 1
+                ? new Promise((resolve) => { release = () => resolve(server(key, method, args)); })
+                : server(key, method, args);
+        });
+        const dropped = [];
+        window.addEventListener('qr-scan-dropped', (event) => dropped.push(event.detail.value));
+
+        typeBurst('PO-1');
+        typeBurst('SKU-1');
+        typeBurst('SKU-2');
+        expect(wire.methodCalls).toHaveLength(1);
+
+        release();
+        await settle();
+        await settle();
+
+        expect(wire.methodCalls.map(([, , args]) => [args.step, args.code])).toEqual([['po', 'PO-1'], ['sku', 'SKU-1']]);
+    });
+
+    it('keeps the local path for plain sequences', async () => {
+        const { wire, sequence } = mountSequence(() => null, { serverCheck: false });
+
+        typeBurst('PO-1');
+        typeBurst('SKU-1');
+        await settle();
+
+        expect(wire.methodCalls).toEqual([]);
+        expect(sequence.results).toEqual({ po: 'PO-1', sku: 'SKU-1' });
+    });
 });
