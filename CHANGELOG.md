@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `ScanStep` and `QrScanSequence::steps()`: per-step `validateUsing()`, `lookup()` and `optional()`. Checked sequences
+  make one `handleStepScan` request per scan; plain `fields()` sequences still make none.
+- `QrScanSequence::validateAllUsing()`, `onInvalidSequence(InvalidSequenceBehavior::JumpToStep|Restart)`,
+  `onCompleted()`, `autoSubmit()`, `resetAfterSubmit()` and `continuous()`, with defaults in config `sequence`.
+  New `ScanSequenceCompleted` event and `qr-sequence-rejected` / `qr-sequence-invalid` browser events.
 - One page-wide hardware input router: every keyboard-wedge burst gets exactly one owner
   (open camera modal, then the focused scan field, then the first listening field on the page).
   A field that can't take a burst (busy, too short) passes it on to the next one.
