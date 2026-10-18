@@ -209,11 +209,11 @@ QrScanSequence::make()
     ->continuous();
 ```
 
-- **`sticky()`** keeps the step's value when the sequence resets (`resetAfterSubmit()`, `continuous()`, `onInvalidSequence(Restart)`). After a reset the sequence starts at the first empty step. To change a sticky value, select the step and scan again.
-- **`repeat(n)`** collects `n` codes into a list (`['P1', 'P2', 'P3']`). Every code runs the step's checks, and a code already in the list is rejected unless the step has `allowDuplicates()`. The step shows `k / n`. `n` can be a closure that receives `$values`; it also runs when the page renders, before every step has a value, so handle missing keys.
+- **`sticky()`** keeps the step's value when the sequence resets (`resetAfterSubmit()`, `continuous()`, `onInvalidSequence(Restart)`). After a reset the sequence starts at the first empty step. To change a sticky value, press its **Clear** button (or select the step and scan again).
+- **`repeat(n)`** collects `n` codes into a list (`['P1', 'P2', 'P3']`). Every code runs the step's checks, and a code already in the list is rejected unless the step has `allowDuplicates()`. The step shows `k / n`. Each code has a small remove button for mis-scans. `n` can be a closure that receives `$values`; if it throws (say, it reads a step that has no value yet), the step acts as open-ended until it can be counted, and a warning is logged in the local environment.
 - **When a repeat step is full**, config `sequence.repeat_complete` decides what happens: `'advance'` (default) moves to the next step; `'wait'` stays on the step and rejects further codes until the operator finishes it. Override it per step with `onRepeatComplete(RepeatComplete::Wait)`.
 - **`repeat()` without a count** is open-ended: it keeps collecting until the operator finishes it.
-- **Finishing a step**: scan the finish code (`finishWith('DONE')` on the step, else config `sequence.finish_code`, default `null` = no finish code) or press the step's **Done** button. A step needs at least one code (or all `n` in `wait` mode) before it can finish. The finish code is never stored.
+- **Finishing a step**: scan the finish code (config `sequence.finish_code` for every step, default `null` = none; `finishWith('DONE')` overrides it per step) or press the step's **Done** button. A step needs at least one code (or all `n` in `wait` mode) before it can finish. The finish code is never stored.
 - Sticky and repeat steps go through the server like checked steps (one `handleStepScan` request per scan). Sequences without them are unchanged.
 
 ### 4. Focus Handoff Between Fields

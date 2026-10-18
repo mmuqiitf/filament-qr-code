@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ScanStep::sticky()` keeps a value across `resetAfterSubmit()`, `continuous()` and `Restart` rounds.
 - `ScanStep::repeat(?n)`, `onRepeatComplete(RepeatComplete::Advance|Wait)`, `finishWith()` and `allowDuplicates()`, with
   config `sequence.repeat_complete` (`'advance'`) and `sequence.finish_code` (`null`), plus a Done control (`finishStep`).
+- Remove buttons on collected repeat codes (`removeStepCode`) and a Clear button on sticky steps (`clearStep`). A failing
+  `repeat()` count closure falls back to an open-ended step.
 - `ScanStep` and `QrScanSequence::steps()`: per-step `validateUsing()`, `lookup()` and `optional()`. Checked sequences
   make one `handleStepScan` request per scan; plain `fields()` sequences still make none.
 - `QrScanSequence::validateAllUsing()`, `onInvalidSequence(InvalidSequenceBehavior::JumpToStep|Restart)`,

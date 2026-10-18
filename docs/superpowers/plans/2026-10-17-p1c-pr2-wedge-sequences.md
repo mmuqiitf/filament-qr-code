@@ -59,3 +59,9 @@
 
 ### Task 6: Docs and verification
 - [ ] `docs/scanning.md`, CHANGELOG. Full verification and example app feature + browser tests against the branch; kill leftover `playwright run-server`; restore composer files.
+
+### Task 7: Resolved decisions (PR #32 review)
+- [ ] Failing Pest: a throwing count closure falls back to open-ended and logs a local warning, then counts once values exist; `removeStepCode` removes one code; `clearStep` clears a sticky step and returns `next_step` = that step; a step `finishWith()` overrides config `finish_code`.
+- [ ] Failing Vitest: `removeCode()` and `clearStep()` call the server, resync `results`, move the pointer, and fire no step events; `isSticky()`.
+- [ ] Implement the server methods, JS actions, Blade remove chips and Clear button, `clear`/`remove_code` strings; rebuild dist. Docs, CHANGELOG, full verification. Commit.
+
