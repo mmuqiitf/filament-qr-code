@@ -53,4 +53,6 @@ return [
     'duplicate_in_step' => '":code" sudah dipindai di langkah ini.',
     'repeat_needs_codes' => 'Pindai minimal :count kode sebelum menyelesaikan langkah ini.',
     'done' => 'Selesai',
+    'clear' => 'Hapus',
+    'remove_code' => 'Buang',
 ];

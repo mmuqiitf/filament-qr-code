@@ -129,6 +129,14 @@
                             class="rounded-full bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                         ></span>
                         <button
+                            x-show="isSticky(f.key) && results[f.key]"
+                            type="button"
+                            @click.stop="clearStep(f.key)"
+                            class="rounded-md border border-gray-300 px-2 py-0.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                        >
+                            {{ __('filament-qr-code::ui.clear') }}
+                        </button>
+                        <button
                             x-show="isRepeating(f.key) && currentFieldIndex === idx && stepProgress(f.key) !== null"
                             type="button"
                             @click.stop="finishStep(f.key)"
@@ -152,8 +160,25 @@
                             />
                         </template>
 
+                        {{-- Repeat steps: one chip per code, each with a remove button for mis-scans --}}
+                        <template x-if="isRepeating(f.key)">
+                            <div class="flex flex-wrap items-center justify-end gap-1">
+                                <template x-for="(code, codeIndex) in (Array.isArray(results[f.key]) ? results[f.key] : [])" :key="codeIndex + '-' + code">
+                                    <span class="inline-flex items-center gap-1 font-mono text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 pl-2 pr-1 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                                        <span x-text="code"></span>
+                                        <button
+                                            type="button"
+                                            @click.stop="removeCode(f.key, codeIndex)"
+                                            class="rounded px-1 text-gray-400 hover:text-danger-600"
+                                            :aria-label="'{{ __('filament-qr-code::ui.remove_code') }} ' + code"
+                                        >&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                        </template>
+
                         {{-- Unedited (locked) mode: captured values are read-only --}}
-                        <template x-if="!editable || isRepeating(f.key)">
+                        <template x-if="!editable && !isRepeating(f.key)">
                             <div class="flex items-center justify-end gap-1.5">
                                 <span class="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700" x-text="Array.isArray(results[f.key]) ? results[f.key].join(', ') : (results[f.key] || '')"></span>
                                 <span x-show="!results[f.key] && currentFieldIndex === idx" class="text-xs font-semibold text-primary-600 dark:text-primary-400 animate-pulse">

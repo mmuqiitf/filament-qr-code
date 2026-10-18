@@ -304,11 +304,34 @@ export default function qrScanSequenceComponent({
 
             if (!field || !serverCheck || !componentKey || !this.$wire) return;
 
-            return this.processServerScan(field, '', 'manual', { method: 'finishStep' })
+            return this.processServerScan(field, '', 'manual', { method: 'finishStep', args: { step: key } })
                 .finally(() => this.replayQueuedScan());
         },
 
-        async processServerScan(currentField, code, source, { keepStep = false, method = 'handleStepScan' } = {}) {
+        isSticky(key) {
+            return Boolean(this.stepOptions(key)?.sticky);
+        },
+
+        // Remove one mis-scanned code from a repeat step.
+        async removeCode(key, index) {
+            return this.runStepAction(key, 'removeStepCode', { step: key, index });
+        },
+
+        // The Clear control: empty a step (usually sticky) and ask for it again.
+        async clearStep(key) {
+            return this.runStepAction(key, 'clearStep', { step: key });
+        },
+
+        async runStepAction(key, method, args) {
+            const field = this.fields[this.indexOfStep(key)];
+
+            if (!field || !serverCheck || !componentKey || !this.$wire) return;
+
+            return this.processServerScan(field, '', 'manual', { method, args, quiet: true })
+                .finally(() => this.replayQueuedScan());
+        },
+
+        async processServerScan(currentField, code, source, { keepStep = false, method = 'handleStepScan', args = null, quiet = false } = {}) {
             if (this.isChecking) return;
 
             this.isChecking = true;
@@ -318,7 +341,7 @@ export default function qrScanSequenceComponent({
                 result = await this.$wire.callSchemaComponentMethod(
                     componentKey,
                     method,
-                    method === 'finishStep' ? { step: currentField.key } : { step: currentField.key, code, source },
+                    args ?? { step: currentField.key, code, source },
                 );
             } catch (error) {
                 console.error('QR sequence check failed:', error);
@@ -367,6 +390,10 @@ export default function qrScanSequenceComponent({
             }
 
             this.stepError = null;
+
+            // Remove and Clear only resync state: no feedback, no step events.
+            if (quiet) return result;
+
             if (source !== 'manual') this.emitFeedback();
 
             if (!result.finished) window.dispatchEvent(new CustomEvent('qr-sequence-step', {

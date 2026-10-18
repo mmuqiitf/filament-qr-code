@@ -177,4 +177,31 @@ describe('wedge-driven sequences', () => {
 
         expect(sequence.stepProgress('po')).toBe('2');
     });
+
+    it('removes a collected code and clears a sticky step without step events', async () => {
+        const events = [];
+        window.addEventListener('qr-sequence-step', (event) => events.push(event.detail));
+        const { wire, sequence } = mountSequence((key, method, args) => (method === 'removeStepCode'
+            ? { passes: true, code: 'A1', source: 'manual', step: 'sku', skipped: [], next_step: 'sku', completed: false, reset: false, values: { po: 'PO-1', sku: ['A2'] } }
+            : { passes: true, code: '', source: 'manual', step: 'po', skipped: [], next_step: 'po', completed: false, reset: false, values: { sku: ['A2'] } }), {
+            steps: [
+                { key: 'po', optional: false, sticky: true, repeat: null, repeating: false },
+                { key: 'sku', optional: false, sticky: false, repeat: 3, repeating: true },
+            ],
+        });
+        sequence.results = { po: 'PO-1', sku: ['A1', 'A2'] };
+        sequence.setCurrentField(2);
+
+        await sequence.removeCode('sku', 0);
+        expect(wire.methodCalls.at(-1)).toEqual(['form.receipt', 'removeStepCode', { step: 'sku', index: 0 }]);
+        expect(sequence.results).toEqual({ po: 'PO-1', sku: ['A2'] });
+        expect(sequence.getCurrentField().key).toBe('sku');
+
+        await sequence.clearStep('po');
+        expect(wire.methodCalls.at(-1)).toEqual(['form.receipt', 'clearStep', { step: 'po' }]);
+        expect(sequence.results).toEqual({ sku: ['A2'] });
+        expect(sequence.getCurrentField().key).toBe('po');
+        expect(sequence.isSticky('po')).toBe(true);
+        expect(events).toEqual([]);
+    });
 });

@@ -53,4 +53,6 @@ return [
     'duplicate_in_step' => '":code" was already scanned in this step.',
     'repeat_needs_codes' => 'Scan at least :count code(s) before finishing this step.',
     'done' => 'Done',
+    'clear' => 'Clear',
+    'remove_code' => 'Remove',
 ];
