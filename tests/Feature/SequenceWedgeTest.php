@@ -8,6 +8,7 @@ use Closure;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
@@ -292,4 +293,53 @@ it('describes sticky and repeat steps in the payload', function (): void {
         ['key' => 'extras', 'optional' => false, 'sticky' => false, 'repeating' => true, 'repeat' => null],
         ['key' => 'note', 'optional' => true, 'sticky' => false, 'repeating' => false, 'repeat' => null],
     ]);
+});
+
+it('falls back to an open-ended repeat when the count closure fails and warns in local dev', function (): void {
+    app()->detectEnvironment(fn (): string => 'local');
+    Log::spy();
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(fn (array $values): int => $values['order'] === 'WO-2' ? 2 : 5));
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'P1')))->toMatchArray(['passes' => true, 'next_step' => 'parts']);
+    wedgeScan($test, 'order', 'WO-2');
+    expect(wedgeResult(wedgeScan($test, 'parts', 'P2')))->toMatchArray(['next_step' => 'box']);
+
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message): bool => str_contains($message, 'repeat'));
+});
+
+it('removes one collected code from a repeat step', function (): void {
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(3));
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'parts', 'P1');
+    wedgeScan($test, 'parts', 'P2');
+
+    $test->call('callSchemaComponentMethod', 'form.receipt', 'removeStepCode', ['step' => 'parts', 'index' => 0]);
+
+    expect(wedgeResult($test))->toMatchArray(['passes' => true, 'next_step' => 'parts', 'values' => ['parts' => ['P2']]]);
+    $test->assertSet('data.receipt.parts', ['P2']);
+    expect(wedgeResult(wedgeScan($test, 'parts', 'P1')))->toMatchArray(['passes' => true]);
+});
+
+it('clears a sticky step and asks for it again', function (): void {
+    SequenceWedgeTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->continuous();
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'po', 'PO-1');
+    wedgeScan($test, 'sku', 'SKU-1');
+    wedgeScan($test, 'lot', 'L001');
+
+    $test->call('callSchemaComponentMethod', 'form.receipt', 'clearStep', ['step' => 'po']);
+
+    expect(wedgeResult($test))->toMatchArray(['passes' => true, 'next_step' => 'po', 'values' => []]);
+    $test->assertSet('data.receipt', []);
+});
+
+it('lets a step finish code override the config one', function (): void {
+    config()->set('qr-code.sequence.finish_code', 'END');
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat()->finishWith('DONE'));
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'parts', 'P1');
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'END')))->toMatchArray(['passes' => false])
+        ->and(wedgeResult(wedgeScan($test, 'parts', 'DONE')))->toMatchArray(['finished' => true]);
 });

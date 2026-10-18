@@ -334,6 +334,71 @@ trait HasSequenceSteps
         return $this->finishRepeatStep($index, '', ScanInput::Manual, $values)->toClient();
     }
 
+    /**
+     * Remove one collected code from a repeat step (a mis-scan).
+     *
+     * @return array<string, mixed>
+     */
+    #[ExposedLivewireMethod]
+    public function removeStepCode(string $step, int $index): array
+    {
+        $values = $this->getSequenceState();
+        $stepIndex = $this->findStepIndex($step);
+
+        if ($stepIndex === null || ! $this->getScanSteps()[$stepIndex]->isRepeating()) {
+            return $this->rejectStepAction($step, $values);
+        }
+
+        $codes = $this->repeatCodes($values, $step);
+        $removed = $codes[$index] ?? '';
+        unset($codes[$index]);
+        $values[$step] = array_values($codes);
+
+        if ($values[$step] === []) {
+            unset($values[$step]);
+        }
+
+        $this->writeSequenceValues($values);
+
+        return (new SequenceScanResult(scan: ScanResult::accept($removed, ScanInput::Manual), step: $step, nextStep: $step, values: $values))->toClient();
+    }
+
+    /**
+     * Clear a step (the Clear control on sticky steps) and ask for it again.
+     *
+     * @return array<string, mixed>
+     */
+    #[ExposedLivewireMethod]
+    public function clearStep(string $step): array
+    {
+        $values = $this->getSequenceState();
+
+        if ($this->findStepIndex($step) === null) {
+            return $this->rejectStepAction($step, $values);
+        }
+
+        unset($values[$step]);
+        $this->writeSequenceValues($values);
+
+        return (new SequenceScanResult(scan: ScanResult::accept('', ScanInput::Manual), step: $step, nextStep: $step, values: $values))->toClient();
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    protected function rejectStepAction(string $step, array $values): array
+    {
+        $known = $this->findStepIndex($step) !== null;
+
+        return (new SequenceScanResult(
+            scan: ScanResult::reject('', ScanInput::Manual, __('filament-qr-code::ui.scan_rejected')),
+            step: $known ? $step : null,
+            nextStep: $known ? $step : null,
+            values: $values,
+        ))->toClient();
+    }
+
     /** @param  array<string, mixed>  $values */
     protected function handleRepeatScan(int $index, string $code, ScanInput $input, array $values): SequenceScanResult
     {
@@ -435,7 +500,16 @@ trait HasSequenceSteps
     /** @param  array<string, mixed>  $values */
     public function getRepeatLimit(ScanStep $step, array $values): ?int
     {
-        $times = $this->evaluate($step->getRepeatTimesUsing(), ['values' => $values]);
+        try {
+            $times = $this->evaluate($step->getRepeatTimesUsing(), ['values' => $values]);
+        } catch (Throwable $exception) {
+            // Usually a count that reads a step with no value yet: stay open-ended until it has one.
+            if (app()->isLocal()) {
+                Log::warning("QrScanSequence step [{$step->getKey()}]: the repeat() count closure failed ({$exception->getMessage()}); treating the step as open-ended until its values exist.");
+            }
+
+            return null;
+        }
 
         return is_numeric($times) ? max(1, (int) $times) : null;
     }
