@@ -81,8 +81,10 @@ final class ScanStep
 
     // PR B (P1.10)
     public function sticky(bool|Closure $condition = true): self;
-    public function repeat(int|Closure $times): self;
-    public function onRepeatComplete(RepeatComplete $behaviour): self;
+    public function repeat(int|Closure|null $times = null): self;     // null: open-ended
+    public function onRepeatComplete(RepeatComplete|Closure|null $behaviour): self;
+    public function finishWith(string|Closure|null $code): self;      // finish scan for this step
+    public function allowDuplicates(bool|Closure $condition = true): self;
 
     public function getKey(): string;
     public function getLabel(): string;          // default: ucwords of the key, as today
@@ -197,16 +199,21 @@ enum RepeatComplete: string { case Advance = 'advance'; case Wait = 'wait'; }   
     'reset_after_submit' => false,
     'continuous' => false,
     'repeat_complete' => 'advance',  // 'advance' | 'wait'            (decision 3, PR B)
+    'finish_code' => null,           // scan that finishes a waiting or open-ended repeat step (PR B)
 ],
 ```
 
 ## 7. P1.10: wedge-driven sequences, `sticky()`, `repeat(n)` (PR B)
 
 - The sequence is already a page-scope router target (P1b). PR B makes the active step explicit to the router (`ownsFocus` for the step inputs, so a focused step input takes the burst for that step) and adds `qr-sequence-step` `source: 'hardware'`. Acceptance: "three bursts fill steps po, sku, lot in order; sticky po survives reset".
-- `sticky()`: the value survives `resetAfterSubmit`/`continuous`/`Restart`; after a reset the pointer starts at the first non-sticky empty step. Clearing a sticky step: click it and rescan, or the "Clear" control.
-- `repeat(int|Closure $times)`: the step collects `n` codes into a list (`values[step]` is `list<string>`); each scan runs the step checks; the step label shows `k / n`. A `Closure` can read other steps (`$values`, `Get`) such as the BOM count of the work order.
-- When `k === n`: `RepeatComplete::Advance` (default, **decision 3**) moves to the next step; `Wait` stays until the operator confirms ("Next" control) — further scans are rejected with `repeat_full`.
+- `sticky()`: the value survives `resetAfterSubmit`/`continuous`/`Restart`; after a reset the pointer starts at the first non-sticky empty step. Clearing a sticky step: the "Clear" control (`clearStep`), or select it and rescan.
+- `repeat(int|Closure|null $times = null)`: the step collects codes into a list (`values[step]` is `list<string>`); each scan runs the step checks; the step label shows `k / n` (or `k` when open-ended). A `Closure` receives `$values` (the other steps), e.g. the BOM count of the work order.
+- When `k === n`: `RepeatComplete::Advance` (default, **decision 3**, config `sequence.repeat_complete`, per step `onRepeatComplete()`) moves to the next step; `Wait` stays on the step until the operator finishes it. Further scans on a full step are rejected with `repeat_full`.
+- **Open-ended repeats** (`repeat()` with no count) never fill up: the step collects until the operator finishes it.
+- **Finishing a step:** a finish scan (`finishWith('DONE')` on the step, else config `sequence.finish_code`, default `null` = none) or the step's "Done" control, which calls the exposed `finishStep(step)`. Finishing needs at least one code (or `n` codes for a fixed count with `Wait`); it then moves to the next empty step or completes the sequence. Finish codes are never stored.
+- A repeat step counts as filled for completion when it has `n` codes (fixed) or at least one code (open-ended). The scan that fills a `Wait` or open-ended step never completes the sequence by itself; finishing does.
 - Duplicates inside one repeat step are rejected (`duplicate_in_step`) unless `allowDuplicates()` on the step.
+- Sticky, repeat, finish codes all need the server: a sequence with any sticky or repeat step makes the `handleStepScan` call per scan, so plain sequences stay request-free.
 
 ## 8. Edge cases
 
@@ -260,3 +267,15 @@ Approved on PR #31 (2026-10-17):
 4. **Typed corrections:** new `ScanInput::Manual` (`'manual'`). With server work, an edited step calls `handleStepScan(step, code, 'manual')`: same checks, no optional skip, no step change, no beep. A rejected edit stays visible with its message. Clearing a step still writes state directly.
 5. **`resetAfterSubmit` default:** `false`.
 6. **Missing key:** a sequence with server work but no `statePath()` or `key()` gets an automatic key `qr-scan-sequence-{step keys}` (so `form.qr-scan-sequence-po-sku` under a form), and logs a warning once in the local environment. Plain sequences keep a null key. An explicit `key()` replaces the automatic one.
+
+### PR B decisions
+
+Approved on PR #32 (2026-10-18):
+
+1. **Failing `repeat()` count closure:** errors are caught. The step acts as an open-ended repeat until its values exist (the count is re-read on every scan), and a warning is logged in the local environment.
+2. **Removing a mis-scan:** each collected code in a repeat step has a small remove button, which calls the exposed `removeStepCode(step, index)`. The pointer stays on that step.
+3. **Clear for sticky steps:** a sticky step with a value shows a Clear button, which calls the exposed `clearStep(step)` and moves the pointer to that step.
+4. **Finish code:** config `sequence.finish_code` stays the global default (`null`); `finishWith()` overrides it per step.
+
+Remove and Clear only resync state: no feedback, no `qr-sequence-step` event.
+

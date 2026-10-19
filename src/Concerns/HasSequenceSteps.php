@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
+use Mmuqiitf\FilamentQrCode\Enums\RepeatComplete;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
@@ -169,7 +170,7 @@ trait HasSequenceSteps
     public function hasServerSequenceWork(): bool
     {
         foreach ($this->getScanSteps() as $step) {
-            if ($step->hasChecks()) {
+            if ($step->hasChecks() || $step->isSticky() || $step->isRepeating()) {
                 return true;
             }
         }
@@ -268,10 +269,14 @@ trait HasSequenceSteps
         $steps = $this->getScanSteps();
         $normalized = $this->normalizeStepValue($step, trim($code));
         $code = is_scalar($normalized) ? trim((string) $normalized) : trim($code);
+        if ($steps[$index]->isRepeating()) {
+            return $this->handleRepeatScan($index, $code, $input, $values)->toClient();
+        }
+
         $result = $this->checkStep($steps[$index], $code, $input, $values);
         $skipped = [];
 
-        if (! $result->passes && $input !== ScanInput::Manual && $steps[$index]->isOptional() && isset($steps[$index + 1])) {
+        if (! $result->passes && $input !== ScanInput::Manual && $steps[$index]->isOptional() && isset($steps[$index + 1]) && ! $steps[$index + 1]->isRepeating()) {
             // An optional step whose check fails gives way when the code fits the next step.
             $nextResult = $this->checkStep($steps[$index + 1], $code, $input, $values);
 
@@ -306,6 +311,248 @@ trait HasSequenceSteps
         return $this->completeSequence($result, $step, $values, $skipped)->toClient();
     }
 
+    /**
+     * Finish a waiting or open-ended repeat step (the Done control).
+     *
+     * @return array<string, mixed>
+     */
+    #[ExposedLivewireMethod]
+    public function finishStep(string $step): array
+    {
+        $values = $this->getSequenceState();
+        $index = $this->findStepIndex($step);
+
+        if ($index === null || ! $this->getScanSteps()[$index]->isRepeating()) {
+            return (new SequenceScanResult(
+                scan: ScanResult::reject('', ScanInput::Manual, __('filament-qr-code::ui.scan_rejected')),
+                step: $index === null ? null : $step,
+                nextStep: $index === null ? null : $step,
+                values: $values,
+            ))->toClient();
+        }
+
+        return $this->finishRepeatStep($index, '', ScanInput::Manual, $values)->toClient();
+    }
+
+    /**
+     * Remove one collected code from a repeat step (a mis-scan).
+     *
+     * @return array<string, mixed>
+     */
+    #[ExposedLivewireMethod]
+    public function removeStepCode(string $step, int $index): array
+    {
+        $values = $this->getSequenceState();
+        $stepIndex = $this->findStepIndex($step);
+
+        if ($stepIndex === null || ! $this->getScanSteps()[$stepIndex]->isRepeating()) {
+            return $this->rejectStepAction($step, $values);
+        }
+
+        $codes = $this->repeatCodes($values, $step);
+        $removed = $codes[$index] ?? '';
+        unset($codes[$index]);
+        $values[$step] = array_values($codes);
+
+        if ($values[$step] === []) {
+            unset($values[$step]);
+        }
+
+        $this->writeSequenceValues($values);
+
+        return (new SequenceScanResult(scan: ScanResult::accept($removed, ScanInput::Manual), step: $step, nextStep: $step, values: $values))->toClient();
+    }
+
+    /**
+     * Clear a step (the Clear control on sticky steps) and ask for it again.
+     *
+     * @return array<string, mixed>
+     */
+    #[ExposedLivewireMethod]
+    public function clearStep(string $step): array
+    {
+        $values = $this->getSequenceState();
+
+        if ($this->findStepIndex($step) === null) {
+            return $this->rejectStepAction($step, $values);
+        }
+
+        unset($values[$step]);
+        $this->writeSequenceValues($values);
+
+        return (new SequenceScanResult(scan: ScanResult::accept('', ScanInput::Manual), step: $step, nextStep: $step, values: $values))->toClient();
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    protected function rejectStepAction(string $step, array $values): array
+    {
+        $known = $this->findStepIndex($step) !== null;
+
+        return (new SequenceScanResult(
+            scan: ScanResult::reject('', ScanInput::Manual, __('filament-qr-code::ui.scan_rejected')),
+            step: $known ? $step : null,
+            nextStep: $known ? $step : null,
+            values: $values,
+        ))->toClient();
+    }
+
+    /** @param  array<string, mixed>  $values */
+    protected function handleRepeatScan(int $index, string $code, ScanInput $input, array $values): SequenceScanResult
+    {
+        $step = $this->getScanSteps()[$index];
+        $key = $step->getKey();
+
+        if ($code !== '' && $code === $this->getFinishCode($step)) {
+            return $this->finishRepeatStep($index, $code, $input, $values);
+        }
+
+        $codes = $this->repeatCodes($values, $key);
+        $limit = $this->getRepeatLimit($step, $values);
+
+        $result = match (true) {
+            $limit !== null && count($codes) >= $limit => ScanResult::reject($code, $input, __('filament-qr-code::ui.repeat_full', ['count' => $limit])),
+            ! $step->allowsDuplicates() && in_array($code, $codes, true) => ScanResult::reject($code, $input, __('filament-qr-code::ui.duplicate_in_step', ['code' => $code])),
+            default => $this->checkStep($step, $code, $input, $values),
+        };
+
+        if (! $result->passes) {
+            event(new ScanRejected($result, $key));
+
+            return new SequenceScanResult(scan: $result, step: $key, nextStep: $key, values: $values);
+        }
+
+        $values[$key] = [...$codes, $result->code];
+        $this->writeSequenceValues($values);
+        $this->dispatchAcceptedStep($result, $key);
+
+        $isFull = $limit !== null && count($values[$key]) >= $limit;
+
+        if (! $isFull || $this->getRepeatComplete($step) === RepeatComplete::Wait) {
+            return new SequenceScanResult(scan: $result, step: $key, nextStep: $key, values: $values);
+        }
+
+        return $this->advanceFrom($index, $result, $key, $values);
+    }
+
+    /** @param  array<string, mixed>  $values */
+    protected function finishRepeatStep(int $index, string $code, ScanInput $input, array $values): SequenceScanResult
+    {
+        $step = $this->getScanSteps()[$index];
+        $key = $step->getKey();
+        $limit = $this->getRepeatLimit($step, $values);
+        $needed = $limit ?? 1;
+        $count = count($this->repeatCodes($values, $key));
+
+        if ($count < $needed && ! ($step->isOptional() && $count === 0)) {
+            $result = ScanResult::reject($code, $input, __('filament-qr-code::ui.repeat_needs_codes', ['count' => $needed]));
+            event(new ScanRejected($result, $key));
+
+            return new SequenceScanResult(scan: $result, step: $key, nextStep: $key, values: $values);
+        }
+
+        $sequenceResult = $this->advanceFrom($index, ScanResult::accept($code, $input), $key, $values);
+
+        return new SequenceScanResult(
+            scan: $sequenceResult->scan,
+            step: $sequenceResult->step,
+            nextStep: $sequenceResult->nextStep,
+            values: $sequenceResult->values,
+            skipped: $sequenceResult->skipped,
+            completed: $sequenceResult->completed,
+            invalidStep: $sequenceResult->invalidStep,
+            submitted: $sequenceResult->submitted,
+            reset: $sequenceResult->reset,
+            finished: true,
+        );
+    }
+
+    /** @param  array<string, mixed>  $values */
+    protected function advanceFrom(int $index, ScanResult $result, string $key, array $values): SequenceScanResult
+    {
+        $nextStep = $this->findNextStep($index, $values);
+
+        if ($nextStep !== null) {
+            return new SequenceScanResult(scan: $result, step: $key, nextStep: $nextStep, values: $values);
+        }
+
+        return $this->completeSequence($result, $key, $values);
+    }
+
+    /**
+     * A repeat step is filled with its count of codes, or one code when open-ended.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public function isStepFilled(ScanStep $step, array $values): bool
+    {
+        if (! $step->isRepeating()) {
+            return filled($values[$step->getKey()] ?? null);
+        }
+
+        $count = count($this->repeatCodes($values, $step->getKey()));
+
+        return $count >= ($this->getRepeatLimit($step, $values) ?? 1);
+    }
+
+    /** @param  array<string, mixed>  $values */
+    public function getRepeatLimit(ScanStep $step, array $values): ?int
+    {
+        try {
+            $times = $this->evaluate($step->getRepeatTimesUsing(), ['values' => $values]);
+        } catch (Throwable $exception) {
+            // Usually a count that reads a step with no value yet: stay open-ended until it has one.
+            if (app()->isLocal()) {
+                Log::warning("QrScanSequence step [{$step->getKey()}]: the repeat() count closure failed ({$exception->getMessage()}); treating the step as open-ended until its values exist.");
+            }
+
+            return null;
+        }
+
+        return is_numeric($times) ? max(1, (int) $times) : null;
+    }
+
+    public function getRepeatComplete(ScanStep $step): RepeatComplete
+    {
+        if ($step->getRepeatTimesUsing() === null) {
+            return RepeatComplete::Wait;
+        }
+
+        $behavior = $this->evaluate($step->getRepeatCompleteUsing())
+            ?? (function_exists('config') ? config('qr-code.sequence.repeat_complete') : null);
+
+        if ($behavior instanceof RepeatComplete) {
+            return $behavior;
+        }
+
+        return is_string($behavior) ? (RepeatComplete::tryFrom($behavior) ?? RepeatComplete::Advance) : RepeatComplete::Advance;
+    }
+
+    public function getFinishCode(ScanStep $step): ?string
+    {
+        $code = $this->evaluate($step->getFinishCodeUsing())
+            ?? (function_exists('config') ? config('qr-code.sequence.finish_code') : null);
+
+        return is_string($code) && trim($code) !== '' ? trim($code) : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @return list<string>
+     */
+    protected function repeatCodes(array $values, string $key): array
+    {
+        $codes = $values[$key] ?? [];
+
+        if (is_string($codes)) {
+            return $codes === '' ? [] : [$codes];
+        }
+
+        return is_array($codes) ? array_values(array_map(strval(...), array_filter($codes, is_scalar(...)))) : [];
+    }
+
     /** @param  array<string, mixed>  $values */
     public function checkStep(ScanStep $step, string $code, ?ScanInput $source, array $values): ScanResult
     {
@@ -329,7 +576,7 @@ trait HasSequenceSteps
             $restart = $this->getInvalidSequenceBehavior() === InvalidSequenceBehavior::Restart;
 
             if ($restart) {
-                $values = [];
+                $values = $this->stickyValues($values);
                 $this->writeSequenceValues($values);
             }
 
@@ -338,7 +585,7 @@ trait HasSequenceSteps
             return new SequenceScanResult(
                 scan: ScanResult::reject($result->code, $result->source, $message),
                 step: $step,
-                nextStep: $restart ? $this->getFirstStepKey() : $invalidStep,
+                nextStep: $restart ? $this->getFirstEmptyStepKey($values) : $invalidStep,
                 values: $values,
                 skipped: $skipped,
                 invalidStep: $invalidStep,
@@ -355,20 +602,51 @@ trait HasSequenceSteps
             || ($submitted !== false && $this->isContinuous());
 
         if ($reset) {
-            $values = [];
+            $values = $this->stickyValues($values);
             $this->writeSequenceValues($values);
         }
 
         return new SequenceScanResult(
             scan: $result,
             step: $step,
-            nextStep: $reset ? $this->getFirstStepKey() : null,
+            nextStep: $reset ? $this->getFirstEmptyStepKey($values) : null,
             values: $values,
             skipped: $skipped,
             completed: true,
             submitted: $submitted,
             reset: $reset,
         );
+    }
+
+    /**
+     * The values a reset keeps: sticky steps only.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    protected function stickyValues(array $values): array
+    {
+        $kept = [];
+
+        foreach ($this->getScanSteps() as $step) {
+            if ($step->isSticky() && filled($values[$step->getKey()] ?? null)) {
+                $kept[$step->getKey()] = $values[$step->getKey()];
+            }
+        }
+
+        return $kept;
+    }
+
+    /** @param  array<string, mixed>  $values */
+    protected function getFirstEmptyStepKey(array $values): ?string
+    {
+        foreach ($this->getScanSteps() as $step) {
+            if (! $this->isStepFilled($step, $values)) {
+                return $step->getKey();
+            }
+        }
+
+        return $this->getFirstStepKey();
     }
 
     protected function getFirstStepKey(): ?string
@@ -502,13 +780,13 @@ trait HasSequenceSteps
         $steps = $this->getScanSteps();
 
         foreach (array_slice($steps, $index + 1) as $step) {
-            if (blank($values[$step->getKey()] ?? null)) {
+            if (! $this->isStepFilled($step, $values)) {
                 return $step->getKey();
             }
         }
 
         foreach ($steps as $step) {
-            if (! $step->isOptional() && blank($values[$step->getKey()] ?? null)) {
+            if (! $step->isOptional() && ! $this->isStepFilled($step, $values)) {
                 return $step->getKey();
             }
         }
@@ -520,7 +798,7 @@ trait HasSequenceSteps
     public function allRequiredFilled(array $values): bool
     {
         foreach ($this->getScanSteps() as $step) {
-            if (! $step->isOptional() && blank($values[$step->getKey()] ?? null)) {
+            if (! $step->isOptional() && ! $this->isStepFilled($step, $values)) {
                 return false;
             }
         }

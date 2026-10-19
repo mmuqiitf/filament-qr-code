@@ -184,11 +184,37 @@ QrScanSequence::make()
 - **Completion.** `onCompleted($values)` runs and `ScanSequenceCompleted` fires, then `autoSubmit()` calls your submit method (`autoSubmit(method: 'save')` for another name). A `ValidationException` from it lands in the error bag and the values stay.
 - **Defaults** live in config `sequence`: `on_invalid` `'jump_to_step'`, `auto_submit` `false`, `submit_method` `'submit'`, `reset_after_submit` `false`, `continuous` `false`.
 - **Plain sequences don't change.** Without checks, `validateAllUsing()`, `onCompleted()`, `autoSubmit()` or `continuous()`, the browser writes state itself as before and makes no request. `fields([...])` is shorthand for steps without checks.
-- **Browser events.** `qr-sequence-step` (now with `skipped`), `qr-sequence-completed` (now with `submitted`), plus `qr-sequence-rejected` `{ field, value, message, source }` and `qr-sequence-invalid` `{ field, message, values }`.
+- **Browser events.** `qr-sequence-step` (now with `skipped` and `source`), `qr-sequence-completed` (now with `submitted`), plus `qr-sequence-rejected` `{ field, value, message, source }` and `qr-sequence-invalid` `{ field, message, values }`.
 
 - **Normal submits check too.** `$this->form->getState()` re-runs every step check (on the step's state path) and `validateAllUsing()` (reported on the last step once every required step has a value). Empty steps pass; add `required` yourself if you need it.
 - **Typed corrections.** In an editable sequence with server work, an edited step is checked like a scan with source `ScanInput::Manual` (`'manual'`). It never skips an optional step or moves the current step, and a rejected edit stays visible with its message.
 - **Keys.** Server checks reach the component by its key. Give the sequence `statePath()` or `key()`; if it has neither, it gets an automatic key from its step keys (`qr-scan-sequence-po-sku`) and logs a warning in the local environment, so two identical sequences on one page need explicit keys.
+
+#### Handheld scanners, sticky and repeat steps
+
+A keyboard-wedge scanner fills the sequence without any focus: every burst goes to the current step, then the sequence moves on. If an operator focuses a step's input, the next burst goes to that step instead. While a server check is running, one burst waits and replays; any more are dropped (`qr-scan-dropped`).
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\RepeatComplete;
+
+QrScanSequence::make()
+    ->statePath('picking')
+    ->steps([
+        ScanStep::make('po')->sticky(),                      // kept for every item
+        ScanStep::make('sku')->lookup(Product::class, 'sku'),
+        ScanStep::make('serials')
+            ->repeat(fn (array $values): int => Product::firstWhere('sku', $values['sku'] ?? null)?->serial_count ?? 1),
+        ScanStep::make('extras')->repeat()->finishWith('DONE')->optional(), // open-ended
+    ])
+    ->continuous();
+```
+
+- **`sticky()`** keeps the step's value when the sequence resets (`resetAfterSubmit()`, `continuous()`, `onInvalidSequence(Restart)`). After a reset the sequence starts at the first empty step. To change a sticky value, press its **Clear** button (or select the step and scan again).
+- **`repeat(n)`** collects `n` codes into a list (`['P1', 'P2', 'P3']`). Every code runs the step's checks, and a code already in the list is rejected unless the step has `allowDuplicates()`. The step shows `k / n`. Each code has a small remove button for mis-scans. `n` can be a closure that receives `$values`; if it throws (say, it reads a step that has no value yet), the step acts as open-ended until it can be counted, and a warning is logged in the local environment.
+- **When a repeat step is full**, config `sequence.repeat_complete` decides what happens: `'advance'` (default) moves to the next step; `'wait'` stays on the step and rejects further codes until the operator finishes it. Override it per step with `onRepeatComplete(RepeatComplete::Wait)`.
+- **`repeat()` without a count** is open-ended: it keeps collecting until the operator finishes it.
+- **Finishing a step**: scan the finish code (config `sequence.finish_code` for every step, default `null` = none; `finishWith('DONE')` overrides it per step) or press the step's **Done** button. A step needs at least one code (or all `n` in `wait` mode) before it can finish. The finish code is never stored.
+- Sticky and repeat steps go through the server like checked steps (one `handleStepScan` request per scan). Sequences without them are unchanged.
 
 ### 4. Focus Handoff Between Fields
 

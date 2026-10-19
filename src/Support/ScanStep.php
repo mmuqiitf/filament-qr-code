@@ -7,6 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Support;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Model;
+use Mmuqiitf\FilamentQrCode\Enums\RepeatComplete;
 
 /**
  * One step of a QrScanSequence: a state key, a label and the checks a scanned
@@ -30,6 +31,18 @@ final class ScanStep
     private ?Closure $modifyLookupQueryUsing = null;
 
     private bool|Closure $isOptional = false;
+
+    private bool|Closure $isSticky = false;
+
+    private bool $isRepeating = false;
+
+    private int|Closure|null $repeatTimes = null;
+
+    private RepeatComplete|Closure|null $repeatComplete = null;
+
+    private string|Closure|null $finishCode = null;
+
+    private bool|Closure $allowsDuplicates = false;
 
     private function __construct(private readonly string $key) {}
 
@@ -95,6 +108,78 @@ final class ScanStep
         $this->isOptional = $condition;
 
         return $this;
+    }
+
+    /** Keep the value across resetAfterSubmit(), continuous() and Restart rounds. */
+    public function sticky(bool|Closure $condition = true): self
+    {
+        $this->isSticky = $condition;
+
+        return $this;
+    }
+
+    public function isSticky(): bool
+    {
+        return (bool) value($this->isSticky);
+    }
+
+    /**
+     * Collect several codes into a list. With a count (or a closure receiving
+     * $values) the step fills up; without one it stays open until finished.
+     */
+    public function repeat(int|Closure|null $times = null): self
+    {
+        $this->isRepeating = true;
+        $this->repeatTimes = $times;
+
+        return $this;
+    }
+
+    public function onRepeatComplete(RepeatComplete|Closure|null $behavior): self
+    {
+        $this->repeatComplete = $behavior;
+
+        return $this;
+    }
+
+    /** A scan that finishes this repeat step instead of being stored. */
+    public function finishWith(string|Closure|null $code): self
+    {
+        $this->finishCode = $code;
+
+        return $this;
+    }
+
+    public function allowDuplicates(bool|Closure $condition = true): self
+    {
+        $this->allowsDuplicates = $condition;
+
+        return $this;
+    }
+
+    public function isRepeating(): bool
+    {
+        return $this->isRepeating;
+    }
+
+    public function getRepeatTimesUsing(): int|Closure|null
+    {
+        return $this->repeatTimes;
+    }
+
+    public function getRepeatCompleteUsing(): RepeatComplete|Closure|null
+    {
+        return $this->repeatComplete;
+    }
+
+    public function getFinishCodeUsing(): string|Closure|null
+    {
+        return $this->finishCode;
+    }
+
+    public function allowsDuplicates(): bool
+    {
+        return (bool) value($this->allowsDuplicates);
     }
 
     public function getKey(): string
