@@ -7,47 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-19
+
+### Upgrading from 0.4
+- Run `php artisan filament:assets` after updating: the scanner and sequence JS changed (input router,
+  continuous mode, sequence server path).
+- No breaking API changes. Fields and sequences that don't use the new options behave as before: plain
+  `fields()` sequences make no request, and `hardwareInput()` defaults to `'focus'`, today's behaviour.
+- Replace the deprecated `filament-qr-code.image` route name with `filamentQrCode.image`.
+
 ### Added
-- Wedge-driven sequences: hardware bursts fill and advance `QrScanSequence` steps without focus; a focused step input
-  takes the burst for that step; one burst waits during a server check. `qr-sequence-step` gains `source`.
-- `ScanStep::sticky()` keeps a value across `resetAfterSubmit()`, `continuous()` and `Restart` rounds.
-- `ScanStep::repeat(?n)`, `onRepeatComplete(RepeatComplete::Advance|Wait)`, `finishWith()` and `allowDuplicates()`, with
-  config `sequence.repeat_complete` (`'advance'`) and `sequence.finish_code` (`null`), plus a Done control (`finishStep`).
-- Remove buttons on collected repeat codes (`removeStepCode`) and a Clear button on sticky steps (`clearStep`). A failing
-  `repeat()` count closure falls back to an open-ended step.
-- `ScanStep` and `QrScanSequence::steps()`: per-step `validateUsing()`, `lookup()` and `optional()`. Checked sequences
-  make one `handleStepScan` request per scan; plain `fields()` sequences still make none.
-- `QrScanSequence::validateAllUsing()`, `onInvalidSequence(InvalidSequenceBehavior::JumpToStep|Restart)`,
-  `onCompleted()`, `autoSubmit()`, `resetAfterSubmit()` and `continuous()`, with defaults in config `sequence`.
-  New `ScanSequenceCompleted` event and `qr-sequence-rejected` / `qr-sequence-invalid` browser events.
-- Form submits re-run sequence step checks and `validateAllUsing()`; typed corrections are checked as
-  `ScanInput::Manual` (new `'manual'` source); a checked sequence without `statePath()`/`key()` gets an automatic key.
-- One page-wide hardware input router: every keyboard-wedge burst gets exactly one owner
-  (open camera modal, then the focused scan field, then the first listening field on the page).
-  A field that can't take a burst (busy, too short) passes it on to the next one.
-- `QrScanner::hardwareInput(scope: HardwareInputScope::Focus|Page)` and config
-  `hardware_scanner.default_scope` (`'focus'`, today's behaviour).
-- `qr-scan-routed` browser event; `data-qr-ignore` keeps wedge text in an input.
-- `mode` (`'single'` or `'continuous'`) in `qr-scanned`, `qr-scan-accepted`, `qr-scan-rejected` and `qr-scan-duplicate`.
-- Continuous mode for `QrScanner`: `mode(ScanMode::Continuous)`, `continuousDisplay(ContinuousDisplay::Empty|LastCode)`,
-  `pauseOnReject()` and `keepCameraOpen()`, with defaults in config `scan.continuous` (`display` `'empty'`,
-  `pause_on_reject` `false`, `keep_camera_open` `false`, `cooldown_ms` `300`). `onScanned()` runs once per accepted code.
-- One-slot queue for scans that arrive while a continuous field is checking; extra scans fire `qr-scan-dropped`.
-  New `qr-scan-paused` and `qr-scan-resumed` events, and a `queued` reason on `qr-scan-routed`.
-- `required()` on a continuous field logs a warning once in the local environment.
-- POS recipe: `docs/recipes/pos.md`.
+- **Input router (P1 part 2).** One page-wide hardware input router: every keyboard-wedge burst gets exactly one
+  owner (open camera modal, then the focused scan field, then the first listening field on the page). A field that
+  can't take a burst (busy, too short) passes it on to the next one (#28, #29).
+  - `QrScanner::hardwareInput(scope: HardwareInputScope::Focus|Page)` and config `hardware_scanner.default_scope`
+    (`'focus'`).
+  - `qr-scan-routed` browser event; `data-qr-ignore` keeps wedge text in an input.
+- **Continuous mode (P1 part 2).** `QrScanner::mode(ScanMode::Continuous)`,
+  `continuousDisplay(ContinuousDisplay::Empty|LastCode)`, `pauseOnReject()` and `keepCameraOpen()`, with defaults in
+  config `scan.continuous` (`display` `'empty'`, `pause_on_reject` `false`, `keep_camera_open` `false`,
+  `cooldown_ms` `300`). `onScanned()` runs once per accepted code (#30).
+  - One-slot queue for scans that arrive while a continuous field is checking; extra scans fire `qr-scan-dropped`.
+    New `qr-scan-paused` and `qr-scan-resumed` events, and a `queued` reason on `qr-scan-routed`.
+  - `mode` (`'single'` or `'continuous'`) in `qr-scanned`, `qr-scan-accepted`, `qr-scan-rejected` and
+    `qr-scan-duplicate`.
+  - `required()` on a continuous field logs a warning once in the local environment.
+  - POS recipe: `docs/recipes/pos.md`.
+- **Sequence steps (P1 part 3).** `ScanStep` and `QrScanSequence::steps()` with per-step `validateUsing()`,
+  `lookup()` and `optional()` (an optional step gives way when the code fits the next step). Checked sequences make
+  one `handleStepScan` request per scan (#31).
+  - Whole-set check `validateAllUsing()` and `onInvalidSequence(InvalidSequenceBehavior::JumpToStep|Restart)`;
+    `onCompleted()`, `autoSubmit()`, `resetAfterSubmit()` and `continuous()`, with defaults in config `sequence`.
+  - New `ScanSequenceCompleted` event and `qr-sequence-rejected` / `qr-sequence-invalid` browser events.
+  - Form submits re-run step checks and `validateAllUsing()`. Typed corrections are checked as `ScanInput::Manual`
+    (new `'manual'` source). A checked sequence without `statePath()`/`key()` gets an automatic key.
+- **Wedge-driven sequences (P1 part 3).** Hardware bursts fill and advance sequence steps without focus; a focused
+  step input takes the burst for that step; one burst waits during a server check. `qr-sequence-step` gains
+  `source` (#32).
+  - `ScanStep::sticky()` keeps a value across `resetAfterSubmit()`, `continuous()` and `Restart` rounds, with a Clear
+    button.
+  - `ScanStep::repeat(?n)`, `onRepeatComplete(RepeatComplete::Advance|Wait)`, `finishWith()` and
+    `allowDuplicates()`, with config `sequence.repeat_complete` (`'advance'`) and `sequence.finish_code` (`null`),
+    a Done control and remove buttons on collected codes. A failing `repeat()` count closure falls back to an
+    open-ended step.
+- Delivered in #26–#32 (P1b and P1c specs, plans and PRs).
 
 ### Changed
-- The signed QR image route is now named `filamentQrCode.image` (camelCase).
+- The signed QR image route is now named `filamentQrCode.image` (camelCase) (#27).
 
 ### Fixed
-- A burst is no longer handled twice when several hardware consumers share a page (for example
-  two collectors, or a `QrScanner` with `suppressWhenGlobalListener(false)` next to a listener).
+- A burst is no longer handled twice when several hardware consumers share a page (for example two collectors, or a
+  `QrScanner` with `suppressWhenGlobalListener(false)` next to a listener).
 
 ### Deprecated
-- The `filament-qr-code.image` route name still resolves to the same URL but is
-  deprecated and will be removed in 1.0. Replace `route('filament-qr-code.image')` /
-  `URL::signedRoute('filament-qr-code.image', ...)` with `filamentQrCode.image`.
+- The `filament-qr-code.image` route name still resolves to the same URL but is deprecated and will be removed in
+  1.0. Replace `route('filament-qr-code.image')` / `URL::signedRoute('filament-qr-code.image', ...)` with
+  `filamentQrCode.image`.
 - `suppressWhenGlobalListener()`, `isSuppressedWhenGlobalListenerActive()` and the JS
   `isGlobalHardwareListenerActive()` no longer affect routing; removal planned for 1.0.
 
@@ -262,7 +277,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.2.0...v0.3.0
