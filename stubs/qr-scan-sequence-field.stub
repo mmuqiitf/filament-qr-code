@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+
+class {{ class }} extends QrScanSequence
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->steps([
+            ScanStep::make('code'),
+            // ScanStep::make('serials')->repeat(),
+        ]);
+    }
+}

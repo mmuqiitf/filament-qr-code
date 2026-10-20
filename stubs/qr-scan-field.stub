@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
+class {{ class }} extends QrScanner
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Configure the field once and reuse it everywhere, e.g.:
+        // $this->lookup(Product::class, 'sku')
+        //     ->normalizeWith(uppercase: true)
+        //     ->continuous();
+    }
+}

@@ -30,7 +30,8 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
             ->hasConfigFile('qr-code')
             ->hasTranslations()
             ->hasViews(static::$name)
-            ->hasCommand(Commands\QrCodeDoctorCommand::class);
+            ->hasCommand(Commands\QrCodeDoctorCommand::class)
+            ->hasCommand(Commands\MakeQrScanFieldCommand::class);
     }
 
     public static function registerAssetsOnce(): void
@@ -84,6 +85,13 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
 
     public function packageBooted(): void
     {
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../stubs/qr-scan-field.stub' => base_path('stubs/filament-qr-code/qr-scan-field.stub'),
+                __DIR__.'/../stubs/qr-scan-sequence-field.stub' => base_path('stubs/filament-qr-code/qr-scan-sequence-field.stub'),
+            ], 'filament-qr-code-stubs');
+        }
+
         static::registerAssetsOnce();
 
         Event::listen(QrCodeScanned::class, LogQrCodeScan::class);
