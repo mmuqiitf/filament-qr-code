@@ -939,7 +939,7 @@ trait HasSequenceSteps
 
         $this->writeSequenceValues($values);
 
-        $this->getLivewire()->dispatch('qr-sequence-reset', field: $this->getControlKey(), values: $values);
+        $this->getLivewire()->dispatch('qr-sequence-reset', field: $this->getControlKey(), values: $values, fromServer: true);
     }
 
     /**

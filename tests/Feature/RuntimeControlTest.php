@@ -259,7 +259,7 @@ it('resets the sequence from page code, keeping sticky steps', function (): void
 
     $test->call('resetReceipt')
         ->assertSet('data.receipt', ['po' => 'PO-1'])
-        ->assertDispatched('qr-sequence-reset', field: 'form.receipt', values: ['po' => 'PO-1']);
+        ->assertDispatched('qr-sequence-reset', field: 'form.receipt', values: ['po' => 'PO-1'], fromServer: true);
 
     $test->call('resetReceipt', false)->assertSet('data.receipt', []);
 });

@@ -108,6 +108,8 @@
             <template x-for="(f, idx) in fields" :key="f.key">
                 <div
                     @click="setCurrentField(idx)"
+                    :data-qr-step-active="isActive(f.key) ? 'true' : 'false'"
+                    :style="isActive(f.key) ? '' : 'opacity: 0.5'"
                     class="p-3 rounded-xl border transition cursor-pointer flex items-center justify-between text-sm"
                     :class="currentFieldIndex === idx
                         ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/30 text-primary-900 dark:text-primary-100 ring-1 ring-primary-500'
