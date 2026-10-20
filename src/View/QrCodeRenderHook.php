@@ -14,25 +14,25 @@ namespace Mmuqiitf\FilamentQrCode\View;
  */
 final class QrCodeRenderHook
 {
-    public const string SCANNER_START = 'filament-qr-code::scanner.start';
+    public const SCANNER_START = 'filament-qr-code::scanner.start';
 
-    public const string SCANNER_END = 'filament-qr-code::scanner.end';
+    public const SCANNER_END = 'filament-qr-code::scanner.end';
 
-    public const string SCANNER_MODAL_START = 'filament-qr-code::scanner.modal.start';
+    public const SCANNER_MODAL_START = 'filament-qr-code::scanner.modal.start';
 
-    public const string SCANNER_MODAL_END = 'filament-qr-code::scanner.modal.end';
+    public const SCANNER_MODAL_END = 'filament-qr-code::scanner.modal.end';
 
-    public const string SEQUENCE_START = 'filament-qr-code::sequence.start';
+    public const SEQUENCE_START = 'filament-qr-code::sequence.start';
 
-    public const string SEQUENCE_END = 'filament-qr-code::sequence.end';
+    public const SEQUENCE_END = 'filament-qr-code::sequence.end';
 
-    public const string SEQUENCE_STEPS_BEFORE = 'filament-qr-code::sequence.steps.before';
+    public const SEQUENCE_STEPS_BEFORE = 'filament-qr-code::sequence.steps.before';
 
-    public const string SEQUENCE_STEPS_AFTER = 'filament-qr-code::sequence.steps.after';
+    public const SEQUENCE_STEPS_AFTER = 'filament-qr-code::sequence.steps.after';
 
-    public const string SEQUENCE_STEP_HEADER = 'filament-qr-code::sequence.step.header';
+    public const SEQUENCE_STEP_HEADER = 'filament-qr-code::sequence.step.header';
 
-    public const string COLLECTOR_START = 'filament-qr-code::collector.start';
+    public const COLLECTOR_START = 'filament-qr-code::collector.start';
 
-    public const string COLLECTOR_END = 'filament-qr-code::collector.end';
+    public const COLLECTOR_END = 'filament-qr-code::collector.end';
 }
