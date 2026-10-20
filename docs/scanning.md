@@ -436,7 +436,7 @@ $this->dispatch('qr-scanner-refresh', field: 'data.sku');
 const scanner = document.querySelector('[data-field-name="sku"]').qrScanner; // root has data-qr-scanner
 await scanner.feed('PRD-1001');            // runs the same path as a scan (source defaults to 'hardware')
 scanner.pause(); scanner.resume();
-scanner.reset();                           // clear value, error, queued scan and repeat memory
+scanner.reset();                           // clear value, error, queued scan and the duplicate cooldown
 scanner.setOptions({ mode: 'continuous', pauseOnReject: true });
 scanner.refresh();                         // re-read the rendered options now
 scanner.getOptions(); scanner.getState();  // { value, isPaused, isChecking, isScanning }
