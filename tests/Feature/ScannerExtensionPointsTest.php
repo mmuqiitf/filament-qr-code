@@ -201,3 +201,14 @@ it('makes the scan components macroable', function (): void {
 
     expect(QrScanner::make('a')->forWarehouse()->getScanPayload()['normalize']['uppercase'])->toBeTrue();
 });
+
+it('adds a stage to every scanner through configureUsing', function (): void {
+    ScanCheckProduct::query()->where('sku', 'SKU-1')->update(['stock' => 0]);
+
+    ['result' => $result] = QrScanner::configureUsing(
+        fn (QrScanner $scanner) => $scanner->pipe(RejectOutOfStockStage::class),
+        during: fn (): array => extScan(fn (QrScanner $scanner): QrScanner => $scanner->lookup(ScanCheckProduct::class, 'sku'), 'SKU-1'),
+    );
+
+    expect($result)->toMatchArray(['passes' => false, 'message' => 'No stock left.']);
+});
