@@ -805,7 +805,7 @@ trait HasSequenceSteps
             code: $result->code,
             source: ($result->source ?? ScanInput::Camera)->value,
             field: $step,
-            context: ['record_key' => $result->record?->getKey()],
+            context: ['record_key' => $result->recordKey()],
         ));
     }
 

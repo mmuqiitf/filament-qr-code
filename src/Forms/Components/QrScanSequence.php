@@ -8,6 +8,7 @@ use Closure;
 use Filament\Forms\Components\Contracts\HasValidationRules;
 use Filament\Schemas\Components\Component;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
+use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasOptionsSync;
@@ -18,6 +19,7 @@ use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 class QrScanSequence extends Component implements HasValidationRules
 {
     use HasCameraScanning;
+    use HasCodeNormalization;
     use HasFeedback;
     use HasHardwareScanner;
     use HasOptionsSync;

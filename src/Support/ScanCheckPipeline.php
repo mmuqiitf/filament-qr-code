@@ -9,12 +9,15 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
+use Mmuqiitf\FilamentQrCode\Contracts\ScanCheckStage;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Throwable;
 
 /**
  * The live-scan checks shared by QrScanner and sequence steps: rules, then a
- * lookup, then closures. The first failure stops the run.
+ * lookup (model and/or resolver), then closures, then piped stages. The first
+ * failure stops the run.
  */
 final readonly class ScanCheckPipeline
 {
@@ -22,6 +25,7 @@ final readonly class ScanCheckPipeline
      * @param  array<int, mixed>  $rules
      * @param  array<int, Closure>  $closures
      * @param  class-string<Model>|null  $lookupModel
+     * @param  array<int, ScanCheckStage|class-string<ScanCheckStage>>  $stages
      */
     public function __construct(
         public array $rules = [],
@@ -29,11 +33,37 @@ final readonly class ScanCheckPipeline
         public ?string $lookupModel = null,
         public string $lookupColumn = 'code',
         public ?Closure $modifyLookupQueryUsing = null,
+        public ?Closure $lookupResolver = null,
+        public bool $lookupFallback = false,
+        public array $stages = [],
+        public ?object $component = null,
     ) {}
 
     public function hasChecks(): bool
     {
-        return $this->rules !== [] || $this->closures !== [] || $this->lookupModel !== null;
+        return $this->rules !== []
+            || $this->closures !== []
+            || $this->lookupModel !== null
+            || $this->lookupResolver !== null
+            || $this->stages !== [];
+    }
+
+    /**
+     * Validate a stage when it's added, so a typo fails at boot, not on a scan.
+     *
+     * @return ScanCheckStage|class-string<ScanCheckStage>
+     */
+    public static function ensureStage(mixed $stage): ScanCheckStage|string
+    {
+        if ($stage instanceof ScanCheckStage) {
+            return $stage;
+        }
+
+        if (is_string($stage) && is_subclass_of($stage, ScanCheckStage::class)) {
+            return $stage;
+        }
+
+        throw new InvalidArgumentException('A scan check stage must implement '.ScanCheckStage::class.'.');
     }
 
     /**
@@ -43,7 +73,7 @@ final readonly class ScanCheckPipeline
     public function run(string $code, ?ScanInput $source, Closure $evaluate, string $attributeLabel, array $context = []): ScanResult
     {
         try {
-            return $this->runStages($code, $source, $evaluate, $attributeLabel, $context);
+            return $this->runChecks($code, $source, $evaluate, $attributeLabel, $context);
         } catch (ValidationException $exception) {
             return ScanResult::reject($code, $source, $exception->validator->errors()->first());
         } catch (Throwable $exception) {
@@ -54,7 +84,7 @@ final readonly class ScanCheckPipeline
     }
 
     /** @param  array<string, mixed>  $context */
-    private function runStages(string $code, ?ScanInput $source, Closure $evaluate, string $attributeLabel, array $context): ScanResult
+    private function runChecks(string $code, ?ScanInput $source, Closure $evaluate, string $attributeLabel, array $context): ScanResult
     {
         if ($code === '') {
             return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_empty'));
@@ -64,14 +94,47 @@ final readonly class ScanCheckPipeline
             return $rejection;
         }
 
-        $record = $this->lookUp($code, $source, $evaluate);
+        $record = $this->lookUp($code, $source, $evaluate, $context);
 
         if ($record instanceof ScanResult) {
             return $record;
         }
 
         return $this->runClosures($code, $source, $record, $evaluate, $context)
+            ?? $this->runPipedStages($code, $source, $record, $context)
             ?? ScanResult::accept($code, $source, $record);
+    }
+
+    /** @param  array<string, mixed>  $context */
+    private function runPipedStages(string $code, ?ScanInput $source, mixed $record, array $context): ?ScanResult
+    {
+        if ($this->stages === []) {
+            return null;
+        }
+
+        $stageContext = new ScanCheckContext(
+            code: $code,
+            source: $source,
+            record: $record,
+            component: $this->component,
+            step: ($context['step'] ?? null) instanceof ScanStep ? $context['step'] : null,
+            values: is_array($context['values'] ?? null) ? $context['values'] : [],
+        );
+
+        foreach ($this->stages as $stage) {
+            $instance = $stage instanceof ScanCheckStage ? $stage : app($stage);
+            $outcome = $instance->check($stageContext);
+
+            if ($outcome === false) {
+                return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_rejected'));
+            }
+
+            if (is_string($outcome) && $outcome !== '') {
+                return ScanResult::reject($code, $source, $outcome);
+            }
+        }
+
+        return null;
     }
 
     private function checkRules(string $code, ?ScanInput $source, string $attributeLabel): ?ScanResult
@@ -93,7 +156,27 @@ final readonly class ScanCheckPipeline
         return ScanResult::reject($code, $source, (string) $validator->errors()->first('code'));
     }
 
-    private function lookUp(string $code, ?ScanInput $source, Closure $evaluate): Model|ScanResult|null
+    /** @param  array<string, mixed>  $context */
+    private function lookUp(string $code, ?ScanInput $source, Closure $evaluate, array $context): mixed
+    {
+        if ($this->lookupModel === null && $this->lookupResolver === null) {
+            return null;
+        }
+
+        // A resolver replaces the model lookup unless it's a fallback.
+        $record = $this->lookupModel !== null && ($this->lookupResolver === null || $this->lookupFallback)
+            ? $this->lookUpModel($code, $evaluate)
+            : null;
+
+        if ($record === null && $this->lookupResolver !== null) {
+            $resolved = $evaluate($this->lookupResolver, [...$context, 'code' => $code, 'source' => $source], [ScanInput::class => $source]);
+            $record = $resolved === false ? null : $resolved;
+        }
+
+        return $record ?? ScanResult::reject($code, $source, __('filament-qr-code::ui.record_not_found', ['code' => $code]));
+    }
+
+    private function lookUpModel(string $code, Closure $evaluate): ?Model
     {
         if ($this->lookupModel === null) {
             return null;
@@ -107,15 +190,11 @@ final readonly class ScanCheckPipeline
 
         $record = $query->where($this->lookupColumn, $code)->first();
 
-        if ($record instanceof Model) {
-            return $record;
-        }
-
-        return ScanResult::reject($code, $source, __('filament-qr-code::ui.record_not_found', ['code' => $code]));
+        return $record instanceof Model ? $record : null;
     }
 
     /** @param  array<string, mixed>  $context */
-    private function runClosures(string $code, ?ScanInput $source, ?Model $record, Closure $evaluate, array $context): ?ScanResult
+    private function runClosures(string $code, ?ScanInput $source, mixed $record, Closure $evaluate, array $context): ?ScanResult
     {
         foreach ($this->closures as $check) {
             $outcome = $evaluate($check, [

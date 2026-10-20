@@ -9,6 +9,7 @@ use Filament\Forms\Components\Concerns\CanBeReadOnly;
 use Filament\Forms\Components\Concerns\HasPlaceholder;
 use Filament\Forms\Components\Field;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
+use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasOptionsSync;
@@ -24,6 +25,7 @@ class QrScanner extends Field
 {
     use CanBeReadOnly;
     use HasCameraScanning;
+    use HasCodeNormalization;
     use HasFeedback;
     use HasHardwareScanner;
     use HasOptionsSync;
@@ -166,8 +168,12 @@ class QrScanner extends Field
      */
     public function normalizeUsing(Closure $normalizer): static
     {
+        // Live scans: applied in handleScan() before rules and lookup.
+        $this->scanNormalizer = $normalizer;
+
         $this->afterStateUpdated(function ($component, $state) use ($normalizer): void {
             $normalized = $component->evaluate($normalizer, [
+                'code' => $state,
                 'rawValue' => $state,
                 'state' => $state,
             ]);
