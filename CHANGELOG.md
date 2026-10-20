@@ -19,7 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ScanStep::when(fn (array $values) => ...)`: conditional steps are skipped, not required, and their value is dropped.
 - `window.FilamentQrCode.router` (the shared hardware input router) and `createInputRouter` are public and documented.
 
+- **Extension points (P2.2).** See `docs/customizing.md`.
+  - `lookupUsing(fn ($code) => ...)` on scanners and steps replaces the model lookup (`fallback: true` runs it after a miss). `lookup()` model and column accept closures.
+  - `normalizeWith(trim, uppercase, stripPrefix)` presets apply in the browser and on the server. `normalizeUsing()` now runs on the server before rules and lookup. `ScanStep::normalizeUsing()` added.
+  - `->pipe(Stage::class)` with the `ScanCheckStage` contract runs custom checks after the built-in ones (container-resolved; also on submit).
+  - `ScanStep` closures get `$get`/`$livewire`, `$step` and `$values`. `ScanStep` is macroable.
+  - `onStepAccepted()` / `onStepRejected()` side-effect hooks on sequences.
+  - `ScanAccepted` / `ScanRejected` gain `statePath`, `livewireClass`, `livewireId`, `sequence` and `values`. `ScanSequenceCompleted` gains `livewireClass` and `livewireId`. The `QrCodeScanned` context gains `state_path`.
+  - Views are split into publishable sub-views. They add `fi-qr-*` classes, `data-qr-part` markers, `extraAttributes()` on the roots, `QrCodeRenderHook` render hooks and `--fi-qr-*` CSS variables. The rendered output is otherwise unchanged.
+  - `php artisan make:qr-scan-field Name [--sequence] [--force]`, with stubs published via `--tag=filament-qr-code-stubs`.
+
 ### Changed
+- `ScanResult::$record` is typed `mixed` (lookups may return arrays or objects). Use `recordKey()` for the key.
+- `normalizeUsing()` on a scanner now also normalizes server-checked scans before the checks, not only the stored state.
 - An optional step whose check fails now also gives way to a following repeat step, so `po, sku, lot?, serials` works.
 - `QrScanSequence::make()` runs `setUp()` and `configureUsing()` callbacks; sequences with a state path now fill to `[]`.
 - The scanner's `x-data` no longer embeds the options (they're on `data-qr-options`), and the sequence view gained a
