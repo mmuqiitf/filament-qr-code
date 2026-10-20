@@ -9,6 +9,7 @@ import {
 } from './qr-hardware-scanner.js';
 import { qrFeedback } from './audio-feedback.js';
 import * as qrCameraCore from './qr-camera-core.js';
+import { createInputRouter, inputRouter } from './input-router.js';
 import '../css/qr-code.css';
 
 export {
@@ -21,6 +22,8 @@ export {
     sanitizeScannedValue,
     qrFeedback,
     qrCameraCore,
+    createInputRouter,
+    inputRouter,
 };
 
 // Global registration for Alpine.js
@@ -35,6 +38,11 @@ if (typeof window !== 'undefined') {
         sanitizeScannedValue,
         qrFeedback,
         qrCameraCore,
+        createInputRouter,
+        // The shared page-wide wedge router: FilamentQrCode.router.register(target).
+        get router() {
+            return inputRouter();
+        },
     };
 
     const registerComponents = () => {
