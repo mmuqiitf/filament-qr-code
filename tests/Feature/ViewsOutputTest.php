@@ -16,6 +16,8 @@ function comparableViewHtml(string $html): string
     $html = preg_replace('/wire:id="[^"]*"|wire:snapshot="[^"]*"|wire:effects="[^"]*"|wire:name="[^"]*"/', '', $html);
     $html = preg_replace("/livewireId: '[^']*'/", "livewireId: ''", (string) $html);
     $html = preg_replace('/wire:key="[A-Za-z0-9]{20}\./', 'wire:key="', (string) $html);
+    // Livewire's deterministic Blade keys hash the view's absolute path (lw-<crc32>-<n>): keep the index, drop the hash.
+    $html = preg_replace('/\blw-\d+-(\d+)\b/', 'lw-hash-$1', (string) $html);
     $html = preg_replace('/\s+data-qr-part="[^"]*"/', '', (string) $html);
     $html = preg_replace('/\bfi-qr-[a-z0-9-]+\b/', '', (string) $html);
     $html = preg_replace('/<!--.*?-->/s', '', (string) $html);
