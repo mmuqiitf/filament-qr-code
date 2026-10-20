@@ -15,49 +15,57 @@ import {
 } from './qr-camera-core.js';
 import { createScanDeduper, requestScanCheck } from './scan-pipeline.js';
 import { FLASH_CLASSES, flashElement, playOutcomeFeedback } from './feedback.js';
+import { changedKeys, feedSource, listenForControlEvents, observeOptions, readOptionsAttribute } from './runtime-control.js';
+
+const DEFAULT_OPTIONS = {
+    nextField: null,
+    sound: true,
+    vibrate: true,
+    beepFrequency: 880,
+    beepDurationMs: 80,
+    vibrateDurationMs: 100,
+    hardwareScanner: true,
+    burstThresholdMs: 50,
+    terminators: ['Enter', 'Tab'],
+    minBarcodeLength: 2,
+    minFastKeys: 1,
+    scanTimeoutMs: 150,
+    hardwareScope: 'focus',
+    preventSubmit: true,
+    fps: 25,
+    qrbox: 250,
+    preferRearCamera: true,
+    formats: [],
+    fileScanFailedMessage: 'No barcode or QR code found in selected image.',
+    insecureMessage: 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
+    serverCheck: false,
+    componentKey: null,
+    cooldownMs: 0,
+    clearOnReject: true,
+    scanFailedMessage: 'The scan could not be checked. Please try again.',
+    successFeedback: null,
+    errorFeedback: null,
+    mode: 'single',
+    continuousDisplay: 'empty',
+    pauseOnReject: false,
+    keepCameraOpen: false,
+    syncOptions: 'morph',
+};
+
+const ROUTER_OPTIONS = ['hardwareScanner', 'hardwareScope', 'burstThresholdMs', 'minFastKeys', 'minBarcodeLength', 'terminators', 'scanTimeoutMs', 'preventSubmit'];
+
+function definedOnly(options) {
+    return Object.fromEntries(Object.entries(options ?? {}).filter(([, value]) => value !== undefined));
+}
 
 /**
- * Alpine component for QrScanner field.
+ * Alpine component for QrScanner field. Options live in `this.options` so
+ * they can change at runtime (setOptions, a re-rendered data-qr-options, or
+ * a qr-scanner-set-options event) without re-creating the component.
  */
-export default function qrScannerComponent({
-    state = null,
-    statePath = null,
-    nextField = null,
-    sound = true,
-    vibrate = true,
-    beepFrequency = 880,
-    beepDurationMs = 80,
-    vibrateDurationMs = 100,
-    hardwareScanner = true,
-    burstThresholdMs = 50,
-    terminators = ['Enter', 'Tab'],
-    minBarcodeLength = 2,
-    minFastKeys = 1,
-    scanTimeoutMs = 150,
-    hardwareScope = 'focus',
-    preventSubmit = true,
-    fps = 25,
-    qrbox = 250,
-    preferRearCamera = true,
-    formats = [],
-    cameraStorageKey = null,
-    fileScanFailedMessage = 'No barcode or QR code found in selected image.',
-    insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
-    serverCheck = false,
-    componentKey = null,
-    cooldownMs = 0,
-    clearOnReject = true,
-    scanFailedMessage = 'The scan could not be checked. Please try again.',
-    successFeedback = null,
-    errorFeedback = null,
-    mode = 'single',
-    continuousDisplay = 'empty',
-    pauseOnReject = false,
-    keepCameraOpen = false,
-} = {}) {
-    const storageKey = cameraStorageKey || storageKeyFor('scanner');
+export default function qrScannerComponent({ state = null, statePath = null, ...options } = {}) {
     const deduper = createScanDeduper();
-    const isContinuous = mode === 'continuous';
+    let storageKey = storageKeyFor('scanner');
 
     return {
         // State
@@ -79,29 +87,26 @@ export default function qrScannerComponent({
         rejectionMessage: '',
         queuedScan: null,
         boundDeliverHandler: null,
+        options: { ...DEFAULT_OPTIONS, ...definedOnly(options) },
+        pendingOptions: null,
+        decoderIsStale: false,
+        stopObservingOptions: null,
+        stopListeningForControls: null,
 
         init() {
+            // The view keeps x-data constant and renders options on data-qr-options:
+            // a changed x-data would make Alpine re-create the component on morph.
+            const { statePath: renderedStatePath = null, cameraStorageKey = null, ...rendered } = readOptionsAttribute(this.fieldElement()) ?? {};
+            this.options = { ...this.options, ...definedOnly(rendered) };
+            this.statePath = this.statePath ?? renderedStatePath;
+            storageKey = cameraStorageKey || this.options.cameraStorageKey || storageKey;
+
             this.scannerElementId = `qr-reader-${this.$id('qr-reader')}`;
 
-            if (hardwareScanner) {
-                this.unregisterTarget = inputRouter().register({
-                    id: `${this.scannerElementId}-${Math.random().toString(36).slice(2)}`,
-                    element: this.fieldElement(),
-                    name: this.fieldElement().getAttribute('data-field-name') || null,
-                    kind: 'field',
-                    scope: hardwareScope === 'page' ? 'page' : 'focus',
-                    detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs, preventSubmit },
-                    accept: () => !this.isChecking && !this.isPaused,
-                    hold: (scannedValue) => this.holdScan(scannedValue, 'hardware'),
-                    isModalOpen: () => this.isModalOpen,
-                    deliver: (scannedValue) => {
-                        this.handleScanResult(scannedValue, 'hardware');
-                    },
-                });
-            }
+            this.registerWithRouter();
 
             this.boundDeliverHandler = (event) => {
-                if (!serverCheck || !componentKey) {
+                if (!this.options.serverCheck || !this.options.componentKey) {
                     return;
                 }
 
@@ -109,6 +114,23 @@ export default function qrScannerComponent({
                 this.handleScanResult(event.detail?.value, 'hardware');
             };
             this.fieldElement().addEventListener('qr-scan-deliver', this.boundDeliverHandler);
+
+            this.stopObservingOptions = observeOptions(this.fieldElement(), (rendered) => {
+                if (this.options.syncOptions !== 'refresh') {
+                    this.setOptions(rendered);
+                }
+            });
+
+            this.stopListeningForControls = listenForControlEvents({
+                'qr-scanner-feed': ({ code, source }) => this.feed(code, source),
+                'qr-scanner-pause': () => this.pause(),
+                'qr-scanner-resume': () => this.resumeScanning(),
+                'qr-scanner-reset': () => this.reset(),
+                'qr-scanner-refresh': () => this.refreshOptions(),
+                'qr-scanner-set-options': ({ options: changes }) => this.setOptions(changes ?? {}),
+            }, () => this.identities());
+
+            this.fieldElement().qrScanner = this.controlApi();
         },
 
         destroy() {
@@ -117,9 +139,144 @@ export default function qrScannerComponent({
                 this.boundDeliverHandler = null;
             }
 
+            this.stopObservingOptions?.();
+            this.stopObservingOptions = null;
+            this.stopListeningForControls?.();
+            this.stopListeningForControls = null;
+            delete this.fieldElement().qrScanner;
+
             this.unregisterTarget?.();
             this.unregisterTarget = null;
             this.stopScan();
+        },
+
+        // The documented per-element API: element.qrScanner.
+        controlApi() {
+            return {
+                feed: (code, source) => this.feed(code, source),
+                pause: () => this.pause(),
+                resume: () => this.resumeScanning(),
+                reset: () => this.reset(),
+                setOptions: (changes) => this.setOptions(changes),
+                refresh: () => this.refreshOptions(),
+                getOptions: () => ({ ...this.options }),
+                getState: () => ({
+                    value: this.value,
+                    isPaused: this.isPaused,
+                    isChecking: this.isChecking,
+                    isScanning: this.isScanning,
+                }),
+            };
+        },
+
+        identities() {
+            return [this.getStatePath(), this.fieldName(), this.options.componentKey].filter(Boolean);
+        },
+
+        feed(code, source) {
+            return this.handleScanResult(code, feedSource(source));
+        },
+
+        pause() {
+            if (this.isPaused) {
+                return;
+            }
+
+            this.isPaused = true;
+            this.pauseCamera();
+            window.dispatchEvent(new CustomEvent('qr-scan-paused', { detail: { field: this.fieldName() } }));
+        },
+
+        reset() {
+            const wasPaused = this.isPaused;
+
+            this.value = '';
+            this.rejectionMessage = '';
+            this.queuedScan = null;
+            this.isPaused = false;
+            deduper.reset();
+
+            if (wasPaused) {
+                window.dispatchEvent(new CustomEvent('qr-scan-resumed', { detail: { field: this.fieldName() } }));
+
+                if (this.isModalOpen) {
+                    this.resumeCamera();
+                }
+            }
+        },
+
+        refreshOptions() {
+            const rendered = readOptionsAttribute(this.fieldElement());
+
+            if (rendered) {
+                this.setOptions(rendered);
+            }
+        },
+
+        // New options wait for a running check; camera options apply on the next camera start.
+        setOptions(changes = {}) {
+            this.pendingOptions = { ...(this.pendingOptions ?? {}), ...definedOnly(changes) };
+
+            if (!this.isChecking) {
+                this.applyPendingOptions();
+            }
+        },
+
+        applyPendingOptions() {
+            const changes = this.pendingOptions;
+            this.pendingOptions = null;
+
+            if (!changes) {
+                return;
+            }
+
+            const changed = changedKeys(this.options, changes);
+            this.options = { ...this.options, ...changes };
+
+            if (changed.includes('formats')) {
+                this.markDecoderStale();
+            }
+
+            if (changed.some((key) => ROUTER_OPTIONS.includes(key))) {
+                this.registerWithRouter();
+            }
+        },
+
+        markDecoderStale() {
+            if (this.isScanning) {
+                this.decoderIsStale = true;
+
+                return;
+            }
+
+            this.html5Qrcode = null;
+            this.decoderIsStale = false;
+        },
+
+        registerWithRouter() {
+            this.unregisterTarget?.();
+            this.unregisterTarget = null;
+
+            if (!this.options.hardwareScanner) {
+                return;
+            }
+
+            const { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs, preventSubmit, hardwareScope } = this.options;
+
+            this.unregisterTarget = inputRouter().register({
+                id: `${this.scannerElementId}-${Math.random().toString(36).slice(2)}`,
+                element: this.fieldElement(),
+                name: this.fieldElement().getAttribute('data-field-name') || null,
+                kind: 'field',
+                scope: hardwareScope === 'page' ? 'page' : 'focus',
+                detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs, preventSubmit },
+                accept: () => !this.isChecking && !this.isPaused,
+                hold: (scannedValue) => this.holdScan(scannedValue, 'hardware'),
+                isModalOpen: () => this.isModalOpen,
+                deliver: (scannedValue) => {
+                    this.handleScanResult(scannedValue, 'hardware');
+                },
+            });
         },
 
         getStatePath() {
@@ -183,12 +340,12 @@ export default function qrScannerComponent({
 
             await loadCameraDevices(this, {
                 Html5QrcodeClass: decoder.Html5Qrcode,
-                preferRearCamera,
+                preferRearCamera: this.options.preferRearCamera,
                 storageKey,
                 requireDevices: true,
                 emptyMessage: 'No camera devices detected on this system.',
                 deniedMessage: 'Failed to access camera.',
-                insecureMessage,
+                insecureMessage: this.options.insecureMessage,
             });
 
             if (!this.hasError) {
@@ -197,11 +354,11 @@ export default function qrScannerComponent({
         },
 
         scannerFormatsConfig() {
-            return scannerFormatsConfigFor(formats);
+            return scannerFormatsConfigFor(this.options.formats);
         },
 
         currentQrbox() {
-            return resolveQrboxFor(this.scannerElementId, qrbox, formats);
+            return resolveQrboxFor(this.scannerElementId, this.options.qrbox, this.options.formats);
         },
 
         async startScan() {
@@ -220,19 +377,24 @@ export default function qrScannerComponent({
                 return;
             }
 
+            if (this.decoderIsStale) {
+                this.html5Qrcode = null;
+                this.decoderIsStale = false;
+            }
+
             if (!this.html5Qrcode) {
                 const decoderFormats = decoder.Html5QrcodeSupportedFormats;
                 ensureScannerInstance(
                     this,
                     this.scannerElementId,
-                    formats,
+                    this.options.formats,
                     decoder.Html5Qrcode,
                     decoderFormats
                 );
             }
 
             const config = {
-                fps: fps,
+                fps: this.options.fps,
                 qrbox: this.currentQrbox(),
             };
 
@@ -258,6 +420,11 @@ export default function qrScannerComponent({
 
         async stopScan() {
             await stopCameraFeed(this, 'camera scanner');
+
+            if (this.decoderIsStale) {
+                this.html5Qrcode = null;
+                this.decoderIsStale = false;
+            }
         },
 
         async handleScanResult(scannedText, source = 'camera') {
@@ -268,6 +435,7 @@ export default function qrScannerComponent({
             }
 
             const field = this.fieldElement().getAttribute('data-field-name') || null;
+            const { serverCheck, componentKey, cooldownMs, mode, scanFailedMessage } = this.options;
 
             if (deduper.isDuplicate(code, cooldownMs)) {
                 window.dispatchEvent(new CustomEvent('qr-scan-duplicate', { detail: { value: code, field, source, mode } }));
@@ -295,6 +463,7 @@ export default function qrScannerComponent({
                 return result;
             } finally {
                 this.isChecking = false;
+                this.applyPendingOptions();
                 this.replayQueuedScan();
             }
         },
@@ -303,7 +472,7 @@ export default function qrScannerComponent({
         holdScan(scannedText, source = 'hardware') {
             const code = sanitizeScannedValue(scannedText);
 
-            if (!isContinuous || this.isPaused || !code) {
+            if (!this.isContinuous() || this.isPaused || !code) {
                 return false;
             }
 
@@ -359,8 +528,12 @@ export default function qrScannerComponent({
             }
         },
 
+        isContinuous() {
+            return this.options.mode === 'continuous';
+        },
+
         async onCameraDecode(decodedText) {
-            if (!serverCheck || !componentKey) {
+            if (!this.options.serverCheck || !this.options.componentKey) {
                 await this.handleScanResult(decodedText, 'camera');
                 this.closeScannerModal();
 
@@ -382,7 +555,7 @@ export default function qrScannerComponent({
             }
 
             if (result.passes) {
-                if (isContinuous && keepCameraOpen) {
+                if (this.isContinuous() && this.options.keepCameraOpen) {
                     this.resumeCamera();
 
                     return;
@@ -424,8 +597,9 @@ export default function qrScannerComponent({
                 this.$wire.set(path, code);
             }
 
-            emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
+            this.emitDefaultFeedback();
 
+            const { nextField, mode } = this.options;
             window.dispatchEvent(new CustomEvent('qr-scanned', {
                 detail: { value: code, field, nextField, source, mode },
             }));
@@ -436,9 +610,17 @@ export default function qrScannerComponent({
             }
         },
 
+        emitDefaultFeedback() {
+            const { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs } = this.options;
+
+            emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
+        },
+
         applyAccepted({ code, source, recordKey }, field) {
+            const { successFeedback, beepFrequency, beepDurationMs, nextField, mode, continuousDisplay } = this.options;
+
             // The server already wrote the state; this keeps the deferred entangle in step without a request.
-            this.value = isContinuous && continuousDisplay === 'empty' ? '' : code;
+            this.value = this.isContinuous() && continuousDisplay === 'empty' ? '' : code;
             this.rejectionMessage = '';
 
             if (successFeedback) {
@@ -448,7 +630,7 @@ export default function qrScannerComponent({
                     beepDurationMs,
                 });
             } else {
-                emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
+                this.emitDefaultFeedback();
             }
 
             window.dispatchEvent(new CustomEvent('qr-scan-accepted', { detail: { value: code, field, source, recordKey, mode } }));
@@ -473,15 +655,17 @@ export default function qrScannerComponent({
         },
 
         applyRejected({ code, source, message }, field) {
+            const { clearOnReject, pauseOnReject, errorFeedback, beepFrequency, beepDurationMs, mode } = this.options;
+
             if (clearOnReject) {
                 this.value = '';
             }
 
-            if (isContinuous) {
+            if (this.isContinuous()) {
                 this.rejectionMessage = message ?? '';
             }
 
-            if (isContinuous && pauseOnReject) {
+            if (this.isContinuous() && pauseOnReject) {
                 this.isPaused = true;
                 window.dispatchEvent(new CustomEvent('qr-scan-paused', { detail: { field } }));
             }
@@ -534,7 +718,7 @@ export default function qrScannerComponent({
                 ensureScannerInstance(
                     this,
                     this.scannerElementId,
-                    formats,
+                    this.options.formats,
                     decoder.Html5Qrcode,
                     decoder.Html5QrcodeSupportedFormats
                 );
@@ -551,7 +735,7 @@ export default function qrScannerComponent({
             } catch (error) {
                 console.debug('QR file scan failed:', error);
                 this.hasError = true;
-                this.errorMessage = fileScanFailedMessage;
+                this.errorMessage = this.options.fileScanFailedMessage;
 
                 if (resumeCamera && this.isModalOpen) {
                     await this.startScan();

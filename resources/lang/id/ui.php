@@ -49,6 +49,7 @@ return [
     'scanning_paused' => 'Pemindaian dijeda.',
     'resume_scanning' => 'Lanjutkan pemindaian',
     'scan_failed' => 'Pindaian tidak dapat diperiksa. Silakan coba lagi.',
+    'step_inactive' => 'Langkah ini tidak berlaku saat ini.',
     'repeat_full' => 'Langkah ini sudah berisi :count kode.',
     'duplicate_in_step' => '":code" sudah dipindai di langkah ini.',
     'repeat_needs_codes' => 'Pindai minimal :count kode sebelum menyelesaikan langkah ini.',

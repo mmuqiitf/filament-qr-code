@@ -1,6 +1,7 @@
 import { qrFeedback } from './audio-feedback.js';
 import { sanitizeScannedValue } from './qr-hardware-scanner.js';
 import { inputRouter } from './input-router.js';
+import { changedKeys, feedSource, listenForControlEvents, observeOptions, readOptionsAttribute } from './runtime-control.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -13,36 +14,49 @@ import {
     storageKeyFor,
 } from './qr-camera-core.js';
 
+const DEFAULT_OPTIONS = {
+    sound: true,
+    vibrate: true,
+    beepFrequency: 880,
+    beepDurationMs: 80,
+    vibrateDurationMs: 100,
+    hardwareScanner: true,
+    burstThresholdMs: 50,
+    terminators: ['Enter', 'Tab'],
+    minBarcodeLength: 2,
+    minFastKeys: 1,
+    scanTimeoutMs: 150,
+    fps: 25,
+    qrbox: 250,
+    preferRearCamera: true,
+    formats: [],
+    statePrefix: 'data',
+    componentStatePath: null,
+    serverCheck: false,
+    steps: [],
+    componentKey: null,
+    scanFailedMessage: 'Scan failed.',
+    insecureMessage: 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
+    syncOptions: 'morph',
+};
+
+const ROUTER_OPTIONS = ['hardwareScanner', 'burstThresholdMs', 'minFastKeys', 'minBarcodeLength', 'terminators', 'scanTimeoutMs'];
+
+function definedOnly(options) {
+    return Object.fromEntries(Object.entries(options ?? {}).filter(([, value]) => value !== undefined));
+}
+
+// PHP sends an empty array for "no values".
+function normalizeValues(values) {
+    return values && typeof values === 'object' && !Array.isArray(values) ? { ...values } : {};
+}
+
 /**
- * Alpine component for QrScanSequence container.
+ * Alpine component for QrScanSequence container. Options live in
+ * `this.options` and follow the server through data-qr-options on the
+ * wrapper outside the wire:ignore'd UI.
  */
-export default function qrScanSequenceComponent({
-    fields = [],
-    sound = true,
-    vibrate = true,
-    beepFrequency = 880,
-    beepDurationMs = 80,
-    vibrateDurationMs = 100,
-    hardwareScanner = true,
-    burstThresholdMs = 50,
-    terminators = ['Enter', 'Tab'],
-    minBarcodeLength = 2,
-    minFastKeys = 1,
-    scanTimeoutMs = 150,
-    fps = 25,
-    qrbox = 250,
-    preferRearCamera = true,
-    formats = [],
-    statePrefix = 'data',
-    componentStatePath = null,
-    editable = true,
-    serverCheck = false,
-    steps = [],
-    componentKey = null,
-    scanFailedMessage = 'Scan failed.',
-    cameraStorageKey = null,
-    insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
-} = {}) {
+export default function qrScanSequenceComponent({ fields = [], editable = true, values = undefined, cameraStorageKey = null, ...options } = {}) {
     const storageKey = cameraStorageKey || storageKeyFor('sequence');
 
     return {
@@ -50,6 +64,7 @@ export default function qrScanSequenceComponent({
         currentFieldIndex: 0,
         results: {},
         editable: editable,
+        renderedEditable: editable,
         isScanning: false,
         isLoading: false,
         hasError: false,
@@ -61,36 +76,271 @@ export default function qrScanSequenceComponent({
         unregisterTarget: null,
         queuedScan: null,
         isChecking: false,
+        isPaused: false,
         stepError: null,
+        options: { ...DEFAULT_OPTIONS, ...definedOnly(options) },
+        pendingOptions: null,
+        deferredFields: null,
+        decoderIsStale: false,
+        stopObservingOptions: null,
+        stopListeningForControls: null,
 
         init() {
             this.elementId = `qr-sequence-${this.$id('qr-seq')}`;
 
-            if (hardwareScanner) {
-                this.unregisterTarget = inputRouter().register({
-                    id: `sequence-${this.elementId}-${Math.random().toString(36).slice(2)}`,
-                    element: this.$root ?? this.$el,
-                    name: null,
-                    kind: 'sequence',
-                    scope: 'page',
-                    detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs },
-                    // While a server check runs, refuse bursts so the router can hold one for us.
-                    accept: () => !this.isChecking,
-                    hold: (scannedValue) => this.holdScan(scannedValue),
-                    deliver: (scannedValue) => {
-                        this.focusStepFromInput();
-                        this.processScan(scannedValue, 'hardware');
-                    },
-                });
+            if (this.options.serverCheck && values !== undefined) {
+                this.results = normalizeValues(values);
+                this.currentFieldIndex = this.firstEmptyActiveIndex();
             }
+
+            this.registerWithRouter();
+
+            this.stopObservingOptions = observeOptions(this.$root ?? this.$el, (rendered) => {
+                if (this.options.syncOptions !== 'refresh') {
+                    this.setOptions(rendered);
+                }
+            });
+
+            this.stopListeningForControls = listenForControlEvents({
+                'qr-sequence-feed': ({ code, source }) => this.feed(code, source),
+                'qr-sequence-go-to': ({ step }) => this.goToStep(step),
+                'qr-sequence-reset': ({ values: seeded, fromServer }) => this.resetTo(seeded, { writeState: !fromServer }),
+                'qr-sequence-pause': () => this.pause(),
+                'qr-sequence-resume': () => this.resume(),
+                'qr-sequence-refresh': () => this.refreshOptions(),
+                'qr-sequence-set-options': ({ options: changes }) => this.setOptions(changes ?? {}),
+                'qr-sequence-set-repeat': ({ step, count }) => this.setRepeatCount(step, count),
+            }, () => [this.options.componentKey, this.options.componentStatePath].filter(Boolean));
+
+            (this.$root ?? this.$el).qrScanSequence = this.controlApi();
 
             this.loadCameras();
         },
 
         destroy() {
+            this.stopObservingOptions?.();
+            this.stopObservingOptions = null;
+            this.stopListeningForControls?.();
+            this.stopListeningForControls = null;
+            delete (this.$root ?? this.$el).qrScanSequence;
+
             this.unregisterTarget?.();
             this.unregisterTarget = null;
             this.stopScanner();
+        },
+
+        // The documented per-element API: element.qrScanSequence.
+        controlApi() {
+            return {
+                feed: (code, source) => this.feed(code, source),
+                goToStep: (step) => this.goToStep(step),
+                reset: ({ values: seeded = {} } = {}) => this.resetTo(seeded),
+                pause: () => this.pause(),
+                resume: () => this.resume(),
+                setOptions: (changes) => this.setOptions(changes),
+                refresh: () => this.refreshOptions(),
+                getOptions: () => ({ ...this.options, fields: [...this.fields], editable: this.editable }),
+                getState: () => ({
+                    currentStep: this.getCurrentField()?.key ?? null,
+                    values: { ...this.results },
+                    isPaused: this.isPaused,
+                    isChecking: this.isChecking,
+                    isScanning: this.isScanning,
+                }),
+            };
+        },
+
+        feed(code, source) {
+            if (this.isPaused) return undefined;
+
+            return this.processScan(code, feedSource(source));
+        },
+
+        goToStep(key) {
+            const index = this.indexOfStep(key);
+
+            if (index < 0) return;
+
+            this.currentFieldIndex = index;
+            this.stepError = null;
+        },
+
+        pause() {
+            this.isPaused = true;
+        },
+
+        resume() {
+            this.isPaused = false;
+        },
+
+        /**
+         * Start over with seeded values. Page code also writes them to Livewire
+         * state; a reset the server sent already did that.
+         */
+        resetTo(seeded = {}, { writeState = true } = {}) {
+            this.results = normalizeValues(seeded);
+            this.stepError = null;
+            this.isPaused = false;
+            this.queuedScan = null;
+            this.applyDeferredFields();
+            this.currentFieldIndex = this.firstEmptyActiveIndex();
+
+            if (writeState) this.writeAllValues();
+        },
+
+        writeAllValues() {
+            if (!this.$wire) return;
+
+            this.fields.forEach(({ key }) => this.$wire.set(this.statePathFor(key), this.results[key] ?? null, false));
+
+            if (this.options.componentStatePath) {
+                this.$wire.set(this.options.componentStatePath, { ...this.results });
+            }
+        },
+
+        setRepeatCount(key, count) {
+            this.options = {
+                ...this.options,
+                steps: this.options.steps.map((step) => (step.key === key ? { ...step, repeat: count ?? null } : step)),
+            };
+        },
+
+        refreshOptions() {
+            const rendered = readOptionsAttribute(this.$root ?? this.$el);
+
+            if (rendered) this.setOptions(rendered);
+        },
+
+        // Options wait for a running check; the step list waits for the round to end.
+        setOptions(changes = {}) {
+            this.pendingOptions = { ...(this.pendingOptions ?? {}), ...definedOnly(changes) };
+
+            if (!this.isChecking) this.applyPendingOptions();
+        },
+
+        applyPendingOptions() {
+            const changes = this.pendingOptions;
+            this.pendingOptions = null;
+
+            if (!changes) return;
+
+            const { fields: nextFields, values: nextValues, editable: nextEditable, ...rest } = changes;
+            const changed = changedKeys(this.options, rest);
+            this.options = { ...this.options, ...rest };
+
+            if (changed.includes('formats')) this.markDecoderStale();
+            if (changed.some((key) => ROUTER_OPTIONS.includes(key))) this.registerWithRouter();
+
+            // Only a server-side change of editable() wins over a qr-sequence-editable toggle.
+            if (nextEditable !== undefined && nextEditable !== this.renderedEditable) {
+                this.renderedEditable = nextEditable;
+                this.editable = nextEditable;
+            }
+
+            if (nextFields !== undefined) this.applyFields(nextFields);
+            if (nextValues !== undefined && this.options.serverCheck) this.applyValues(nextValues);
+        },
+
+        applyFields(nextFields) {
+            const keysOf = (list) => list.map(({ key }) => key).join('\u0000');
+
+            if (keysOf(nextFields) === keysOf(this.fields)) {
+                this.fields = nextFields;
+
+                return;
+            }
+
+            if (this.isRoundInProgress()) {
+                this.deferredFields = nextFields;
+
+                return;
+            }
+
+            this.fields = nextFields;
+            this.deferredFields = null;
+            this.currentFieldIndex = this.firstEmptyActiveIndex();
+        },
+
+        applyDeferredFields() {
+            if (!this.deferredFields) return;
+
+            this.fields = this.deferredFields;
+            this.deferredFields = null;
+        },
+
+        // A round is in progress once any non-sticky step holds a value.
+        isRoundInProgress() {
+            return Object.keys(this.results).some((key) => !this.isSticky(key));
+        },
+
+        applyValues(nextValues) {
+            const normalized = normalizeValues(nextValues);
+
+            if (JSON.stringify(normalized) === JSON.stringify(this.results)) return;
+
+            this.results = normalized;
+
+            const current = this.getCurrentField();
+
+            if (!current || !this.isActive(current.key) || this.isFilled(current.key)) {
+                this.currentFieldIndex = this.firstEmptyActiveIndex();
+            }
+        },
+
+        isFilled(key) {
+            const value = this.results[key];
+
+            if (!this.isRepeating(key)) return value !== undefined && value !== null && value !== '';
+
+            const count = Array.isArray(value) ? value.length : 0;
+
+            return count >= (this.stepOptions(key)?.repeat ?? 1);
+        },
+
+        isActive(key) {
+            return this.stepOptions(key)?.active !== false;
+        },
+
+        firstEmptyActiveIndex() {
+            const index = this.fields.findIndex(({ key }) => this.isActive(key) && !this.isFilled(key));
+
+            return index >= 0 ? index : 0;
+        },
+
+        markDecoderStale() {
+            if (this.isScanning) {
+                this.decoderIsStale = true;
+
+                return;
+            }
+
+            this.html5Qrcode = null;
+            this.decoderIsStale = false;
+        },
+
+        registerWithRouter() {
+            this.unregisterTarget?.();
+            this.unregisterTarget = null;
+
+            if (!this.options.hardwareScanner) return;
+
+            const { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs } = this.options;
+
+            this.unregisterTarget = inputRouter().register({
+                id: `sequence-${this.elementId}-${Math.random().toString(36).slice(2)}`,
+                element: this.$root ?? this.$el,
+                name: null,
+                kind: 'sequence',
+                scope: 'page',
+                detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs },
+                // While a server check runs, refuse bursts so the router can hold one for us.
+                accept: () => !this.isChecking && !this.isPaused,
+                hold: (scannedValue) => this.holdScan(scannedValue),
+                deliver: (scannedValue) => {
+                    this.focusStepFromInput();
+                    this.processScan(scannedValue, 'hardware');
+                },
+            });
         },
 
         getCurrentField() {
@@ -115,24 +365,24 @@ export default function qrScanSequenceComponent({
 
             await loadCameraDevices(this, {
                 Html5QrcodeClass: decoder.Html5Qrcode,
-                preferRearCamera,
+                preferRearCamera: this.options.preferRearCamera,
                 storageKey,
                 deniedMessage: 'Camera access denied or unavailable.',
-                insecureMessage,
+                insecureMessage: this.options.insecureMessage,
                 fixedMessage: true,
             });
         },
 
         scannerFormatsConfig() {
-            return scannerFormatsConfigFor(formats);
+            return scannerFormatsConfigFor(this.options.formats);
         },
 
         currentQrbox() {
-            return resolveQrboxFor(this.elementId, qrbox, formats);
+            return resolveQrboxFor(this.elementId, this.options.qrbox, this.options.formats);
         },
 
         statePathFor(fieldKey) {
-            const prefix = (statePrefix || '').trim().replace(/\.$/, '');
+            const prefix = (this.options.statePrefix || '').trim().replace(/\.$/, '');
             return prefix ? `${prefix}.${fieldKey}` : fieldKey;
         },
 
@@ -152,15 +402,20 @@ export default function qrScanSequenceComponent({
                 return;
             }
 
+            if (this.decoderIsStale) {
+                this.html5Qrcode = null;
+                this.decoderIsStale = false;
+            }
+
             if (!this.html5Qrcode) {
                 const decoderFormats = decoder.Html5QrcodeSupportedFormats;
-                ensureScannerInstance(this, this.elementId, formats, decoder.Html5Qrcode, decoderFormats);
+                ensureScannerInstance(this, this.elementId, this.options.formats, decoder.Html5Qrcode, decoderFormats);
             }
 
             try {
                 await this.html5Qrcode.start(
                     this.selectedDeviceId,
-                    { fps, qrbox: this.currentQrbox() },
+                    { fps: this.options.fps, qrbox: this.currentQrbox() },
                     (decodedText) => {
                         this.processScan(decodedText, 'camera');
                     },
@@ -176,6 +431,11 @@ export default function qrScanSequenceComponent({
 
         async stopScanner() {
             await stopCameraFeed(this, 'sequence scanner');
+
+            if (this.decoderIsStale) {
+                this.html5Qrcode = null;
+                this.decoderIsStale = false;
+            }
         },
 
         processScan(decodedText, source = 'camera') {
@@ -183,7 +443,9 @@ export default function qrScanSequenceComponent({
             if (!currentField) return;
 
             const trimmed = sanitizeScannedValue(decodedText);
-            if (!trimmed) return;
+            if (!trimmed || this.isPaused) return;
+
+            const { serverCheck, componentKey, componentStatePath } = this.options;
 
             if (serverCheck && componentKey && this.$wire) {
                 return this.processServerScan(currentField, trimmed, source)
@@ -213,10 +475,12 @@ export default function qrScanSequenceComponent({
                 },
             }));
 
-            // Auto-advance to next field, or stop the feed when complete
-            // so the button never gets stuck on "Stop".
-            if (this.currentFieldIndex < this.fields.length - 1) {
-                this.currentFieldIndex++;
+            // Auto-advance to the next active field, or stop the feed when
+            // complete so the button never gets stuck on "Stop".
+            const nextIndex = this.fields.findIndex((field, index) => index > this.currentFieldIndex && this.isActive(field.key));
+
+            if (nextIndex >= 0) {
+                this.currentFieldIndex = nextIndex;
             } else {
                 this.stopScanner();
                 window.dispatchEvent(new CustomEvent('qr-sequence-completed', {
@@ -262,13 +526,9 @@ export default function qrScanSequenceComponent({
         emitFeedback() {
             // The single beep for this delivery (camera or hardware): the
             // interceptor that routed hardware bursts never beeps.
-            emitScanFeedback(qrFeedback, {
-                sound,
-                vibrate,
-                beepFrequency,
-                beepDurationMs,
-                vibrateDurationMs,
-            });
+            const { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs } = this.options;
+
+            emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
         },
 
         indexOfStep(key) {
@@ -281,7 +541,7 @@ export default function qrScanSequenceComponent({
          * while a check is in flight are dropped.
          */
         stepOptions(key) {
-            return steps.find((step) => step.key === key) ?? null;
+            return this.options.steps.find((step) => step.key === key) ?? null;
         },
 
         isRepeating(key) {
@@ -302,7 +562,7 @@ export default function qrScanSequenceComponent({
         async finishStep(key) {
             const field = this.fields[this.indexOfStep(key)];
 
-            if (!field || !serverCheck || !componentKey || !this.$wire) return;
+            if (!field || !this.canReachServer()) return;
 
             return this.processServerScan(field, '', 'manual', { method: 'finishStep', args: { step: key } })
                 .finally(() => this.replayQueuedScan());
@@ -325,7 +585,7 @@ export default function qrScanSequenceComponent({
         async runStepAction(key, method, args) {
             const field = this.fields[this.indexOfStep(key)];
 
-            if (!field || !serverCheck || !componentKey || !this.$wire) return;
+            if (!field || !this.canReachServer()) return;
 
             return this.processServerScan(field, '', 'manual', { method, args, quiet: true })
                 .finally(() => this.replayQueuedScan());
@@ -334,6 +594,7 @@ export default function qrScanSequenceComponent({
         async processServerScan(currentField, code, source, { keepStep = false, method = 'handleStepScan', args = null, quiet = false } = {}) {
             if (this.isChecking) return;
 
+            const { componentKey, scanFailedMessage } = this.options;
             this.isChecking = true;
             let result;
 
@@ -350,6 +611,8 @@ export default function qrScanSequenceComponent({
                 this.isChecking = false;
             }
 
+            const applyQueuedOptions = () => this.applyPendingOptions();
+
             if (result === null || typeof result !== 'object' || typeof result.passes !== 'boolean') {
                 result = { passes: false, step: currentField.key, next_step: currentField.key, message: scanFailedMessage, values: { ...this.results } };
             }
@@ -365,13 +628,17 @@ export default function qrScanSequenceComponent({
                     : value;
             }
 
-            this.results = { ...(result.values || {}) };
+            this.results = normalizeValues(result.values);
+
+            if (result.completed || result.reset) this.applyDeferredFields();
 
             // A rejected typed correction stays visible so the operator can fix it.
             if (!result.passes && keepStep && code !== '') this.results[currentField.key] = code;
 
             const nextIndex = this.indexOfStep(result.next_step);
             if (nextIndex >= 0 && !keepStep) this.currentFieldIndex = nextIndex;
+
+            applyQueuedOptions();
 
             if (!result.passes) {
                 this.stepError = result.message || scanFailedMessage;
@@ -424,7 +691,7 @@ export default function qrScanSequenceComponent({
             const trimmed = ((this.results[fieldKey] || '') + '').trim();
 
             // Typed corrections go through the same server checks as scans.
-            if (trimmed && serverCheck && componentKey && this.$wire) {
+            if (trimmed && this.canReachServer()) {
                 const field = this.fields[this.indexOfStep(fieldKey)] ?? { key: fieldKey };
                 this.results[fieldKey] = trimmed;
 
@@ -440,8 +707,8 @@ export default function qrScanSequenceComponent({
             if (this.$wire) {
                 this.$wire.set(this.statePathFor(fieldKey), trimmed);
 
-                if (componentStatePath) {
-                    this.$wire.set(componentStatePath, { ...this.results });
+                if (this.options.componentStatePath) {
+                    this.$wire.set(this.options.componentStatePath, { ...this.results });
                 }
             }
 
@@ -457,6 +724,11 @@ export default function qrScanSequenceComponent({
             this.currentFieldIndex = 0;
             this.results = {};
             this.stepError = null;
+            this.applyDeferredFields();
+        },
+
+        canReachServer() {
+            return Boolean(this.options.serverCheck && this.options.componentKey && this.$wire);
         },
     };
 }

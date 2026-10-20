@@ -7,6 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Support;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Concerns\HasOptionsSync;
 use Mmuqiitf\FilamentQrCode\Concerns\HasOutcomeFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
@@ -28,6 +29,7 @@ final class ScanOptions
         HasCameraScanning::class => 'getCameraScanPayload',
         HasSequentialScan::class => 'getSequentialScanPayload',
         InteractsWithScans::class => 'getScanChecksScanPayload',
+        HasOptionsSync::class => 'getOptionsSyncScanPayload',
     ];
 
     /** @return array<string, mixed> */

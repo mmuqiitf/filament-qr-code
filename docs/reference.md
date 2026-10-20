@@ -100,6 +100,19 @@ QrHardwareScannerListener::make(['sku'])
 | `continuous.pause_on_reject`   | `false`   | `false` shows the error and keeps scanning; `true` pauses until dismissed (`pauseOnReject()`) |
 | `continuous.keep_camera_open`  | `false`   | `false` closes the camera after each scan (`keepCameraOpen()`) |
 | `continuous.cooldown_ms`       | `300`     | repeat window for continuous fields (`cooldown()` wins) |
+| `sync_options`                 | `'morph'` | when the browser picks up server option changes: `'morph'` (every re-render) or `'refresh'` (only on a `qr-scanner-refresh` / `qr-sequence-refresh` event); `syncOptions()` per field |
+
+### `sequence`
+
+| Key                  | Default          | Meaning |
+| -------------------- | ---------------- | ------- |
+| `on_invalid`         | `'jump_to_step'` | a failed `validateAllUsing()`: `'jump_to_step'` or `'restart'` (`onInvalidSequence()`) |
+| `auto_submit`        | `false`          | call `submit_method` once the sequence completes (`autoSubmit()`) |
+| `submit_method`      | `'submit'`       | the Livewire method `autoSubmit()` calls |
+| `reset_after_submit` | `false`          | clear non-sticky steps after a successful submit (`resetAfterSubmit()`) |
+| `continuous`         | `false`          | start over after every completed sequence (`continuous()`) |
+| `repeat_complete`    | `'advance'`      | a full `repeat(n)` step: `'advance'` or `'wait'` (`onRepeatComplete()`) |
+| `finish_code`        | `null`           | the scan that finishes a waiting or open-ended repeat step (`finishWith()`) |
 
 ### `generator`
 
@@ -124,9 +137,13 @@ QrHardwareScannerListener::make(['sku'])
 | `qr-sequence-step`        | `{ field, value, index }`     | each container step                |
 | `qr-sequence-completed`   | `{ results }`                 | last container step                |
 | `qr-sequence-edited`      | `{ field, value }`            | operator edits a step              |
+| `qr-sequence-rejected`    | `{ field, value, message, source }` | a checked step rejected a scan |
+| `qr-sequence-invalid`     | `{ field, message, values }`  | `validateAllUsing()` failed on completion |
 | `qr-collector-item-added` | `{ code }`                    | each batch-collector scan          |
 
 `mode` is `'single'` or `'continuous'` (see [Continuous mode](scanning.md#continuous-mode)).
+
+Events you **send** to control a scanner or sequence (`qr-scanner-feed`, `qr-scanner-pause`, `qr-sequence-go-to`, …) are listed in [Runtime control](scanning.md#window-events).
 
 ---
 
@@ -194,6 +211,10 @@ Event::listen(QrCodeScanned::class, function (QrCodeScanned $event): void {
 ```
 
 The event carries `code`, `source`, `field`, and `context`.
+
+### Runtime control
+
+Change options at runtime, feed codes, pause, resume and reset scanners and sequences from page code, drive a sequence from PHP (`goToStep()`, `resetSequence()`, `setRepeatCount()`), make steps conditional with `ScanStep::when()`, and register your own inputs with `window.FilamentQrCode.router`. See [Runtime control](scanning.md#runtime-control).
 
 ### Common payload builders
 

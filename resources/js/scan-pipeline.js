@@ -15,6 +15,11 @@ export function createScanDeduper({ now = () => Date.now() } = {}) {
 
             return false;
         },
+
+        reset() {
+            lastCode = null;
+            lastDeliveredAt = 0;
+        },
     };
 }
 

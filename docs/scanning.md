@@ -216,6 +216,34 @@ QrScanSequence::make()
 - **Finishing a step**: scan the finish code (config `sequence.finish_code` for every step, default `null` = none; `finishWith('DONE')` overrides it per step) or press the step's **Done** button. A step needs at least one code (or all `n` in `wait` mode) before it can finish. The finish code is never stored.
 - Sticky and repeat steps go through the server like checked steps (one `handleStepScan` request per scan). Sequences without them are unchanged.
 
+#### Step order: optional skips and `when()`
+
+- **An optional step gives way.** When a live scan (camera or hardware) fails an optional step's checks but passes the next active step, the optional step is skipped (reported in `skipped`) and the code lands there. The next step can be a repeat step, so `po, sku, lot (optional), serials (repeat)` works: a serial scanned at the lot step goes straight into serials.
+- **`when()` makes a step conditional.** The closure receives `$values` (the sequence so far) and `$step`, and returns a bool:
+
+```php
+ScanStep::make('batch')
+    ->when(fn (array $values): bool => str_starts_with($values['sku'] ?? '', 'BATCH-'))
+    ->validateUsing(['regex:/^B-\d+$/']),
+```
+
+  While it returns `false`, the step is skipped and isn't required. Its value is dropped, and it's greyed out in the browser. A scan aimed straight at it is rejected (`step_inactive`) and the sequence moves to the next empty active step. Conditions run in step order, so a step's closure sees the values of the active steps before it. A closure that throws counts as active, and a warning is logged in the local environment.
+
+#### Driving a sequence from page code
+
+Call these on the component from your page. Each one updates the browser on the next response.
+
+```php
+$sequence = $this->form->getComponent(fn ($component) => $component instanceof QrScanSequence);
+
+$sequence->goToStep('lot');                      // move the cursor
+$sequence->resetSequence();                      // start over, keeping sticky steps
+$sequence->resetSequence(keepSticky: false, values: ['po' => 'PO-7001']); // seed values
+$sequence->setRepeatCount('serials', 5);         // override repeat() for this page; null clears it
+```
+
+`setRepeatCount()` is stored in the session, keyed by the Livewire component, so later server checks agree with the counter. Most pages don't need it: a `repeat()` closure that reads page state already updates the `k / n` counter on every re-render (see [Runtime control](#runtime-control)).
+
 ### 4. Focus Handoff Between Fields
 
 Move focus to the next field after each scan (a two-field handoff — distinct from sequential scanning above):
@@ -377,3 +405,90 @@ QrScanner::make('sku')
 ```
 
 Defaults live in `qr-code.feedback.success` and `qr-code.feedback.error`. `sound(false)` and `vibrate(false)` still turn everything off. Fields without checks keep the single success beep. The ring lasts about 0.9 s on the field; while the scanner modal is open it flashes the modal panel instead, and the field ring plays once the modal closes.
+
+## Runtime control
+
+Scanners and sequences follow the server after they're mounted. You can also drive them from page JavaScript.
+
+### Options follow the server
+
+When a re-render changes a field's options (say a `pauseOnReject(fn () => $this->pauseOnReject)` closure flips), the browser applies them **without re-creating the component**. The camera, the queued scan and the field state all survive. The options travel on a `data-qr-options` attribute that Livewire morphs. For a sequence, it sits on a wrapper outside the `wire:ignore`d UI, so repeat counts, labels, active steps and values follow the server too.
+
+The current scan always finishes first:
+
+- New options wait for a server check that's running.
+- Camera options (`fps`, `qrbox`, `formats`, `preferRearCamera`) apply on the next camera start.
+- A sequence keeps its list of steps until the round completes or resets. Everything else (repeat counts, labels, active steps) applies right away.
+
+To apply changes only when you ask, set config `scan.sync_options` to `'refresh'` or use a per-field override, then send a refresh event:
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\OptionsSync;
+
+QrScanner::make('sku')->syncOptions(OptionsSync::Refresh);
+// later, from PHP or JS:
+$this->dispatch('qr-scanner-refresh', field: 'data.sku');
+```
+
+### Per-element API
+
+```js
+const scanner = document.querySelector('[data-field-name="sku"]').qrScanner; // root has data-qr-scanner
+await scanner.feed('PRD-1001');            // runs the same path as a scan (source defaults to 'hardware')
+scanner.pause(); scanner.resume();
+scanner.reset();                           // clear value, error, queued scan and the duplicate cooldown
+scanner.setOptions({ mode: 'continuous', pauseOnReject: true });
+scanner.refresh();                         // re-read the rendered options now
+scanner.getOptions(); scanner.getState();  // { value, isPaused, isChecking, isScanning }
+
+const sequence = document.querySelector('[data-qr-sequence]').qrScanSequence;
+await sequence.feed('PO-7001');            // into the current step
+sequence.goToStep('lot');
+sequence.reset({ values: { po: 'PO-7001' } }); // also writes the values to Livewire state
+sequence.pause(); sequence.resume();
+sequence.setOptions({ ... }); sequence.refresh();
+sequence.getOptions(); sequence.getState();    // { currentStep, values, isPaused, isChecking, isScanning }
+```
+
+`feed()` accepts `camera`, `hardware`, `upload` or `manual` as its second argument. Typed (`manual`) codes never skip an optional step.
+
+### Window events
+
+Send these on `window` (or with `$this->dispatch(...)` from PHP). `field` picks the target. A scanner matches on its state path (`data.sku`), its field name (`sku`) or its component key (`form.sku`); a sequence matches on its key or its state path. Leave `field` out to reach every component of that kind.
+
+| Event | `detail` |
+| --- | --- |
+| `qr-scanner-feed` | `{ field, code, source? }` |
+| `qr-scanner-pause` / `-resume` / `-reset` / `-refresh` | `{ field }` |
+| `qr-scanner-set-options` | `{ field, options }` |
+| `qr-sequence-feed` | `{ field, code, source? }` |
+| `qr-sequence-go-to` | `{ field, step }` |
+| `qr-sequence-reset` | `{ field, values? }` |
+| `qr-sequence-pause` / `-resume` / `-refresh` | `{ field }` |
+| `qr-sequence-set-options` | `{ field, options }` |
+| `qr-sequence-set-repeat` | `{ field, step, count }` (display only; use `setRepeatCount()` in PHP to change the server check too) |
+
+```blade
+<x-filament::button x-on:click="$dispatch('qr-scanner-pause', { field: 'data.sku' })">Pause</x-filament::button>
+```
+
+### Your own inputs in the hardware router
+
+Every keyboard-wedge burst on the page has exactly one owner. To let a custom input (a keypad, an RFID box, a third-party widget) take part, register it with the shared router:
+
+```js
+const unregister = window.FilamentQrCode.router.register({
+    id: 'rfid-keypad',                      // unique
+    element: document.querySelector('#rfid'), // focus inside this element makes it the owner
+    kind: 'custom',
+    scope: 'focus',                         // 'focus': only while focused; 'page': also when nothing else has focus
+    detection: { minBarcodeLength: 4 },     // optional; burstThresholdMs, minFastKeys, terminators, scanTimeoutMs, preventSubmit
+    accept: (code) => true,                 // optional; return false to pass the burst on
+    deliver: (code) => console.log('scanned', code),
+});
+// later
+unregister();
+```
+
+Optional hooks: `hold(code)` (return `true` to keep a burst while you're busy), `ownsFocus(element)` (claim focus outside `element`), and `candidates()`. The router emits `qr-scan-routed` for every delivery.
+

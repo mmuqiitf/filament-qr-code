@@ -49,6 +49,7 @@ return [
     'scanning_paused' => 'Scanning paused.',
     'resume_scanning' => 'Resume scanning',
     'scan_failed' => 'The scan could not be checked. Please try again.',
+    'step_inactive' => 'This step does not apply right now.',
     'repeat_full' => 'This step already has :count codes.',
     'duplicate_in_step' => '":code" was already scanned in this step.',
     'repeat_needs_codes' => 'Scan at least :count code(s) before finishing this step.',

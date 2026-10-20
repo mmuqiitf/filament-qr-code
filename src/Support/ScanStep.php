@@ -44,6 +44,8 @@ final class ScanStep
 
     private bool|Closure $allowsDuplicates = false;
 
+    private ?Closure $activeWhen = null;
+
     private function __construct(private readonly string $key) {}
 
     public static function make(string $key): self
@@ -155,6 +157,23 @@ final class ScanStep
         $this->allowsDuplicates = $condition;
 
         return $this;
+    }
+
+    /**
+     * Make the step conditional. The sequence evaluates the closure with
+     * $values and $step; while it returns false the step is skipped, not
+     * required, and its value is dropped.
+     */
+    public function when(?Closure $condition): self
+    {
+        $this->activeWhen = $condition;
+
+        return $this;
+    }
+
+    public function getWhenUsing(): ?Closure
+    {
+        return $this->activeWhen;
     }
 
     public function isRepeating(): bool

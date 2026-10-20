@@ -288,10 +288,10 @@ it('describes sticky and repeat steps in the payload', function (): void {
     $sequence->container(Livewire::test(SequenceWedgeTestComponent::class)->instance()->form);
 
     expect($sequence->getComponentScanPayload()['steps'])->toBe([
-        ['key' => 'po', 'optional' => false, 'sticky' => true, 'repeating' => false, 'repeat' => null],
-        ['key' => 'parts', 'optional' => false, 'sticky' => false, 'repeating' => true, 'repeat' => 3],
-        ['key' => 'extras', 'optional' => false, 'sticky' => false, 'repeating' => true, 'repeat' => null],
-        ['key' => 'note', 'optional' => true, 'sticky' => false, 'repeating' => false, 'repeat' => null],
+        ['key' => 'po', 'optional' => false, 'sticky' => true, 'repeating' => false, 'repeat' => null, 'active' => true],
+        ['key' => 'parts', 'optional' => false, 'sticky' => false, 'repeating' => true, 'repeat' => 3, 'active' => true],
+        ['key' => 'extras', 'optional' => false, 'sticky' => false, 'repeating' => true, 'repeat' => null, 'active' => true],
+        ['key' => 'note', 'optional' => true, 'sticky' => false, 'repeating' => false, 'repeat' => null, 'active' => true],
     ]);
 });
 
