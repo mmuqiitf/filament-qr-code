@@ -8,6 +8,15 @@ function clock(start = 0) {
 }
 
 describe('createScanDeduper', () => {
+    it('forgets the last code on reset', () => {
+        const deduper = createScanDeduper({ now: () => 1000 });
+
+        deduper.isDuplicate('SKU-1', 1500);
+        deduper.reset();
+
+        expect(deduper.isDuplicate('SKU-1', 1500)).toBe(false);
+    });
+
     it('same code within 1500 ms is dropped', () => {
         const { state, now } = clock();
         const deduper = createScanDeduper({ now });
