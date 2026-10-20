@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Runtime control (P2.1).** Scanners and sequences pick up server-side option changes on every Livewire re-render
+  without being re-created; the scan in progress finishes first. Config `scan.sync_options` (`'morph'`) and
+  `syncOptions(OptionsSync::Refresh)` switch to explicit `qr-scanner-refresh` / `qr-sequence-refresh` events.
+- Per-element API `element.qrScanner` / `element.qrScanSequence` (`feed`, `pause`, `resume`, `reset`, `setOptions`,
+  `refresh`, `getOptions`, `getState`, plus `goToStep` on sequences) and window events aimed at one field
+  (`qr-scanner-feed|pause|resume|reset|refresh|set-options`, `qr-sequence-feed|go-to|reset|pause|resume|refresh|set-options|set-repeat`).
+- The sequence browser state follows the server: repeat `k / n`, labels, active steps and values.
+- `QrScanSequence::goToStep()`, `resetSequence()` and `setRepeatCount()` for page code.
+- `ScanStep::when(fn (array $values) => ...)`: conditional steps are skipped, not required, and their value is dropped.
+- `window.FilamentQrCode.router` (the shared hardware input router) and `createInputRouter` are public and documented.
+
+### Changed
+- An optional step whose check fails now also gives way to a following repeat step, so `po, sku, lot?, serials` works.
+- `QrScanSequence::make()` runs `setUp()` and `configureUsing()` callbacks; sequences with a state path now fill to `[]`.
+- The scanner's `x-data` no longer embeds the options (they're on `data-qr-options`), and the sequence view gained a
+  wrapper `<div data-qr-options>`. Re-publish customised views. Run `php artisan filament:assets` after updating.
+
 ## [0.5.0] - 2026-10-19
 
 ### Upgrading from 0.4

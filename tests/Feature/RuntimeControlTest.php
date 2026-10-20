@@ -128,10 +128,16 @@ it('renders the options on an attribute Livewire can morph', function (): void {
     expect($html)->toMatch('/<div[^>]*data-qr-options="[^"]*"[^>]*>\s*<div[^>]*x-data="qrScanSequence/');
 });
 
-it('re-renders changed scanner options into the attribute', function (): void {
-    $test = Livewire::test(RuntimeControlTestComponent::class)->set('mode', 'continuous');
+it('re-renders changed scanner options into the attribute and keeps x-data constant', function (): void {
+    $test = Livewire::test(RuntimeControlTestComponent::class);
+    preg_match('/x-data="(qrScanner\([^"]*)"/', $test->html(), $before);
 
-    expect($test->html())->toMatch('/data-qr-options="[^"]*&quot;mode&quot;:&quot;continuous&quot;/');
+    $test->set('mode', 'continuous');
+    preg_match('/x-data="(qrScanner\([^"]*)"/', $test->html(), $after);
+
+    // A changed x-data would make Alpine re-create the scanner on morph.
+    expect($test->html())->toMatch('/data-qr-options="[^"]*&quot;mode&quot;:&quot;continuous&quot;/')
+        ->and($after[1])->toBe($before[1]);
 });
 
 it('changing quantity updates repeat k/n', function (): void {
