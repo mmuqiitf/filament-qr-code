@@ -63,9 +63,9 @@ function definedOnly(options) {
  * they can change at runtime (setOptions, a re-rendered data-qr-options, or
  * a qr-scanner-set-options event) without re-creating the component.
  */
-export default function qrScannerComponent({ state = null, statePath = null, cameraStorageKey = null, ...options } = {}) {
-    const storageKey = cameraStorageKey || storageKeyFor('scanner');
+export default function qrScannerComponent({ state = null, statePath = null, ...options } = {}) {
     const deduper = createScanDeduper();
+    let storageKey = storageKeyFor('scanner');
 
     return {
         // State
@@ -94,6 +94,13 @@ export default function qrScannerComponent({ state = null, statePath = null, cam
         stopListeningForControls: null,
 
         init() {
+            // The view keeps x-data constant and renders options on data-qr-options:
+            // a changed x-data would make Alpine re-create the component on morph.
+            const { statePath: renderedStatePath = null, cameraStorageKey = null, ...rendered } = readOptionsAttribute(this.fieldElement()) ?? {};
+            this.options = { ...this.options, ...definedOnly(rendered) };
+            this.statePath = this.statePath ?? renderedStatePath;
+            storageKey = cameraStorageKey || this.options.cameraStorageKey || storageKey;
+
             this.scannerElementId = `qr-reader-${this.$id('qr-reader')}`;
 
             this.registerWithRouter();

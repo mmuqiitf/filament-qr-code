@@ -12,10 +12,7 @@
     :field="$field"
 >
     <div
-        x-data="qrScanner({
-            state: $wire.entangle('{{ $statePath }}'),
-            ...@js($scanPayload)
-        })"
+        x-data="qrScanner({ state: $wire.entangle('{{ $statePath }}') })"
         data-field-name="{{ $getName() }}"
         data-qr-scanner
         data-qr-options="{{ json_encode($scanPayload, JSON_THROW_ON_ERROR) }}"
