@@ -43,6 +43,7 @@
         "flash": true
     },
     "suppressWhenGlobalListenerActive": true,
+    "syncOptions": "morph",
     "terminators": [
         "Enter",
         "Tab"

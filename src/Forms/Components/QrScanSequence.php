@@ -10,6 +10,7 @@ use Filament\Schemas\Components\Component;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Concerns\HasOptionsSync;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequenceSteps;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
@@ -19,6 +20,7 @@ class QrScanSequence extends Component implements HasValidationRules
     use HasCameraScanning;
     use HasFeedback;
     use HasHardwareScanner;
+    use HasOptionsSync;
     use HasScanPayload;
     use HasSequenceSteps;
 
@@ -52,6 +54,7 @@ class QrScanSequence extends Component implements HasValidationRules
     public static function make(array|Closure $fields = []): static
     {
         $static = app(static::class);
+        $static->configure();
         $static->fields($fields);
         // Only used without statePath(): a key() call replaces it.
         $static->key(fn (QrScanSequence $component): ?string => $component->getAutomaticKey());
@@ -324,9 +327,13 @@ class QrScanSequence extends Component implements HasValidationRules
         $state = $mergedState ?? $this->mergeSequenceState([]);
         $missing = [];
 
-        foreach ($this->getScanFields() as $field) {
-            if (blank($state[$field['key']] ?? null)) {
-                $missing[] = $field['key'];
+        foreach ($this->getScanSteps() as $step) {
+            if (! $this->isStepActive($step, $state)) {
+                continue;
+            }
+
+            if (blank($state[$step->getKey()] ?? null)) {
+                $missing[] = $step->getKey();
             }
         }
 
@@ -355,14 +362,15 @@ class QrScanSequence extends Component implements HasValidationRules
             'serverCheck' => filled($key) && $this->hasServerSequenceWork(),
             'scanFailedMessage' => __('filament-qr-code::ui.scan_failed'),
             'steps' => $this->getStepsPayload(),
+            'values' => $this->withoutInactiveSteps($this->getSequenceState()),
             ...(filled($key) ? ['componentKey' => $key] : []),
         ];
     }
 
-    /** @return list<array{key: string, optional: bool, sticky: bool, repeating: bool, repeat: ?int}> */
+    /** @return list<array{key: string, optional: bool, sticky: bool, repeating: bool, repeat: ?int, active: bool}> */
     public function getStepsPayload(): array
     {
-        $values = $this->getSequenceState();
+        $values = $this->withoutInactiveSteps($this->getSequenceState());
 
         return array_values(array_map(fn (ScanStep $step): array => [
             'key' => $step->getKey(),
@@ -370,6 +378,7 @@ class QrScanSequence extends Component implements HasValidationRules
             'sticky' => $step->isSticky(),
             'repeating' => $step->isRepeating(),
             'repeat' => $step->isRepeating() ? $this->getRepeatLimit($step, $values) : null,
+            'active' => $this->isStepActive($step, $values),
         ], $this->getScanSteps()));
     }
 }

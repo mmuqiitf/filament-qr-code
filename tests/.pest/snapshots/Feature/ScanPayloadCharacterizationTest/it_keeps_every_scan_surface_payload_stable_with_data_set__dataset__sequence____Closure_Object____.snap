@@ -35,21 +35,25 @@
             "optional": false,
             "sticky": false,
             "repeating": false,
-            "repeat": null
+            "repeat": null,
+            "active": true
         },
         {
             "key": "employee",
             "optional": false,
             "sticky": false,
             "repeating": false,
-            "repeat": null
+            "repeat": null,
+            "active": true
         }
     ],
     "suppressWhenGlobalListenerActive": true,
+    "syncOptions": "morph",
     "terminators": [
         "Enter",
         "Tab"
     ],
+    "values": [],
     "vibrate": true,
     "vibrateDurationMs": 100
 }

@@ -3,7 +3,10 @@
     $scanPayload = $getScanPayload();
 @endphp
 
+{{-- Livewire morphs data-qr-options on this wrapper; the scanning UI below stays wire:ignore'd. --}}
+<div data-qr-options="{{ json_encode($scanPayload, JSON_THROW_ON_ERROR) }}">
 <div
+    data-qr-sequence
     x-data="qrScanSequence({
         ...@js($scanPayload)
     })"
@@ -191,4 +194,5 @@
             </template>
         </div>
     </div>
+</div>
 </div>

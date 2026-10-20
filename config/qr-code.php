@@ -86,6 +86,11 @@ return [
     |
     */
     'scan' => [
+        // When the browser picks up options changed on the server: 'morph'
+        // applies them on every Livewire re-render, 'refresh' only on a
+        // qr-scanner-refresh / qr-sequence-refresh event. Override per field
+        // with syncOptions().
+        'sync_options' => 'morph',
         'cooldown_ms' => 1500,
         'clear_on_reject' => true,
         'continuous' => [
