@@ -213,3 +213,9 @@ it('makes ScanStep macroable', function (): void {
 
     expect(ScanStep::make('serials')->serial()->isRepeating())->toBeTrue();
 });
+
+it('sends the sequence normalize presets to the browser', function (): void {
+    expect(QrScanSequence::make([ScanStep::make('po')])->getScanPayload())->not->toHaveKey('normalize')
+        ->and(QrScanSequence::make([ScanStep::make('po')])->normalizeWith(uppercase: true, stripPrefix: 'PO:')->getScanPayload()['normalize'])
+        ->toBe(['trim' => true, 'uppercase' => true, 'stripPrefixes' => ['PO:']]);
+});

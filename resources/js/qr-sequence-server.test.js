@@ -57,6 +57,16 @@ describe('sequence server path', () => {
         expect(sequence.getCurrentField().key).toBe('sku');
     });
 
+    it('applies the normalize presets before sending the step scan', async () => {
+        const { wire, sequence } = mountSequence((key, method, args) => result({ code: args.code, step: args.step }), {
+            normalize: { trim: true, uppercase: true, stripPrefixes: ['po:'] },
+        });
+
+        await sequence.processScan(' po:a1 ', 'hardware');
+
+        expect(wire.methodCalls).toEqual([['form.receipt', 'handleStepScan', { step: 'po', code: 'A1', source: 'hardware' }]]);
+    });
+
     it('stays on a rejected step and reports it', async () => {
         const events = captureEvents('qr-sequence-rejected', 'qr-sequence-step');
         const { sequence } = mountSequence((key, method, args) => result({

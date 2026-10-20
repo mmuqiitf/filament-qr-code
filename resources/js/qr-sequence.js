@@ -1,5 +1,6 @@
 import { qrFeedback } from './audio-feedback.js';
 import { sanitizeScannedValue } from './qr-hardware-scanner.js';
+import { normalizeCode } from './scan-pipeline.js';
 import { inputRouter } from './input-router.js';
 import { changedKeys, feedSource, listenForControlEvents, observeOptions, readOptionsAttribute } from './runtime-control.js';
 import {
@@ -442,7 +443,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             const currentField = this.getCurrentField();
             if (!currentField) return;
 
-            const trimmed = sanitizeScannedValue(decodedText);
+            const trimmed = normalizeCode(sanitizeScannedValue(decodedText), this.options.normalize);
             if (!trimmed || this.isPaused) return;
 
             const { serverCheck, componentKey, componentStatePath } = this.options;
