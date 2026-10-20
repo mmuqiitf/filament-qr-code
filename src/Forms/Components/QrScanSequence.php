@@ -12,6 +12,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasOptionsSync;
+use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequenceSteps;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
@@ -24,6 +25,7 @@ class QrScanSequence extends Component implements HasValidationRules
     use HasFeedback;
     use HasHardwareScanner;
     use HasOptionsSync;
+    use HasRenderHookScopes;
     use HasScanPayload;
     use HasSequenceSteps;
 

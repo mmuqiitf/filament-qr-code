@@ -1,13 +1,17 @@
-/* Viewfinder & Reticle styling */
+/* Viewfinder & Reticle styling.
+   Theme with CSS variables (each falls back to the built-in value):
+   --fi-qr-viewfinder-bg, --fi-qr-viewfinder-radius, --fi-qr-reticle-color,
+   --fi-qr-reticle-size, --fi-qr-laser-color, --fi-qr-flash-success,
+   --fi-qr-flash-danger. */
 .filament-qr-viewfinder {
     position: relative;
     width: 100%;
     /* 4:3 matches most camera sensors, so `cover` crops less than 1:1 and
        the square view no longer pushes mobile layouts down the page. */
     aspect-ratio: 4 / 3;
-    background-color: #000;
+    background-color: var(--fi-qr-viewfinder-bg, #000);
     overflow: hidden;
-    border-radius: 0.75rem;
+    border-radius: var(--fi-qr-viewfinder-radius, 0.75rem);
 }
 
 .filament-qr-viewfinder video {
@@ -28,8 +32,8 @@
 
 .filament-qr-reticle-box {
     position: relative;
-    width: 220px;
-    height: 220px;
+    width: var(--fi-qr-reticle-size, 220px);
+    height: var(--fi-qr-reticle-size, 220px);
     border: 2px solid rgba(255, 255, 255, 0.4);
     border-radius: 12px;
     /* Spotlight dimming around the single scan rectangle. */
@@ -48,7 +52,7 @@
     position: absolute;
     width: 24px;
     height: 24px;
-    border-color: #22c55e;
+    border-color: var(--fi-qr-reticle-color, #22c55e);
 }
 
 .filament-qr-reticle-corner.top-left {
@@ -90,8 +94,8 @@
     left: 0;
     width: 100%;
     height: 2px;
-    background: #22c55e;
-    box-shadow: 0 0 10px #22c55e, 0 0 5px #22c55e;
+    background: var(--fi-qr-laser-color, #22c55e);
+    box-shadow: 0 0 10px var(--fi-qr-laser-color, #22c55e), 0 0 5px var(--fi-qr-laser-color, #22c55e);
     animation: filament-qr-scan-anim 2s ease-in-out infinite;
 }
 
@@ -147,20 +151,20 @@
 @keyframes fi-qr-flash-success {
     0%,
     40% {
-        box-shadow: 0 0 0 3px rgb(34 197 94 / 0.7);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--fi-qr-flash-success, rgb(34 197 94)) 70%, transparent);
     }
     to {
-        box-shadow: 0 0 0 3px rgb(34 197 94 / 0);
+        box-shadow: 0 0 0 3px transparent;
     }
 }
 
 @keyframes fi-qr-flash-danger {
     0%,
     40% {
-        box-shadow: 0 0 0 3px rgb(239 68 68 / 0.8);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--fi-qr-flash-danger, rgb(239 68 68)) 80%, transparent);
     }
     to {
-        box-shadow: 0 0 0 3px rgb(239 68 68 / 0);
+        box-shadow: 0 0 0 3px transparent;
     }
 }
 
@@ -171,10 +175,10 @@
     }
 
     .fi-qr-flash-success {
-        outline: 2px solid rgb(34 197 94);
+        outline: 2px solid var(--fi-qr-flash-success, rgb(34 197 94));
     }
 
     .fi-qr-flash-danger {
-        outline: 2px solid rgb(239 68 68);
+        outline: 2px solid var(--fi-qr-flash-danger, rgb(239 68 68));
     }
 }
