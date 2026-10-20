@@ -162,15 +162,15 @@ describe('QrScanner control API', () => {
         const api = host.qrScanner;
 
         await api.feed('A-1');
-        expect(wire.methodCalls.at(-1)).toEqual(['form.sku', 'handleScan', { code: 'A-1', source: 'manual' }]);
+        expect(wire.methodCalls.at(-1)).toEqual(['form.sku', 'handleScan', { code: 'A-1', source: 'hardware' }]);
 
         api.pause();
         expect(api.getState()).toMatchObject({ isPaused: true, value: 'A-1' });
         expect(await api.feed('A-2')).toMatchObject({ ignored: true });
 
         api.resume();
-        await api.feed('A-3', 'hardware');
-        expect(wire.methodCalls.at(-1)[2]).toEqual({ code: 'A-3', source: 'hardware' });
+        await api.feed('A-3', 'camera');
+        expect(wire.methodCalls.at(-1)[2]).toEqual({ code: 'A-3', source: 'camera' });
 
         api.reset();
         expect(api.getState()).toMatchObject({ value: '', isPaused: false, isChecking: false });

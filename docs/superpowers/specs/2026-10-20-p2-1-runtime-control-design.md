@@ -86,7 +86,7 @@ it's the `[data-qr-sequence]` x-data element.
 
 ```js
 const scanner = document.querySelector('[data-field-name="sku"]').qrScanner;
-await scanner.feed('PRD-1001');     // same path as a scan; source defaults to 'manual'
+await scanner.feed('PRD-1001');     // same path as a scan; source defaults to 'hardware'
 scanner.pause();                    // stop accepting scans (camera paused too)
 scanner.resume();
 scanner.reset();                    // clear value, rejection message, queued scan, dedupe memory; resume
@@ -106,8 +106,9 @@ sequence.getOptions(); sequence.getState();  // { currentStep, values, isPaused,
 Inside Alpine, `$el.closest('[data-qr-scanner]').qrScanner` works the same way. The
 scanner root also gets the `data-qr-scanner` attribute.
 
-`feed()` sources are `camera`, `hardware`, `upload` and `manual`. Anything else becomes
-`manual`.
+`feed()` sources are `camera`, `hardware`, `upload` and `manual`. The default is
+`hardware` (a fed code is a scan from some device, so optional steps can still give way);
+anything unknown becomes `manual`.
 
 **Window events** carry a `field` key that selects the target:
 

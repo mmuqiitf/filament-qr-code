@@ -146,7 +146,7 @@ export default function qrScannerComponent({ state = null, statePath = null, cam
         // The documented per-element API: element.qrScanner.
         controlApi() {
             return {
-                feed: (code, source = 'manual') => this.feed(code, source),
+                feed: (code, source) => this.feed(code, source),
                 pause: () => this.pause(),
                 resume: () => this.resumeScanning(),
                 reset: () => this.reset(),
@@ -166,7 +166,7 @@ export default function qrScannerComponent({ state = null, statePath = null, cam
             return [this.getStatePath(), this.fieldName(), this.options.componentKey].filter(Boolean);
         },
 
-        feed(code, source = 'manual') {
+        feed(code, source) {
             return this.handleScanResult(code, feedSource(source));
         },
 

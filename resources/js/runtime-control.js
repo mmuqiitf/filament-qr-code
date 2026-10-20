@@ -5,7 +5,12 @@
 
 const SOURCES = ['camera', 'hardware', 'upload', 'manual'];
 
+// A fed code counts as a device scan unless the caller names another source.
 export function feedSource(source) {
+    if (source === undefined || source === null) {
+        return 'hardware';
+    }
+
     return SOURCES.includes(source) ? source : 'manual';
 }
 
