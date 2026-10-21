@@ -7,6 +7,8 @@ namespace Mmuqiitf\FilamentQrCode\Support;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Traits\Macroable;
+use Mmuqiitf\FilamentQrCode\Contracts\ScanCheckStage;
 use Mmuqiitf\FilamentQrCode\Enums\RepeatComplete;
 
 /**
@@ -15,6 +17,8 @@ use Mmuqiitf\FilamentQrCode\Enums\RepeatComplete;
  */
 final class ScanStep
 {
+    use Macroable;
+
     private string|Closure|null $label = null;
 
     /** @var array<int, mixed> */
@@ -23,10 +27,22 @@ final class ScanStep
     /** @var array<int, Closure> */
     private array $closures = [];
 
-    /** @var class-string<Model>|null */
-    private ?string $lookupModel = null;
+    /** @var class-string<Model>|Closure|null */
+    private string|Closure|null $lookupModel = null;
 
-    private string $lookupColumn = 'code';
+    private string|Closure $lookupColumn = 'code';
+
+    private ?Closure $lookupResolver = null;
+
+    private bool $lookupFallback = false;
+
+    /** @var array<int, ScanCheckStage|class-string<ScanCheckStage>> */
+    private array $stages = [];
+
+    private ?Closure $normalizer = null;
+
+    /** Set by the owning sequence: evaluates step closures with $get, $livewire, $values and $step. */
+    private ?Closure $evaluator = null;
 
     private ?Closure $modifyLookupQueryUsing = null;
 
@@ -95,14 +111,70 @@ final class ScanStep
         return $this;
     }
 
-    /** @param  class-string<Model>  $model */
-    public function lookup(string $model, string $column = 'code', ?Closure $modifyQueryUsing = null): self
+    /** @param  class-string<Model>|Closure  $model */
+    public function lookup(string|Closure $model, string|Closure $column = 'code', ?Closure $modifyQueryUsing = null): self
     {
         $this->lookupModel = $model;
         $this->lookupColumn = $column;
         $this->modifyLookupQueryUsing = $modifyQueryUsing;
 
         return $this;
+    }
+
+    /**
+     * Find the step's record yourself. Replaces lookup() unless $fallback,
+     * when it runs only after the model lookup found nothing.
+     */
+    public function lookupUsing(?Closure $resolver, bool $fallback = false): self
+    {
+        $this->lookupResolver = $resolver;
+        $this->lookupFallback = $fallback;
+
+        return $this;
+    }
+
+    /**
+     * Custom checks that run after the rules, lookup and closures.
+     *
+     * @param  ScanCheckStage|class-string<ScanCheckStage>  ...$stages
+     */
+    public function pipe(ScanCheckStage|string ...$stages): self
+    {
+        foreach ($stages as $stage) {
+            $this->stages[] = ScanCheckPipeline::ensureStage($stage);
+        }
+
+        return $this;
+    }
+
+    /** Clean this step's codes before its checks (after the sequence's own normalizers). */
+    public function normalizeUsing(?Closure $normalizer): self
+    {
+        $this->normalizer = $normalizer;
+
+        return $this;
+    }
+
+    public function getNormalizeUsing(): ?Closure
+    {
+        return $this->normalizer;
+    }
+
+    /** @internal Called by QrScanSequence so step closures get its injections. */
+    public function evaluateUsing(?Closure $evaluator): self
+    {
+        $this->evaluator = $evaluator;
+
+        return $this;
+    }
+
+    private function resolve(mixed $value): mixed
+    {
+        if (! $value instanceof Closure) {
+            return $value;
+        }
+
+        return $this->evaluator instanceof Closure ? ($this->evaluator)($value, $this) : value($value);
     }
 
     public function optional(bool|Closure $condition = true): self
@@ -122,7 +194,7 @@ final class ScanStep
 
     public function isSticky(): bool
     {
-        return (bool) value($this->isSticky);
+        return (bool) $this->resolve($this->isSticky);
     }
 
     /**
@@ -198,7 +270,7 @@ final class ScanStep
 
     public function allowsDuplicates(): bool
     {
-        return (bool) value($this->allowsDuplicates);
+        return (bool) $this->resolve($this->allowsDuplicates);
     }
 
     public function getKey(): string
@@ -208,29 +280,41 @@ final class ScanStep
 
     public function getLabel(): string
     {
-        $label = value($this->label);
+        $label = $this->resolve($this->label);
 
         return is_string($label) && $label !== '' ? $label : self::headline($this->key);
     }
 
     public function isOptional(): bool
     {
-        return (bool) value($this->isOptional);
+        return (bool) $this->resolve($this->isOptional);
     }
 
     public function hasChecks(): bool
     {
-        return $this->rules !== [] || $this->closures !== [] || $this->lookupModel !== null;
+        return $this->rules !== []
+            || $this->closures !== []
+            || $this->lookupModel !== null
+            || $this->lookupResolver !== null
+            || $this->stages !== [];
     }
 
-    public function checkPipeline(): ScanCheckPipeline
+    public function checkPipeline(?object $component = null): ScanCheckPipeline
     {
+        /** @var class-string<Model>|null $model */
+        $model = $this->resolve($this->lookupModel);
+        $column = $this->resolve($this->lookupColumn);
+
         return new ScanCheckPipeline(
             rules: $this->rules,
             closures: $this->closures,
-            lookupModel: $this->lookupModel,
-            lookupColumn: $this->lookupColumn,
+            lookupModel: $model,
+            lookupColumn: is_string($column) && $column !== '' ? $column : 'code',
             modifyLookupQueryUsing: $this->modifyLookupQueryUsing,
+            lookupResolver: $this->lookupResolver,
+            lookupFallback: $this->lookupFallback,
+            stages: $this->stages,
+            component: $component,
         );
     }
 

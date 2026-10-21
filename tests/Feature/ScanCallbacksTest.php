@@ -34,7 +34,7 @@ it('accepted scan dispatches ScanAccepted and QrCodeScanned with source=hardware
     Event::assertDispatched(QrCodeScanned::class, fn (QrCodeScanned $event): bool => $event->code === 'SKU-1'
         && $event->source === 'hardware'
         && $event->field === 'sku'
-        && $event->context === ['record_key' => $productId]);
+        && $event->context === ['record_key' => $productId, 'state_path' => 'data.sku']);
     Event::assertNotDispatched(ScanRejected::class);
 });
 
@@ -231,7 +231,7 @@ it('logs accepted live scans through LogQrCodeScan when auditing is enabled', fu
         ->and($logged[0]['code'])->toBe('SKU-1')
         ->and($logged[0]['source'])->toBe('upload')
         ->and($logged[0]['field'])->toBe('sku')
-        ->and($logged[0]['context'])->toBe(['record_key' => ScanCheckProduct::query()->where('sku', 'SKU-1')->value('id')]);
+        ->and($logged[0]['context'])->toBe(['record_key' => ScanCheckProduct::query()->where('sku', 'SKU-1')->value('id'), 'state_path' => 'data.sku']);
 
     config()->set('qr-code.audit.enabled', false);
 });

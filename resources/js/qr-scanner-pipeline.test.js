@@ -224,4 +224,17 @@ describe('qrScanner server checks', () => {
             ),
         ).toBe(true);
     });
+
+    it('applies the normalize presets before dedupe and the server call', async () => {
+        const { scanner, wire } = mountChecked({
+            normalize: { trim: true, uppercase: true, stripPrefixes: ['sku:'] },
+        });
+
+        await scanner.handleScanResult('sku:ab-1', 'hardware');
+        const second = await scanner.handleScanResult('AB-1', 'hardware');
+
+        expect(wire.methodCalls).toEqual([['form.sku', 'handleScan', { code: 'AB-1', source: 'hardware' }]]);
+        expect(second.ignored).toBe(true);
+        expect(scanner.value).toBe('AB-1');
+    });
 });

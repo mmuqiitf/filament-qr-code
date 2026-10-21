@@ -9,6 +9,7 @@ use Filament\Forms\Components\Field;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Validation\DistinctCodes;
 
@@ -17,6 +18,7 @@ class QrCollector extends Field
     use HasCameraScanning;
     use HasFeedback;
     use HasHardwareScanner;
+    use HasRenderHookScopes;
     use HasScanPayload;
 
     protected string $view = 'filament-qr-code::components.qr-collector';

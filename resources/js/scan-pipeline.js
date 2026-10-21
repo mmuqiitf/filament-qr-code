@@ -48,3 +48,18 @@ export async function requestScanCheck(wire, { componentKey, code, source, scanF
         return normalizeScanResult(null, { code, source, scanFailedMessage });
     }
 }
+
+/**
+ * Apply the field's normalizeWith() presets in the browser so duplicate
+ * detection and step matching see the cleaned code. Mirrors PHP
+ * CodeNormalizer::apply(): trim, strip the first matching prefix, uppercase.
+ */
+export function normalizeCode(code, presets) {
+    if (!presets || typeof code !== 'string') return code;
+
+    let normalized = presets.trim === false ? code : code.trim();
+    const prefix = (presets.stripPrefixes || []).find((candidate) => candidate && normalized.startsWith(candidate));
+    if (prefix) normalized = normalized.slice(prefix.length);
+
+    return presets.uppercase ? normalized.toUpperCase() : normalized;
+}

@@ -8,19 +8,24 @@ use Closure;
 use Filament\Forms\Components\Contracts\HasValidationRules;
 use Filament\Schemas\Components\Component;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
+use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasOptionsSync;
+use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequenceSteps;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+use ReflectionFunction;
 
 class QrScanSequence extends Component implements HasValidationRules
 {
     use HasCameraScanning;
+    use HasCodeNormalization;
     use HasFeedback;
     use HasHardwareScanner;
     use HasOptionsSync;
+    use HasRenderHookScopes;
     use HasScanPayload;
     use HasSequenceSteps;
 
@@ -101,11 +106,56 @@ class QrScanSequence extends Component implements HasValidationRules
             $step = $item instanceof ScanStep ? $item : ScanStep::fromField($index, $item);
 
             if ($step instanceof ScanStep) {
-                $steps[] = $step;
+                $steps[] = $step->evaluateUsing(fn (Closure $closure, ScanStep $step): mixed => $this->evaluateStepClosure($closure, $step));
             }
         }
 
         return $steps;
+    }
+
+    protected bool $isReadingStepValues = false;
+
+    /**
+     * Evaluate a ScanStep closure with Filament's injections plus $step and,
+     * when the closure asks for it, $values. While values are being read a
+     * nested request gets [], so a label that reads $values can't recurse.
+     */
+    public function evaluateStepClosure(Closure $closure, ScanStep $step): mixed
+    {
+        $named = ['step' => $step];
+
+        if ($this->closureWantsValues($closure)) {
+            $named['values'] = $this->readStepValues();
+        }
+
+        return $this->evaluate($closure, $named, [ScanStep::class => $step]);
+    }
+
+    protected function closureWantsValues(Closure $closure): bool
+    {
+        foreach ((new ReflectionFunction($closure))->getParameters() as $parameter) {
+            if ($parameter->getName() === 'values') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @return array<string, mixed> */
+    protected function readStepValues(): array
+    {
+        if ($this->isReadingStepValues) {
+            return [];
+        }
+
+        $this->isReadingStepValues = true;
+
+        try {
+            return $this->getSequenceState();
+        } finally {
+            $this->isReadingStepValues = false;
+        }
     }
 
     /**

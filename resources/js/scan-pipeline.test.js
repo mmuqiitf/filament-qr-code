@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createScanDeduper, normalizeScanResult, requestScanCheck } from './scan-pipeline.js';
+import { createScanDeduper, normalizeCode, normalizeScanResult, requestScanCheck } from './scan-pipeline.js';
 
 function clock(start = 0) {
     const state = { now: start };
@@ -120,5 +120,24 @@ describe('requestScanCheck', () => {
             recordKey: null,
         });
         expect(errors).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('normalizeCode', () => {
+    it('returns the code unchanged without presets', () => {
+        expect(normalizeCode(' abc ', undefined)).toBe(' abc ');
+        expect(normalizeCode(' abc ', null)).toBe(' abc ');
+    });
+
+    it('trims, strips the first matching prefix, then uppercases (mirrors CodeNormalizer::apply)', () => {
+        const presets = { trim: true, uppercase: true, stripPrefixes: ['SKU:', 'SKU'] };
+
+        expect(normalizeCode('  sku:ab-1 ', { ...presets, stripPrefixes: ['sku:', 'sku'] })).toBe('AB-1');
+        expect(normalizeCode(' SKU:ab-1 ', presets)).toBe('AB-1');
+        expect(normalizeCode(' other ', presets)).toBe('OTHER');
+    });
+
+    it('keeps whitespace when trim is off and ignores empty prefixes', () => {
+        expect(normalizeCode(' ab ', { trim: false, uppercase: false, stripPrefixes: [''] })).toBe(' ab ');
     });
 });

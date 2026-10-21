@@ -26,7 +26,7 @@ final readonly class ScanChecksRule implements ValidationRule
             return;
         }
 
-        $result = $this->component->runScanChecks(trim((string) $value), source: null);
+        $result = $this->component->runScanChecks($this->component->normalizeScannedCode((string) $value), source: null);
 
         if ($result->passes) {
             return;

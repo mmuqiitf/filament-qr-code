@@ -14,5 +14,7 @@ class ScanSequenceCompleted
     public function __construct(
         public array $values,
         public ?string $statePath = null,
+        public ?string $livewireClass = null,
+        public ?string $livewireId = null,
     ) {}
 }

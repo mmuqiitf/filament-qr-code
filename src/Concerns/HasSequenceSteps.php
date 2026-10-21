@@ -49,6 +49,10 @@ trait HasSequenceSteps
 
     protected bool|Closure|null $isContinuousSequence = null;
 
+    protected ?Closure $onStepAcceptedCallback = null;
+
+    protected ?Closure $onStepRejectedCallback = null;
+
     /** @return array<int, ScanStep> */
     abstract public function getScanSteps(): array;
 
@@ -62,6 +66,83 @@ trait HasSequenceSteps
     abstract public function getComponentStatePath(): ?string;
 
     abstract public function hasStatePath(): bool;
+
+    /**
+     * Side effect after a step accepts a live scan (log, notify). Receives
+     * $step, $result, $code, $record, $values; its return value is ignored.
+     */
+    public function onStepAccepted(?Closure $callback): static
+    {
+        $this->onStepAcceptedCallback = $callback;
+
+        return $this;
+    }
+
+    /** Side effect after a step rejects a scan. It can't change the result or the message. */
+    public function onStepRejected(?Closure $callback): static
+    {
+        $this->onStepRejectedCallback = $callback;
+
+        return $this;
+    }
+
+    /** @param  array<string, mixed>  $values */
+    protected function runStepHook(?Closure $hook, ScanResult $result, string $step, array $values): void
+    {
+        if (! $hook instanceof Closure) {
+            return;
+        }
+
+        try {
+            $this->evaluate($hook, [
+                'step' => $step,
+                'result' => $result,
+                'code' => $result->code,
+                'record' => $result->record,
+                'source' => $result->source,
+                'values' => $values,
+            ], [ScanResult::class => $result]);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    /** @param  array<string, mixed>  $values */
+    protected function rejectStep(ScanResult $result, string $step, array $values): void
+    {
+        event(new ScanRejected($result, $step, ...$this->stepEventContext($step, $values)));
+
+        $this->runStepHook($this->onStepRejectedCallback, $result, $step, $values);
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @return array{statePath: ?string, livewireClass: ?string, livewireId: ?string, sequence: ?string, values: array<string, mixed>}
+     */
+    protected function stepEventContext(string $step, array $values): array
+    {
+        [$livewireClass, $livewireId] = $this->livewireIdentity();
+
+        return [
+            'statePath' => $this->getStepValuePath($step),
+            'livewireClass' => $livewireClass,
+            'livewireId' => $livewireId,
+            'sequence' => $this->getComponentStatePath(),
+            'values' => $values,
+        ];
+    }
+
+    /** @return array{0: ?string, 1: ?string} */
+    protected function livewireIdentity(): array
+    {
+        try {
+            $livewire = $this->getLivewire();
+        } catch (Throwable) {
+            return [null, null];
+        }
+
+        return [$livewire::class, $livewire->getId()];
+    }
 
     public function onCompleted(?Closure $callback): static
     {
@@ -271,13 +352,12 @@ trait HasSequenceSteps
 
         if (! $this->isStepActive($steps[$index], $values)) {
             $result = ScanResult::reject(trim($code), $input, __('filament-qr-code::ui.step_inactive'));
-            event(new ScanRejected($result, $step));
+            $this->rejectStep($result, $step, $values);
 
             return (new SequenceScanResult(scan: $result, step: $step, nextStep: $this->getFirstEmptyStepKey($values), values: $values))->toClient();
         }
 
-        $normalized = $this->normalizeStepValue($step, trim($code));
-        $code = is_scalar($normalized) ? trim((string) $normalized) : trim($code);
+        $code = $this->normalizeStepCode($steps[$index], $code, $values);
         if ($steps[$index]->isRepeating()) {
             return $this->handleRepeatScan($index, $code, $input, $values)->toClient();
         }
@@ -308,7 +388,7 @@ trait HasSequenceSteps
         }
 
         if (! $result->passes) {
-            event(new ScanRejected($result, $step));
+            $this->rejectStep($result, $step, $values);
 
             return (new SequenceScanResult(scan: $result, step: $step, nextStep: $step, values: $values))->toClient();
         }
@@ -319,7 +399,7 @@ trait HasSequenceSteps
 
         $values[$step] = $result->code;
         $this->writeSequenceValues($values);
-        $this->dispatchAcceptedStep($result, $step);
+        $this->dispatchAcceptedStep($result, $step, $values);
 
         $nextStep = $this->findNextStep($index, $values);
 
@@ -431,7 +511,7 @@ trait HasSequenceSteps
         $result = $this->checkRepeatScan($step, $code, $input, $values);
 
         if (! $result->passes) {
-            event(new ScanRejected($result, $key));
+            $this->rejectStep($result, $key, $values);
 
             return new SequenceScanResult(scan: $result, step: $key, nextStep: $key, values: $values);
         }
@@ -467,7 +547,7 @@ trait HasSequenceSteps
 
         $values[$key] = [...$this->repeatCodes($values, $key), $result->code];
         $this->writeSequenceValues($values);
-        $this->dispatchAcceptedStep($result, $key);
+        $this->dispatchAcceptedStep($result, $key, $values);
 
         $limit = $this->getRepeatLimit($step, $values);
         $isFull = $limit !== null && count($values[$key]) >= $limit;
@@ -490,7 +570,7 @@ trait HasSequenceSteps
 
         if ($count < $needed && ! ($step->isOptional() && $count === 0)) {
             $result = ScanResult::reject($code, $input, __('filament-qr-code::ui.repeat_needs_codes', ['count' => $needed]));
-            event(new ScanRejected($result, $key));
+            $this->rejectStep($result, $key, $values);
 
             return new SequenceScanResult(scan: $result, step: $key, nextStep: $key, values: $values);
         }
@@ -604,10 +684,34 @@ trait HasSequenceSteps
         return is_array($codes) ? array_values(array_map(strval(...), array_filter($codes, is_scalar(...)))) : [];
     }
 
+    /**
+     * The code a step checks: the normalizeWith() presets, the sequence's
+     * normalizeStepUsing(), then the step's own normalizeUsing().
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public function normalizeStepCode(ScanStep $step, string $code, array $values): string
+    {
+        $code = $this->applyCodeNormalizer($code);
+        $normalized = $this->normalizeStepValue($step->getKey(), $code);
+        $code = is_scalar($normalized) ? trim((string) $normalized) : $code;
+
+        if (! ($normalizer = $step->getNormalizeUsing()) instanceof Closure) {
+            return $code;
+        }
+
+        $normalized = $this->evaluate($normalizer, ['code' => $code, 'rawValue' => $code, 'state' => $code, 'step' => $step, 'values' => $values]);
+
+        return is_scalar($normalized) ? trim((string) $normalized) : $code;
+    }
+
+    /** Provided by HasCodeNormalization. */
+    abstract protected function applyCodeNormalizer(string $code): string;
+
     /** @param  array<string, mixed>  $values */
     public function checkStep(ScanStep $step, string $code, ?ScanInput $source, array $values): ScanResult
     {
-        return $step->checkPipeline()->run(
+        return $step->checkPipeline($this)->run(
             $code,
             $source,
             fn (Closure $closure, array $named = [], array $typed = []): mixed => $this->evaluate($closure, $named, $typed),
@@ -631,7 +735,7 @@ trait HasSequenceSteps
                 $this->writeSequenceValues($values);
             }
 
-            event(new ScanRejected(ScanResult::reject($result->code, $result->source, $message), $invalidStep));
+            $this->rejectStep(ScanResult::reject($result->code, $result->source, $message), $invalidStep, $values);
 
             return new SequenceScanResult(
                 scan: ScanResult::reject($result->code, $result->source, $message),
@@ -646,7 +750,8 @@ trait HasSequenceSteps
 
         $this->evaluate($this->onCompletedCallback, ['values' => $values]);
 
-        event(new ScanSequenceCompleted($values, $this->getComponentStatePath()));
+        [$livewireClass, $livewireId] = $this->livewireIdentity();
+        event(new ScanSequenceCompleted($values, $this->getComponentStatePath(), $livewireClass, $livewireId));
 
         $submitted = $this->shouldAutoSubmit() ? $this->submitSequence() : null;
         $reset = ($submitted === true && $this->shouldResetAfterSubmit())
@@ -798,14 +903,16 @@ trait HasSequenceSteps
         return true;
     }
 
-    protected function dispatchAcceptedStep(ScanResult $result, string $step): void
+    /** @param  array<string, mixed>  $values */
+    protected function dispatchAcceptedStep(ScanResult $result, string $step, array $values = []): void
     {
-        event(new ScanAccepted($result, $step));
+        event(new ScanAccepted($result, $step, ...$this->stepEventContext($step, $values)));
+        $this->runStepHook($this->onStepAcceptedCallback, $result, $step, $values);
         event(new QrCodeScanned(
             code: $result->code,
             source: ($result->source ?? ScanInput::Camera)->value,
             field: $step,
-            context: ['record_key' => $result->record?->getKey()],
+            context: ['record_key' => $result->recordKey()],
         ));
     }
 

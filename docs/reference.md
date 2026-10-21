@@ -163,12 +163,15 @@ and translate per locale.
 
 - **Defaults**: publish `config/qr-code.php` (`php artisan vendor:publish --tag="filament-qr-code-config"`) and tune `hardware_scanner`, `feedback`, `camera`, `generator`, `audit`. Every per-component method (`->fps()`, `->beepFrequency()`, `->hardwareScanner(...)`, …) overrides its config default — see [Configuration](#configuration).
 - **Language**: UI strings live under `filament-qr-code::ui`. Publish with `--tag="filament-qr-code-translations"` and translate per locale — see [Translations](#translations).
+- **Look and markup**: `extraAttributes()`, `fi-qr-*` classes, CSS variables, render hooks and per-part views. See [customizing.md](customizing.md#styling).
 - **Print**: wrap QR images in `.filament-qr-label-sheet` / `.filament-qr-label` for a three-per-row shelf-label print sheet (camera UI auto-hides in print).
 - **Generator look**: `size()`, `margin()`, `color()`, `backgroundColor()`, `errorCorrection()`, `caption()`, `withText()`, `logo()` — see [§6](generating.md#6-qr-code-generator-components). `withText()` / `logo()` force PNG output.
 
 ---
 
 ## Extending
+
+Custom lookups, code normalization presets, check stages (`pipe()`), step hooks, macros, `make:qr-scan-field`, render hooks, CSS variables and per-part view overrides are covered in [Extending and customizing](customizing.md).
 
 ### Normalize live scans
 

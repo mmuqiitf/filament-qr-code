@@ -13,7 +13,7 @@ import {
     stopCameraFeed,
     storageKeyFor,
 } from './qr-camera-core.js';
-import { createScanDeduper, requestScanCheck } from './scan-pipeline.js';
+import { createScanDeduper, normalizeCode, requestScanCheck } from './scan-pipeline.js';
 import { FLASH_CLASSES, flashElement, playOutcomeFeedback } from './feedback.js';
 import { changedKeys, feedSource, listenForControlEvents, observeOptions, readOptionsAttribute } from './runtime-control.js';
 
@@ -428,7 +428,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
         },
 
         async handleScanResult(scannedText, source = 'camera') {
-            const code = sanitizeScannedValue(scannedText);
+            const code = normalizeCode(sanitizeScannedValue(scannedText), this.options.normalize);
 
             if (!code || this.isChecking || this.isPaused) {
                 return { passes: false, ignored: true };

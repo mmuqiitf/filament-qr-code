@@ -9,6 +9,7 @@ use Filament\Support\Components\Attributes\ExposedLivewireMethod;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Model;
+use Mmuqiitf\FilamentQrCode\Contracts\ScanCheckStage;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
@@ -27,10 +28,19 @@ trait InteractsWithScans
     /** @var array<int, Closure> */
     protected array $scanCheckClosures = [];
 
-    /** @var class-string<Model>|null */
-    protected ?string $lookupModel = null;
+    /** @var class-string<Model>|Closure|null */
+    protected string|Closure|null $lookupModel = null;
 
-    protected string $lookupColumn = 'code';
+    protected string|Closure $lookupColumn = 'code';
+
+    protected ?Closure $lookupResolver = null;
+
+    protected bool $lookupFallback = false;
+
+    /** @var array<int, ScanCheckStage|class-string<ScanCheckStage>> */
+    protected array $scanStages = [];
+
+    protected ?Closure $scanNormalizer = null;
 
     protected ?Closure $modifyLookupQueryUsing = null;
 
@@ -65,7 +75,7 @@ trait InteractsWithScans
     public function handleScan(string $code, string $source): array
     {
         $input = ScanInput::fromClient($source);
-        $code = trim($code);
+        $code = $this->normalizeScannedCode($code);
 
         if ($this->isDisabled() || $this->isReadOnly()) {
             return ScanResult::reject($code, $input, __('filament-qr-code::ui.scan_rejected'))->toClient();
@@ -90,7 +100,7 @@ trait InteractsWithScans
 
             $failure = ScanResult::reject($result->code, $result->source, __('filament-qr-code::ui.scan_failed'));
 
-            event(new ScanRejected($failure, $this->getName()));
+            event(new ScanRejected($failure, $this->getName(), ...$this->scanEventContext()));
 
             return $failure->toClient();
         }
@@ -104,12 +114,12 @@ trait InteractsWithScans
         $this->callAfterStateUpdated();
         $this->evaluateScanCallback($this->onScannedCallback, $result);
 
-        event(new ScanAccepted($result, $this->getName()));
+        event(new ScanAccepted($result, $this->getName(), ...$this->scanEventContext()));
         event(new QrCodeScanned(
             code: $result->code,
             source: ($result->source ?? ScanInput::Camera)->value,
             field: $this->getName(),
-            context: ['record_key' => $result->record?->getKey()],
+            context: ['record_key' => $result->recordKey(), 'state_path' => $this->scanEventContext()['statePath']],
         ));
 
         // Continuous mode: the field is ready for the next scan straight away.
@@ -117,6 +127,9 @@ trait InteractsWithScans
             $this->state(null);
         }
     }
+
+    /** Provided by HasCodeNormalization. */
+    abstract protected function applyCodeNormalizer(string $code): string;
 
     /** Provided by HasScanMode. */
     abstract public function isContinuous(): bool;
@@ -187,7 +200,73 @@ trait InteractsWithScans
 
         $this->evaluateScanCallback($this->onRejectedCallback, $result);
 
-        event(new ScanRejected($result, $this->getName()));
+        event(new ScanRejected($result, $this->getName(), ...$this->scanEventContext()));
+    }
+
+    /**
+     * Where a scan happened, for event listeners. Strings only, so queued
+     * listeners can serialize the events.
+     *
+     * @return array{statePath: ?string, livewireClass: ?string, livewireId: ?string}
+     */
+    protected function scanEventContext(): array
+    {
+        try {
+            $livewire = $this->getLivewire();
+            $statePath = $this->getStatePath();
+        } catch (Throwable) {
+            return ['statePath' => null, 'livewireClass' => null, 'livewireId' => null];
+        }
+
+        return ['statePath' => $statePath, 'livewireClass' => $livewire::class, 'livewireId' => $livewire->getId()];
+    }
+
+    /**
+     * The code every check sees: the normalizeWith() presets (or a trim), then
+     * the normalizeUsing() closure.
+     */
+    public function normalizeScannedCode(string $code): string
+    {
+        $code = $this->applyCodeNormalizer($code);
+
+        if (! $this->scanNormalizer instanceof Closure) {
+            return $code;
+        }
+
+        $normalized = $this->evaluate($this->scanNormalizer, ['code' => $code, 'rawValue' => $code, 'state' => $code]);
+
+        return is_scalar($normalized) ? trim((string) $normalized) : $code;
+    }
+
+    /**
+     * Find the record yourself (an API, a composite key, a non-Eloquent store).
+     * Replaces lookup() on this field unless $fallback, when it runs only after
+     * the model lookup found nothing. Return null or false for "not found".
+     */
+    public function lookupUsing(?Closure $resolver, bool $fallback = false): static
+    {
+        $this->registerScanChecksRule();
+
+        $this->lookupResolver = $resolver;
+        $this->lookupFallback = $fallback;
+
+        return $this;
+    }
+
+    /**
+     * Add custom checks that run after the rules, lookup and closures.
+     *
+     * @param  ScanCheckStage|class-string<ScanCheckStage>  ...$stages
+     */
+    public function pipe(ScanCheckStage|string ...$stages): static
+    {
+        $this->registerScanChecksRule();
+
+        foreach ($stages as $stage) {
+            $this->scanStages[] = ScanCheckPipeline::ensureStage($stage);
+        }
+
+        return $this;
     }
 
     public function runScanChecks(string $code, ?ScanInput $source): ScanResult
@@ -202,17 +281,24 @@ trait InteractsWithScans
 
     public function getScanCheckPipeline(): ScanCheckPipeline
     {
+        /** @var class-string<Model>|null $model */
+        $model = $this->evaluate($this->lookupModel);
+
         return new ScanCheckPipeline(
             rules: $this->scanRules,
             closures: $this->scanCheckClosures,
-            lookupModel: $this->lookupModel,
-            lookupColumn: $this->lookupColumn,
+            lookupModel: $model,
+            lookupColumn: (string) $this->evaluate($this->lookupColumn),
             modifyLookupQueryUsing: $this->modifyLookupQueryUsing,
+            lookupResolver: $this->lookupResolver,
+            lookupFallback: $this->lookupFallback,
+            stages: $this->scanStages,
+            component: $this,
         );
     }
 
-    /** @param  class-string<Model>  $model */
-    public function lookup(string $model, string $column = 'code', ?Closure $modifyQueryUsing = null): static
+    /** @param  class-string<Model>|Closure  $model */
+    public function lookup(string|Closure $model, string|Closure $column = 'code', ?Closure $modifyQueryUsing = null): static
     {
         $this->registerScanChecksRule();
 
@@ -239,6 +325,8 @@ trait InteractsWithScans
         return $this->scanRules !== []
             || $this->scanCheckClosures !== []
             || $this->lookupModel !== null
+            || $this->lookupResolver !== null
+            || $this->scanStages !== []
             || $this->onScannedCallback !== null
             || $this->onRejectedCallback !== null
             || $this->usesContinuousScanMode();
