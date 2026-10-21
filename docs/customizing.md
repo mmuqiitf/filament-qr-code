@@ -2,6 +2,8 @@
 
 Everything here is opt-in. A field that uses none of it behaves and renders exactly as before.
 
+Worked examples: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/warehouse.md) · [Work-order station](recipes/manufacturing.md) · [Label generator page](recipes/generator-page.md) · [Custom inputs](recipes/custom-input.md) · [Styling](recipes/styling.md).
+
 ## Find records yourself: `lookupUsing()`
 
 ```php

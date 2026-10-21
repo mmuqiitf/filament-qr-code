@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Views are split into publishable sub-views. They add `fi-qr-*` classes, `data-qr-part` markers, `extraAttributes()` on the roots, `QrCodeRenderHook` render hooks and `--fi-qr-*` CSS variables. The rendered output is otherwise unchanged.
   - `php artisan make:qr-scan-field Name [--sequence] [--force]`, with stubs published via `--tag=filament-qr-code-stubs`.
 
+### Docs
+- **Examples and recipes (P2.3).** Recipes in `docs/recipes`: `pos` (updated: no `wire:key` re-mount, `normalizeWith()`,
+  pause/resume buttons), `warehouse`, `manufacturing`, `generator-page`, `custom-input` and `styling`. Every PHP block is
+  linted and checked against the real API by `tests/Feature/RecipesTest.php`.
+- `UPGRADE.md` with the 0.5 to 0.6 steps.
+- `filament-qr-code.image` is documented as a deprecated alias of `filamentQrCode.image`, removed in 1.0.
+
 ### Changed
 - `ScanResult::$record` is typed `mixed` (lookups may return arrays or objects). Use `recordKey()` for the key.
 - `normalizeUsing()` on a scanner now also normalizes server-checked scans before the checks, not only the stored state.

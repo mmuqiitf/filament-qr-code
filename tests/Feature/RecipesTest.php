@@ -10,9 +10,11 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
+use Filament\Support\View\ViewManager;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -55,7 +57,7 @@ function knownRecipeMethods(): array
     }
 
     $classes = [Action::class, ColorPicker::class, Repeater::class, Select::class, TextInput::class, Notification::class,
-        Page::class, Schema::class, Builder::class, \Illuminate\Database\Query\Builder::class, Model::class, Collection::class];
+        Page::class, Schema::class, Builder::class, Illuminate\Database\Query\Builder::class, Model::class, Collection::class, LoggerInterface::class, ViewManager::class];
 
     foreach (Finder::create()->files()->in(__DIR__.'/../../src')->name('*.php') as $file) {
         $class = 'Mmuqiitf\\FilamentQrCode\\'.str_replace(['/', '.php'], ['\\', ''], $file->getRelativePathname());
@@ -96,10 +98,10 @@ it('lints every php block in the recipes', function (string $code): void {
 
     $candidates = str_starts_with(ltrim($code), '<?php')
         ? [$code]
-        : [$head.$body, $head."return [\n".$body."\n];"];
+        : [$head.$body, $head."return [\n".$body."\n];", $head."final class RecipeFragment\n{\n".$body."\n}"];
 
     expect(collect($candidates)->contains(fn (string $candidate): bool => lintsAsPhp($candidate)))
-        ->toBeTrue('Recipe block does not lint as a file or as an array fragment');
+        ->toBeTrue('Recipe block does not lint as a file, an array fragment or a class body');
 })->with(fn (): array => recipeBlocks());
 
 it('only imports package classes that exist', function (string $code): void {

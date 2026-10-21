@@ -1,6 +1,8 @@
 # Reference
 
-> Back to [README](../README.md) · [Scanning](scanning.md) · [Batch collecting](collecting.md) · [Generating](generating.md)
+> Back to [README](../README.md) · [Scanning](scanning.md) · [Batch collecting](collecting.md) · [Generating](generating.md) · [Customizing](customizing.md)
+
+Recipes: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/warehouse.md) · [Work-order station](recipes/manufacturing.md) · [Label generator page](recipes/generator-page.md) · [Custom inputs](recipes/custom-input.md) · [Styling](recipes/styling.md). Upgrading from 0.5: [UPGRADE.md](../UPGRADE.md).
 
 Configuration, browser events, translations, customizing, and extending.
 
