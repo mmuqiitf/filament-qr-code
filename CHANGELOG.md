@@ -7,8 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-22
+
+### Upgrading from 0.5
+See [UPGRADE.md](UPGRADE.md). In short: run `php artisan filament:assets`, republish customised views,
+use `ScanResult::recordKey()` instead of `$record->getKey()`, and move off the deprecated `filament-qr-code.image`
+route name (removed in 1.0).
+
 ### Added
-- **Runtime control (P2.1).** Scanners and sequences pick up server-side option changes on every Livewire re-render
+- **Runtime control (P2.1, #33).** Scanners and sequences pick up server-side option changes on every Livewire re-render
   without being re-created; the scan in progress finishes first. Config `scan.sync_options` (`'morph'`) and
   `syncOptions(OptionsSync::Refresh)` switch to explicit `qr-scanner-refresh` / `qr-sequence-refresh` events.
 - Per-element API `element.qrScanner` / `element.qrScanSequence` (`feed`, `pause`, `resume`, `reset`, `setOptions`,
@@ -19,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ScanStep::when(fn (array $values) => ...)`: conditional steps are skipped, not required, and their value is dropped.
 - `window.FilamentQrCode.router` (the shared hardware input router) and `createInputRouter` are public and documented.
 
-- **Extension points (P2.2).** See `docs/customizing.md`.
+- **Extension points (P2.2, #34).** See `docs/customizing.md`.
   - `lookupUsing(fn ($code) => ...)` on scanners and steps replaces the model lookup (`fallback: true` runs it after a miss). `lookup()` model and column accept closures.
   - `normalizeWith(trim, uppercase, stripPrefix)` presets apply in the browser and on the server. `normalizeUsing()` now runs on the server before rules and lookup. `ScanStep::normalizeUsing()` added.
   - `->pipe(Stage::class)` with the `ScanCheckStage` contract runs custom checks after the built-in ones (container-resolved; also on submit).
@@ -30,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `php artisan make:qr-scan-field Name [--sequence] [--force]`, with stubs published via `--tag=filament-qr-code-stubs`.
 
 ### Docs
-- **Examples and recipes (P2.3).** Recipes in `docs/recipes`: `pos` (updated: no `wire:key` re-mount, `normalizeWith()`,
+- **Examples and recipes (P2.3, #36).** Recipes in `docs/recipes`: `pos` (updated: no `wire:key` re-mount, `normalizeWith()`,
   pause/resume buttons), `warehouse`, `manufacturing`, `generator-page`, `custom-input` and `styling`. Every PHP block is
   linted and checked against the real API by `tests/Feature/RecipesTest.php`.
 - `UPGRADE.md` with the 0.5 to 0.6 steps.
@@ -314,7 +321,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.0...v0.3.1
