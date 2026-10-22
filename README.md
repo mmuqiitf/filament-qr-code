@@ -247,6 +247,8 @@ UI strings live under `filament-qr-code::ui` (publish with `--tag="filament-qr-c
 - [Batch collecting](docs/collecting.md) — continuous inventory scanning in repeaters and tables.
 - [Generating](docs/generating.md) — display components, download actions, facade, payloads.
 - [Reference](docs/reference.md) — configuration, events, customizing, extending.
+- [Customizing](docs/customizing.md) — custom lookups, check stages, hooks, styling, render hooks.
+- Recipes — [POS checkout](docs/recipes/pos.md) · [Goods receiving](docs/recipes/warehouse.md) · [Work-order station](docs/recipes/manufacturing.md) · [Label generator page](docs/recipes/generator-page.md) · [Custom inputs](docs/recipes/custom-input.md) · [Styling](docs/recipes/styling.md). Each one runs in the [example app](https://github.com/mmuqiitf/filament-qr-code-example).
 
 ---
 
@@ -288,7 +290,7 @@ PRs welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the test suite, static a
 
 ## Changelog
 
-Please see [CHANGELOG.md](CHANGELOG.md) for more information on what has changed recently.
+Please see [CHANGELOG.md](CHANGELOG.md) for more information on what has changed recently, and [UPGRADE.md](UPGRADE.md) when moving between minor versions.
 
 ## Security Vulnerabilities
 
