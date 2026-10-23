@@ -22,6 +22,7 @@ QrScanner::make('sku')
     ->qrbox(250) // responsive max; the decode box scales to the viewfinder
     ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
     ->preferRearCamera()
+    ->cameraControls() // torch / zoom when the camera supports them; false hides them
     ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2)
     ->minFastKeys(3) // consecutive fast keystrokes before a terminator counts
     ->beepFrequency(880)
@@ -91,6 +92,7 @@ QrHardwareScannerListener::make(['sku'])
 | `fps`                | `25`    | decode attempts per second; auto-degrades to 12 when unrestricted and not explicitly set |
 | `qrbox`              | `250`   | _maximum_ decode-box edge; the real box scales to the viewfinder (wide band for 1D)      |
 | `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins                                |
+| `controls`           | `true`  | torch / zoom controls, shown only when the running camera reports the capability         |
 
 ### `scan`
 
