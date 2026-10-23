@@ -15,7 +15,7 @@
         class="fi-qr-camera-torch rounded p-1 hover:bg-white/10"
         :class="torchOn ? 'text-warning-400' : 'text-white'"
     >
-        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <svg class="h-5 w-5" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
     </button>

@@ -50,11 +50,16 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Mmuqiitf\\FilamentQrCode\\Tests\\": "tests/"
+            "Mmuqiitf\\FilamentQrCode\\Tests\\": "tests/",
+            "Workbench\\App\\": "workbench/app/"
         }
     },
     "scripts": {
         "test": "vendor/bin/pest",
+        "serve": [
+            "@php vendor/bin/testbench workbench:build --ansi",
+            "@php vendor/bin/testbench serve --ansi"
+        ],
         "analyse": "vendor/bin/phpstan analyse",
         "format": "vendor/bin/pint",
         "test-style": "vendor/bin/pint --test"
