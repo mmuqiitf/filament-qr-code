@@ -2,6 +2,7 @@
     "beepDurationMs": 80,
     "beepFrequency": 880,
     "burstThresholdMs": 50,
+    "cameraControls": true,
     "componentStatePath": null,
     "editable": true,
     "fields": [

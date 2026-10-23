@@ -7,6 +7,8 @@ import {
     loadCameraDevices,
     persistCameraId,
     resolveDecoderModule,
+    cameraControlsMixin,
+    refreshCameraControls,
     resolveQrboxFor,
     scannerFormatsConfigFor,
     stopCameraFeed,
@@ -35,6 +37,7 @@ export default function qrCollectorComponent({
     qrbox = 250,
     preferRearCamera = true,
     formats = [],
+    cameraControls = true,
     delayBetweenScansMs = 1200,
     cameraStorageKey = null,
     insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
@@ -46,6 +49,7 @@ export default function qrCollectorComponent({
     const storageKey = cameraStorageKey || storageKeyFor('collector');
 
     return {
+        ...cameraControlsMixin(),
         items: initialItems,
         statePath: statePath,
         scannedSet: new Set(initialItems.map(i => i.code)),
@@ -96,7 +100,7 @@ export default function qrCollectorComponent({
         async loadCameras() {
             let decoder;
             try {
-                decoder = await resolveDecoderModule();
+                decoder = await resolveDecoderModule(formats);
             } catch {
                 this.hasError = true;
                 this.errorMessage = 'Failed to load camera decoder.';
@@ -130,7 +134,7 @@ export default function qrCollectorComponent({
 
             let decoder;
             try {
-                decoder = await resolveDecoderModule();
+                decoder = await resolveDecoderModule(formats);
             } catch {
                 this.hasError = true;
                 this.errorMessage = 'Failed to load camera decoder.';
@@ -152,6 +156,7 @@ export default function qrCollectorComponent({
                     () => {}
                 );
                 this.isScanning = true;
+                refreshCameraControls(this, cameraControls);
                 persistCameraId(storageKey, this.selectedDeviceId);
             } catch (err) {
                 this.hasError = true;

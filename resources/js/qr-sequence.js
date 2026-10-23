@@ -9,6 +9,8 @@ import {
     loadCameraDevices,
     persistCameraId,
     resolveDecoderModule,
+    cameraControlsMixin,
+    refreshCameraControls,
     resolveQrboxFor,
     scannerFormatsConfigFor,
     stopCameraFeed,
@@ -61,6 +63,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
     const storageKey = cameraStorageKey || storageKeyFor('sequence');
 
     return {
+        ...cameraControlsMixin(),
         fields: fields, // array of { key: string, label: string }
         currentFieldIndex: 0,
         results: {},
@@ -357,7 +360,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
         async loadCameras() {
             let decoder;
             try {
-                decoder = await resolveDecoderModule();
+                decoder = await resolveDecoderModule(this.options.formats);
             } catch {
                 this.hasError = true;
                 this.errorMessage = 'Failed to load camera decoder.';
@@ -396,7 +399,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             let decoder;
             try {
-                decoder = await resolveDecoderModule();
+                decoder = await resolveDecoderModule(this.options.formats);
             } catch {
                 this.hasError = true;
                 this.errorMessage = 'Failed to load camera decoder.';
@@ -423,6 +426,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
                     () => {}
                 );
                 this.isScanning = true;
+                refreshCameraControls(this);
                 persistCameraId(storageKey, this.selectedDeviceId);
             } catch (err) {
                 this.hasError = true;

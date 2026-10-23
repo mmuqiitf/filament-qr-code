@@ -24,6 +24,8 @@ return [
     'pause_scanner' => 'Pause Scanner',
     'qr_preview' => 'QR Code Preview',
     'ready_to_scan' => 'Ready to scan',
+    'torch' => 'Toggle flashlight',
+    'zoom' => 'Camera zoom',
     'retry' => 'Retry',
     'scan' => 'Scan',
     'scan_from_image' => 'Scan from image file',

@@ -272,19 +272,265 @@ export function ensureScannerInstance(component, elementId, formats, Html5Qrcode
 }
 
 /**
- * Resolve the heavy html5-qrcode module on demand. The result is cached per
- * page load so the 300K+ decoder downloads exactly once, on first camera use.
+ * Decoder resolution. Components receive an html5-qrcode-shaped module
+ * (`{ Html5Qrcode, Html5QrcodeSupportedFormats }`). The default loader prefers
+ * the browser's native BarcodeDetector when it covers every requested format
+ * and falls back to the lazily imported html5-qrcode bundle otherwise.
+ * `setDecoder(loader)` swaps the loader; results are cached per format set.
  */
-let cachedDecoderModule = null;
+const NATIVE_FORMATS = {
+    AZTEC: 'aztec',
+    CODABAR: 'codabar',
+    CODE_39: 'code_39',
+    CODE_93: 'code_93',
+    CODE_128: 'code_128',
+    DATA_MATRIX: 'data_matrix',
+    EAN_8: 'ean_8',
+    EAN_13: 'ean_13',
+    ITF: 'itf',
+    PDF_417: 'pdf417',
+    QR_CODE: 'qr_code',
+    UPC_A: 'upc_a',
+    UPC_E: 'upc_e',
+};
 
-export async function resolveDecoderModule() {
-    if (cachedDecoderModule) {
-        return cachedDecoderModule;
+export function nativeFormatFor(format) {
+    return NATIVE_FORMATS[format] ?? null;
+}
+
+let customDecoderLoader = null;
+let decoderCache = new Map();
+
+export function setDecoder(loader) {
+    if (loader !== null && typeof loader !== 'function') {
+        throw new TypeError('setDecoder expects a loader function or null.');
     }
 
-    cachedDecoderModule = await import('html5-qrcode');
+    customDecoderLoader = loader;
+    decoderCache = new Map();
+}
 
-    return cachedDecoderModule;
+async function nativeDetectorCovers(formats) {
+    const Detector = globalThis.BarcodeDetector;
+    if (typeof Detector !== 'function' || typeof Detector.getSupportedFormats !== 'function') {
+        return false;
+    }
+
+    try {
+        const supported = new Set(await Detector.getSupportedFormats());
+        const wanted = formats.length > 0 ? formats.map(nativeFormatFor) : ['qr_code'];
+
+        return wanted.every((format) => format !== null && supported.has(format));
+    } catch {
+        return false;
+    }
+}
+
+export async function defaultDecoderLoader({ formats = [] } = {}) {
+    if (await nativeDetectorCovers(formats)) {
+        return createNativeDecoderModule(globalThis.BarcodeDetector);
+    }
+
+    return import('html5-qrcode');
+}
+
+export async function resolveDecoderModule(formats = []) {
+    const list = Array.isArray(formats) ? formats : [];
+    const key = [...list].sort().join(',');
+
+    if (!decoderCache.has(key)) {
+        const loader = customDecoderLoader ?? defaultDecoderLoader;
+        const pending = Promise.resolve(loader({ formats: list }));
+        decoderCache.set(key, pending);
+        pending.catch(() => decoderCache.delete(key));
+    }
+
+    return decoderCache.get(key);
+}
+
+/**
+ * Native BarcodeDetector adapter exposing the html5-qrcode surface the
+ * components use. Detects on the full frame (qrbox is visual only).
+ */
+export function createNativeDecoderModule(Detector) {
+    class NativeScanner {
+        constructor(elementId, config = {}) {
+            this.elementId = elementId;
+            const formats = (config.formatsToSupport ?? []).filter(Boolean);
+            this.detector = new Detector(formats.length > 0 ? { formats } : undefined);
+            this.stream = null;
+            this.video = null;
+            this.frame = null;
+            this.paused = false;
+        }
+
+        static async getCameras() {
+            const media = navigator.mediaDevices;
+            const probe = await media.getUserMedia({ video: true });
+            probe.getTracks().forEach((track) => track.stop());
+            const devices = await media.enumerateDevices();
+
+            return devices
+                .filter((device) => device.kind === 'videoinput')
+                .map((device) => ({ id: device.deviceId, label: device.label }));
+        }
+
+        async start(cameraId, config = {}, onSuccess = () => {}, onError = () => {}) {
+            const deviceConstraint = typeof cameraId === 'string' ? { deviceId: { exact: cameraId } } : cameraId;
+            this.stream = await navigator.mediaDevices.getUserMedia({ video: deviceConstraint, audio: false });
+
+            const video = document.createElement('video');
+            video.muted = true;
+            video.playsInline = true;
+            video.setAttribute('playsinline', '');
+            video.style.width = '100%';
+            video.srcObject = this.stream;
+            document.getElementById(this.elementId)?.appendChild(video);
+            this.video = video;
+            await video.play();
+
+            const interval = 1000 / Math.max(1, config.fps ?? 10);
+            let last = 0;
+            let busy = false;
+            const tick = async (now) => {
+                if (!this.stream) return;
+                this.frame = requestAnimationFrame(tick);
+                if (this.paused || busy || now - last < interval || video.readyState < 2) return;
+                last = now;
+                busy = true;
+                try {
+                    const [hit] = await this.detector.detect(video);
+                    if (hit?.rawValue && this.stream && !this.paused) onSuccess(hit.rawValue, hit);
+                } catch (error) {
+                    onError(error?.message ?? String(error));
+                } finally {
+                    busy = false;
+                }
+            };
+            this.frame = requestAnimationFrame(tick);
+        }
+
+        async stop() {
+            if (this.frame !== null) cancelAnimationFrame(this.frame);
+            this.frame = null;
+            this.stream?.getTracks().forEach((track) => track.stop());
+            this.stream = null;
+            this.video?.remove();
+            this.video = null;
+        }
+
+        pause() {
+            this.paused = true;
+        }
+
+        resume() {
+            this.paused = false;
+        }
+
+        async scanFile(file) {
+            const bitmap = await createImageBitmap(file);
+            try {
+                const [hit] = await this.detector.detect(bitmap);
+                if (!hit?.rawValue) throw new Error('No barcode found in the image.');
+
+                return hit.rawValue;
+            } finally {
+                bitmap.close?.();
+            }
+        }
+
+        runningTrack() {
+            const track = this.stream?.getVideoTracks?.()[0];
+            if (!track) throw new Error('Camera is not running.');
+
+            return track;
+        }
+
+        getRunningTrackCapabilities() {
+            return this.runningTrack().getCapabilities?.() ?? {};
+        }
+
+        applyVideoConstraints(constraints) {
+            return this.runningTrack().applyConstraints(constraints);
+        }
+    }
+
+    return { Html5Qrcode: NativeScanner, Html5QrcodeSupportedFormats: { ...NATIVE_FORMATS }, native: true };
+}
+
+/**
+ * Torch / zoom support read from the running camera track. Never throws.
+ */
+export function cameraCapabilitiesFor(instance) {
+    const none = { torch: false, zoom: null };
+    if (!instance || typeof instance.getRunningTrackCapabilities !== 'function') return none;
+
+    let caps;
+    try {
+        caps = instance.getRunningTrackCapabilities() ?? {};
+    } catch {
+        return none;
+    }
+
+    const zoom = caps.zoom;
+    const hasZoom = zoom && typeof zoom.min === 'number' && typeof zoom.max === 'number' && zoom.max > zoom.min;
+
+    return {
+        torch: caps.torch === true || (Array.isArray(caps.torch) && caps.torch.includes(true)),
+        zoom: hasZoom ? { min: zoom.min, max: zoom.max, step: zoom.step || 0.1 } : null,
+    };
+}
+
+async function applyAdvanced(instance, constraint) {
+    if (!instance || typeof instance.applyVideoConstraints !== 'function') return false;
+    try {
+        await instance.applyVideoConstraints({ advanced: [constraint] });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export function applyTorch(instance, on) {
+    return applyAdvanced(instance, { torch: Boolean(on) });
+}
+
+export function applyZoom(instance, value) {
+    return applyAdvanced(instance, { zoom: Number(value) });
+}
+
+/**
+ * Alpine mixin state shared by the camera components.
+ */
+export function refreshCameraControls(component, enabled = component.options?.cameraControls !== false) {
+    const caps = !enabled
+        ? { torch: false, zoom: null }
+        : cameraCapabilitiesFor(component.html5Qrcode);
+    component.cameraCaps = caps;
+    component.torchOn = false;
+    component.zoomLevel = caps.zoom ? caps.zoom.min : 1;
+}
+
+export function resetCameraControls(component) {
+    component.cameraCaps = { torch: false, zoom: null };
+    component.torchOn = false;
+}
+
+export function cameraControlsMixin() {
+    return {
+        cameraCaps: { torch: false, zoom: null },
+        torchOn: false,
+        zoomLevel: 1,
+
+        async toggleTorch() {
+            const next = !this.torchOn;
+            if (await applyTorch(this.html5Qrcode, next)) this.torchOn = next;
+        },
+
+        async setZoom(value) {
+            if (await applyZoom(this.html5Qrcode, value)) this.zoomLevel = Number(value);
+        },
+    };
 }
 
 /**
@@ -301,6 +547,8 @@ export async function stopCameraFeed(component, logLabel = 'scanner') {
             component.isScanning = false;
         }
     }
+
+    resetCameraControls(component);
 }
 
 /**

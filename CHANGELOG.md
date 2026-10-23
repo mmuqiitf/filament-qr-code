@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Swappable camera decoder: `FilamentQrCode.qrCameraCore.setDecoder(loader)`; `setDecoder(null)` restores the default.
+- Native `BarcodeDetector` decoding when the browser supports every requested format, with html5-qrcode as the fallback.
+- Torch and zoom controls in every viewfinder when the camera supports them; `->cameraControls(false)` / `qr-code.camera.controls` hides them.
+- Recipe: ZXing decoder adapter (`docs/recipes/zxing-decoder.md`), not bundled.
+- Browser smoke tests (Playwright + Testbench workbench) with a fake camera and a synthetic keyboard-wedge burst, run in CI.
+
 ## [0.6.0] - 2026-10-22
 
 ### Upgrading from 0.5

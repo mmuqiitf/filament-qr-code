@@ -10,3 +10,5 @@
 .DS_Store
 *.lock
 *.log
+/test-results/
+/playwright-report/

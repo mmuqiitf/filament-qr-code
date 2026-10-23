@@ -2,6 +2,7 @@
     "beepDurationMs": 80,
     "beepFrequency": 880,
     "burstThresholdMs": 50,
+    "cameraControls": true,
     "clearOnReject": true,
     "continuousDisplay": "empty",
     "cooldownMs": 0,

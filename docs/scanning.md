@@ -406,6 +406,18 @@ QrScanner::make('sku')
 
 Defaults live in `qr-code.feedback.success` and `qr-code.feedback.error`. `sound(false)` and `vibrate(false)` still turn everything off. Fields without checks keep the single success beep. The ring lasts about 0.9 s on the field; while the scanner modal is open it flashes the modal panel instead, and the field ring plays once the modal closes.
 
+## Camera decoder, torch and zoom
+
+The camera picks its decoder on first use: the browser's native `BarcodeDetector` when it supports every format the field asks for, otherwise the bundled html5-qrcode. Swap it from page JavaScript before any camera starts:
+
+```js
+window.FilamentQrCode.qrCameraCore.setDecoder(({ formats }) => myDecoderModule);
+```
+
+The loader returns an html5-qrcode-shaped module; see the [ZXing recipe](recipes/zxing-decoder.md) for a complete adapter. `setDecoder(null)` restores the default.
+
+Torch and zoom controls appear in the viewfinder when the running camera reports `torch` or `zoom` (typically Chrome on Android). Hide them with `->cameraControls(false)` or `qr-code.camera.controls`. iOS Safari reports neither, so the controls stay hidden there.
+
 ## Runtime control
 
 Scanners and sequences follow the server after they're mounted. You can also drive them from page JavaScript.

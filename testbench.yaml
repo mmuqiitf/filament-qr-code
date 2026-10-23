@@ -1,0 +1,34 @@
+laravel: '@testbench'
+
+providers:
+  - BladeUI\Icons\BladeIconsServiceProvider
+  - BladeUI\Heroicons\BladeHeroiconsServiceProvider
+  - RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider
+  - Livewire\LivewireServiceProvider
+  - Filament\FilamentServiceProvider
+  - Filament\Actions\ActionsServiceProvider
+  - Filament\Forms\FormsServiceProvider
+  - Filament\Infolists\InfolistsServiceProvider
+  - Filament\Notifications\NotificationsServiceProvider
+  - Filament\Schemas\SchemasServiceProvider
+  - Filament\Support\SupportServiceProvider
+  - Filament\Tables\TablesServiceProvider
+  - Filament\Widgets\WidgetsServiceProvider
+  - Mmuqiitf\FilamentQrCode\FilamentQrCodeServiceProvider
+  - Workbench\App\Providers\WorkbenchPanelProvider
+
+env:
+  APP_KEY: base64:6Cu/ozkhw+hgSU47S7oDg2BgSbFixMIWoFsRf5DQOkI=
+  APP_DEBUG: true
+  SESSION_DRIVER: file
+  CACHE_STORE: array
+  DB_CONNECTION: sqlite
+  DB_DATABASE: ':memory:'
+
+workbench:
+  start: /workbench/scan-smoke
+  install: false
+  discovers:
+    web: false
+  build:
+    - filament:assets

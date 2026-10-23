@@ -8,6 +8,8 @@ import {
     loadCameraDevices,
     persistCameraId,
     resolveDecoderModule,
+    cameraControlsMixin,
+    refreshCameraControls,
     resolveQrboxFor,
     scannerFormatsConfigFor,
     stopCameraFeed,
@@ -68,6 +70,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
     let storageKey = storageKeyFor('scanner');
 
     return {
+        ...cameraControlsMixin(),
         // State
         value: state,
         statePath: statePath,
@@ -331,7 +334,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
         async loadCamerasAndStart() {
             let decoder;
             try {
-                decoder = await resolveDecoderModule();
+                decoder = await resolveDecoderModule(this.options.formats);
             } catch {
                 this.hasError = true;
                 this.errorMessage = 'Failed to load camera decoder.';
@@ -370,7 +373,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
 
             let decoder;
             try {
-                decoder = await resolveDecoderModule();
+                decoder = await resolveDecoderModule(this.options.formats);
             } catch {
                 this.hasError = true;
                 this.errorMessage = 'Failed to load camera decoder.';
@@ -411,6 +414,8 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 );
 
                 this.isScanning = true;
+
+                refreshCameraControls(this);
                 persistCameraId(storageKey, this.selectedDeviceId);
             } catch (err) {
                 this.hasError = true;
@@ -707,7 +712,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
 
             let decoder;
             try {
-                decoder = await resolveDecoderModule();
+                decoder = await resolveDecoderModule(this.options.formats);
             } catch {
                 this.hasError = true;
                 this.errorMessage = 'Failed to load camera decoder.';
