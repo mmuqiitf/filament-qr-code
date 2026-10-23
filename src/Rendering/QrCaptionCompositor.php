@@ -11,6 +11,8 @@ use ImagickPixel;
 /**
  * Adds a caption strip under rendered PNG bytes, widening the canvas when the
  * caption is wider than the QR. Imagick when available, GD otherwise.
+ *
+ * @internal Not an extension point; may change without notice. Use QrCodeService.
  */
 final class QrCaptionCompositor
 {

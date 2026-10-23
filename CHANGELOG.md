@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Browser smoke tests (Playwright + Testbench workbench) with a fake camera and a synthetic keyboard-wedge burst, run in CI.
 
 ### Changed
-- Internal: `QrCodeService` is now a thin facade over `Rendering\QrRenderer`, `QrRenderCache`, `QrLogoCompositor`, `QrCaptionCompositor`, `QrRenderOptions` and `HexColor`; ZIP packing moved to `Rendering\QrZipArchiver` (`Support\QrZipArchive` still works). Output is byte-identical and the public API is unchanged.
+- Internal: `QrCodeService` is now a thin facade over `Rendering\QrRenderer`, `QrRenderCache`, `QrLogoCompositor`, `QrCaptionCompositor`, `QrRenderOptions` and `HexColor`; ZIP packing moved to `Rendering\QrZipArchiver` (`Support\QrZipArchive` still works). Output is byte-identical and the public API is unchanged. The new `Rendering\*` classes are `@internal`.
+- Breaking for subclasses of `QrCodeService` only: the protected `applyLogo()`, `applyTextOverlay()`, `readPersistentCache()` and `writePersistentCache()` methods and the protected static `$renderCache` property were removed (no shims). Override `generate()` or wrap the service instead.
 - Tests: Pest pins the array cache store, so a Testbench skeleton `.env` left by `workbench:build` no longer breaks the suite.
 
 ## [0.6.0] - 2026-10-22

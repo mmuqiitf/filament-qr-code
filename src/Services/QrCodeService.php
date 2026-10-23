@@ -199,7 +199,7 @@ class QrCodeService
         return $this;
     }
 
-    public function toRenderOptions(string $data): QrRenderOptions
+    protected function toRenderOptions(string $data): QrRenderOptions
     {
         return new QrRenderOptions(
             data: $data,

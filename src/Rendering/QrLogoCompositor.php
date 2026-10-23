@@ -9,6 +9,8 @@ use Imagick;
 /**
  * Centers a logo over rendered PNG bytes. Imagick when available, GD otherwise;
  * any failure returns the QR untouched.
+ *
+ * @internal Not an extension point; may change without notice. Use QrCodeService.
  */
 final class QrLogoCompositor
 {

@@ -7,6 +7,9 @@ namespace Mmuqiitf\FilamentQrCode\Rendering;
 use RuntimeException;
 use ZipArchive;
 
+/**
+ * @internal Not an extension point; may change without notice. Use QrCodeService / DownloadQrBulkAction.
+ */
 final class QrZipArchiver
 {
     /**

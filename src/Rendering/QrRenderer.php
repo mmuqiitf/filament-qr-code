@@ -18,6 +18,8 @@ use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 /**
  * Encodes a payload into SVG or PNG bytes, then applies logo and caption.
  * Stateless: no caching here (see QrRenderCache).
+ *
+ * @internal Not an extension point; may change without notice. Use QrCodeService.
  */
 final class QrRenderer
 {

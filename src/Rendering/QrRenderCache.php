@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Cache;
  * Two-level render cache: L1 in-process (per request, 200-entry FIFO) and an
  * optional best-effort L2 on the Laravel cache. State is static so every
  * QrCodeService instance in a request shares it.
+ *
+ * @internal Not an extension point; may change without notice. Use QrCodeService.
  */
 final class QrRenderCache
 {

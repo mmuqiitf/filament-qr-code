@@ -10,6 +10,8 @@ use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 /**
  * Every input that determines a QR render. Two equal option sets always
  * produce identical bytes, which is what makes the render cache sound.
+ *
+ * @internal Not an extension point; may change without notice. Use QrCodeService.
  */
 final readonly class QrRenderOptions
 {

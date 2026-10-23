@@ -6,6 +6,9 @@ namespace Mmuqiitf\FilamentQrCode\Rendering;
 
 use InvalidArgumentException;
 
+/**
+ * @internal Not an extension point; may change without notice.
+ */
 final class HexColor
 {
     /**
