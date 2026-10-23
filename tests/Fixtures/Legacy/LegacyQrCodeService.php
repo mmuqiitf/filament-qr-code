@@ -1,0 +1,607 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Mmuqiitf\FilamentQrCode\Tests\Fixtures\Legacy;
+
+use BaconQrCode\Common\ErrorCorrectionLevel;
+use BaconQrCode\Renderer\Color\Rgb;
+use BaconQrCode\Renderer\GDLibRenderer;
+use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\Fill;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Response;
+use Imagick;
+use ImagickDraw;
+use ImagickPixel;
+use InvalidArgumentException;
+use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
+use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+/**
+ * Frozen pre-P3.2 copy of QrCodeService, used only by characterization tests.
+ */
+class LegacyQrCodeService
+{
+    protected ?string $data = null;
+
+    protected string $rawResult = '';
+
+    protected int $size = 300;
+
+    protected int $margin = 2;
+
+    protected QrFormat $format = QrFormat::Svg;
+
+    protected string $foregroundColor = '#000000';
+
+    protected string $backgroundColor = '#ffffff';
+
+    protected ?ErrorCorrectionLevel $errorCorrectionLevel = null;
+
+    protected ?string $overlayText = null;
+
+    protected int $fontSize = 16;
+
+    protected string $fontColor = '#000000';
+
+    protected ?string $fontPath = null;
+
+    protected ?string $logoPath = null;
+
+    protected int $logoSize = 50;
+
+    protected string $fileName = 'qrcode';
+
+    /**
+     * L1: in-process render cache (per request).
+     *
+     * @var array<string, string>
+     */
+    protected static array $renderCache = [];
+
+    protected static bool $persistentCacheEnabled = true;
+
+    protected static ?int $persistentCacheTtl = null;
+
+    protected static ?string $persistentCacheStore = null;
+
+    /**
+     * Toggle the persistent (Laravel Cache) L2 layer. The in-process L1
+     * stays active regardless so repeated renders in one request encode once.
+     */
+    public static function persistentCache(bool $enabled = true): void
+    {
+        static::$persistentCacheEnabled = $enabled;
+    }
+
+    public static function cacheTtl(?int $seconds): void
+    {
+        static::$persistentCacheTtl = $seconds;
+    }
+
+    public static function cacheStore(?string $store): void
+    {
+        static::$persistentCacheStore = $store;
+    }
+
+    public static function effectiveCacheTtl(): ?int
+    {
+        if (static::$persistentCacheTtl !== null) {
+            return static::$persistentCacheTtl;
+        }
+
+        if (function_exists('config')) {
+            $configured = config('qr-code.generator.cache_ttl');
+            if ($configured === null || $configured === false) {
+                return null;
+            }
+
+            return is_numeric($configured) ? max(0, (int) $configured) : 86400;
+        }
+
+        return 86400;
+    }
+
+    public function __construct()
+    {
+        $this->errorCorrectionLevel = ErrorCorrectionLevel::M();
+    }
+
+    public static function make(): self
+    {
+        return new self;
+    }
+
+    public function size(int $size): self
+    {
+        $this->size = max(50, $size);
+
+        return $this;
+    }
+
+    public function margin(int $margin): self
+    {
+        $this->margin = max(0, $margin);
+
+        return $this;
+    }
+
+    public function format(QrFormat|string $format): self
+    {
+        if (is_string($format)) {
+            $format = QrFormat::tryFrom(strtolower($format)) ?? QrFormat::Svg;
+        }
+
+        $this->format = $format;
+
+        return $this;
+    }
+
+    public function color(string $hexColor): self
+    {
+        $this->foregroundColor = $hexColor;
+
+        return $this;
+    }
+
+    public function backgroundColor(string $hexColor): self
+    {
+        $this->backgroundColor = $hexColor;
+
+        return $this;
+    }
+
+    public function errorCorrection(string|ErrorCorrectionLevel $level): self
+    {
+        if (is_string($level)) {
+            $this->errorCorrectionLevel = match (strtoupper($level)) {
+                'L' => ErrorCorrectionLevel::L(),
+                'Q' => ErrorCorrectionLevel::Q(),
+                'H' => ErrorCorrectionLevel::H(),
+                default => ErrorCorrectionLevel::M(),
+            };
+        } else {
+            $this->errorCorrectionLevel = $level;
+        }
+
+        return $this;
+    }
+
+    public function withText(string $text, int $fontSize = 16, string $fontColor = '#000000', ?string $fontPath = null): self
+    {
+        $this->overlayText = $text;
+        $this->fontSize = $fontSize;
+        $this->fontColor = $fontColor;
+        $this->fontPath = $fontPath;
+
+        // Overlay text requires PNG format for bitmap rasterization
+        $this->format = QrFormat::Png;
+
+        return $this;
+    }
+
+    public function font(string $fontPath): self
+    {
+        $this->fontPath = $fontPath;
+
+        return $this;
+    }
+
+    public function logo(string $path, int $size = 50): self
+    {
+        $this->logoPath = $path;
+        $this->logoSize = $size;
+        $this->errorCorrectionLevel = ErrorCorrectionLevel::H();
+        $this->format = QrFormat::Png;
+
+        return $this;
+    }
+
+    public function fileName(string $fileName): self
+    {
+        $this->fileName = $fileName;
+
+        return $this;
+    }
+
+    public function generate(string $data): self
+    {
+        $this->data = $data;
+
+        // Text overlays and logos are raster operations: they require PNG
+        // regardless of the order format()/withText()/logo() were called in.
+        if ($this->format === QrFormat::Svg && ($this->overlayText !== null || $this->logoPath !== null)) {
+            $this->format = QrFormat::Png;
+        }
+
+        $ecLevel = $this->errorCorrectionLevel ?? ErrorCorrectionLevel::M();
+
+        // Render output is fully determined by these inputs, so identical
+        // payloads (e.g. repeated table rows or thumbnail + modal previews)
+        // share one cached render instead of re-encoding every time.
+        $cacheKey = md5(implode('|', [
+            $data,
+            $this->size,
+            $this->margin,
+            $this->format->value,
+            $this->foregroundColor,
+            $this->backgroundColor,
+            $ecLevel->getBits(),
+            $this->overlayText ?? '',
+            $this->fontSize,
+            $this->fontColor,
+            $this->fontPath ?? '',
+            $this->logoPath ?? '',
+            $this->logoSize,
+        ]));
+
+        if (isset(static::$renderCache[$cacheKey])) {
+            $this->rawResult = static::$renderCache[$cacheKey];
+
+            return $this;
+        }
+
+        $persistentKey = 'filament-qr-code:render:'.$cacheKey;
+        $persistentHit = static::readPersistentCache($persistentKey);
+        if ($persistentHit !== null) {
+            static::$renderCache[$cacheKey] = $persistentHit;
+            $this->rawResult = $persistentHit;
+
+            return $this;
+        }
+
+        $fgRgb = $this->hexToRgb($this->foregroundColor);
+        $bgRgb = $this->hexToRgb($this->backgroundColor);
+
+        $fill = Fill::uniformColor(
+            new Rgb($bgRgb['r'], $bgRgb['g'], $bgRgb['b']),
+            new Rgb($fgRgb['r'], $fgRgb['g'], $fgRgb['b'])
+        );
+
+        $rendererStyle = new RendererStyle(
+            $this->size,
+            $this->margin,
+            null,
+            null,
+            $fill
+        );
+
+        if ($this->format === QrFormat::Svg) {
+            $renderer = new ImageRenderer($rendererStyle, new SvgImageBackEnd);
+            $writer = new Writer($renderer);
+            $this->rawResult = $writer->writeString($data, 'UTF-8', $ecLevel);
+        } else {
+            // PNG rendering
+            if (extension_loaded('imagick')) {
+                $renderer = new ImageRenderer($rendererStyle, new ImagickImageBackEnd);
+                $writer = new Writer($renderer);
+                $pngData = $writer->writeString($data, 'UTF-8', $ecLevel);
+            } else {
+                $renderer = new GDLibRenderer($this->size, $this->margin, imageFormat: 'png', fill: $fill);
+                $writer = new Writer($renderer);
+                $pngData = $writer->writeString($data, 'UTF-8', $ecLevel);
+            }
+
+            if ($this->logoPath !== null && file_exists($this->logoPath)) {
+                $pngData = $this->applyLogo($pngData);
+            }
+
+            if ($this->overlayText !== null && $this->overlayText !== '') {
+                $pngData = $this->applyTextOverlay($pngData);
+            }
+
+            $this->rawResult = $pngData;
+        }
+
+        if (count(static::$renderCache) >= 200) {
+            array_shift(static::$renderCache);
+        }
+
+        static::$renderCache[$cacheKey] = $this->rawResult;
+        static::writePersistentCache($persistentKey, $this->rawResult);
+
+        return $this;
+    }
+
+    public static function flushRenderCache(): void
+    {
+        static::$renderCache = [];
+    }
+
+    public static function flushPersistentCache(): void
+    {
+        if (! static::$persistentCacheEnabled) {
+            return;
+        }
+
+        try {
+            Cache::store(static::$persistentCacheStore)->flush();
+        } catch (\Throwable) {
+            // Cache backend unavailable (e.g. array driver in tests) — L1 still works.
+        }
+    }
+
+    protected static function readPersistentCache(string $key): ?string
+    {
+        if (! static::$persistentCacheEnabled) {
+            return null;
+        }
+
+        try {
+            $value = Cache::store(static::$persistentCacheStore)->get($key);
+
+            return is_string($value) && $value !== '' ? $value : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    protected static function writePersistentCache(string $key, string $value): void
+    {
+        if (! static::$persistentCacheEnabled) {
+            return;
+        }
+
+        try {
+            $store = Cache::store(static::$persistentCacheStore);
+
+            $ttl = static::effectiveCacheTtl();
+            if ($ttl === null) {
+                $store->forever($key, $value);
+            } elseif ($ttl > 0) {
+                $store->put($key, $value, $ttl);
+            }
+        } catch (\Throwable) {
+            // Persistent caching is best-effort; rendering already succeeded.
+        }
+    }
+
+    public function getRaw(): string
+    {
+        if ($this->rawResult === '') {
+            throw new RuntimeException('QR code has not been generated yet. Call generate() first.');
+        }
+
+        return $this->rawResult;
+    }
+
+    public function toDataUri(): string
+    {
+        $raw = $this->getRaw();
+        $mime = $this->format->getMimeType();
+
+        return 'data:'.$mime.';base64,'.base64_encode($raw);
+    }
+
+    public function download(?string $fileName = null): StreamedResponse
+    {
+        $name = $fileName ?? $this->fileName;
+        $extension = $this->format->getExtension();
+        $mime = $this->format->getMimeType();
+        $content = $this->getRaw();
+
+        return Response::streamDownload(
+            callback: static function () use ($content): void {
+                echo $content;
+            },
+            name: "{$name}.{$extension}",
+            headers: ['Content-Type' => $mime],
+            disposition: 'attachment'
+        );
+    }
+
+    public function stream(?string $fileName = null): StreamedResponse
+    {
+        $name = $fileName ?? $this->fileName;
+        $extension = $this->format->getExtension();
+        $mime = $this->format->getMimeType();
+        $content = $this->getRaw();
+
+        return Response::streamDownload(
+            callback: static function () use ($content): void {
+                echo $content;
+            },
+            name: "{$name}.{$extension}",
+            headers: ['Content-Type' => $mime],
+            disposition: 'inline'
+        );
+    }
+
+    protected function applyLogo(string $qrPngData): string
+    {
+        if (extension_loaded('imagick')) {
+            try {
+                $qr = new Imagick;
+                $qr->readImageBlob($qrPngData);
+
+                $logo = new Imagick($this->logoPath);
+                $logo->thumbnailImage($this->logoSize, $this->logoSize, true);
+
+                $x = (int) (($qr->getImageWidth() - $logo->getImageWidth()) / 2);
+                $y = (int) (($qr->getImageHeight() - $logo->getImageHeight()) / 2);
+
+                $qr->compositeImage($logo, Imagick::COMPOSITE_OVER, $x, $y);
+                $result = $qr->getImageBlob();
+
+                $qr->destroy();
+                $logo->destroy();
+
+                return $result;
+            } catch (\Throwable) {
+                // Fall back to GD
+            }
+        }
+
+        // GD fallback
+        $qrImage = imagecreatefromstring($qrPngData);
+        if ($qrImage === false) {
+            return $qrPngData;
+        }
+
+        $logoData = file_get_contents((string) $this->logoPath);
+        if ($logoData === false) {
+            return $qrPngData;
+        }
+
+        $logoImage = imagecreatefromstring($logoData);
+        if ($logoImage === false) {
+            return $qrPngData;
+        }
+
+        $qrWidth = imagesx($qrImage);
+        $qrHeight = imagesy($qrImage);
+        $logoWidth = imagesx($logoImage);
+        $logoHeight = imagesy($logoImage);
+
+        $dstX = (int) (($qrWidth - $this->logoSize) / 2);
+        $dstY = (int) (($qrHeight - $this->logoSize) / 2);
+
+        imagecopyresampled(
+            $qrImage,
+            $logoImage,
+            $dstX,
+            $dstY,
+            0,
+            0,
+            $this->logoSize,
+            $this->logoSize,
+            $logoWidth,
+            $logoHeight
+        );
+
+        ob_start();
+        imagepng($qrImage);
+        $result = (string) ob_get_clean();
+
+        return $result;
+    }
+
+    protected function applyTextOverlay(string $qrPngData): string
+    {
+        if ($this->overlayText === null || $this->overlayText === '') {
+            return $qrPngData;
+        }
+
+        if (extension_loaded('imagick')) {
+            try {
+                $imagick = new Imagick;
+                $imagick->readImageBlob($qrPngData);
+
+                $qrWidth = $imagick->getImageWidth();
+                $qrHeight = $imagick->getImageHeight();
+
+                $draw = new ImagickDraw;
+                $draw->setFontSize($this->fontSize);
+                $draw->setFillColor(new ImagickPixel($this->fontColor));
+                $draw->setTextAlignment(Imagick::ALIGN_CENTER);
+
+                if ($this->fontPath !== null && file_exists($this->fontPath)) {
+                    $draw->setFont($this->fontPath);
+                }
+
+                $metrics = $imagick->queryFontMetrics($draw, $this->overlayText);
+                $textHeight = (int) $metrics['textHeight'];
+
+                $padding = 12;
+                $newHeight = $qrHeight + $textHeight + $padding;
+                // Widen the canvas for captions longer than the QR is wide.
+                $newWidth = max($qrWidth, (int) ceil($metrics['textWidth']) + 2 * $padding);
+
+                $canvas = new Imagick;
+                $canvas->newImage($newWidth, $newHeight, new ImagickPixel($this->backgroundColor));
+                $canvas->setImageFormat('png');
+
+                $canvas->compositeImage($imagick, Imagick::COMPOSITE_OVER, intdiv($newWidth - $qrWidth, 2), 0);
+
+                $textY = $qrHeight + (int) ($textHeight * 0.8);
+                $canvas->annotateImage($draw, $newWidth / 2, (float) $textY, 0.0, $this->overlayText);
+
+                $imagick->destroy();
+                $result = $canvas->getImageBlob();
+                $canvas->destroy();
+
+                return $result;
+            } catch (\Throwable) {
+                // If Imagick fails (e.g. FreeType font missing or not configured in container), gracefully fall back to GD
+            }
+        }
+
+        // GD fallback
+        $qrImage = imagecreatefromstring($qrPngData);
+        if ($qrImage === false) {
+            return $qrPngData;
+        }
+
+        $qrWidth = imagesx($qrImage);
+        $qrHeight = imagesy($qrImage);
+
+        $fontId = min(5, max(1, (int) floor($this->fontSize / 4)));
+        $textWidth = strlen($this->overlayText) * imagefontwidth($fontId);
+        $textHeight = imagefontheight($fontId);
+        $padding = 10;
+
+        $newHeight = max(1, $qrHeight + $textHeight + $padding);
+        // Widen the canvas for captions longer than the QR is wide.
+        $newWidth = max(1, max($qrWidth, $textWidth + 2 * $padding));
+        $canvas = imagecreatetruecolor($newWidth, $newHeight);
+        if ($canvas === false) {
+            return $qrPngData;
+        }
+
+        $bgRgb = $this->hexToRgb($this->backgroundColor);
+        $bg = imagecolorallocate($canvas, $bgRgb['r'], $bgRgb['g'], $bgRgb['b']);
+        if ($bg !== false) {
+            imagefill($canvas, 0, 0, $bg);
+        }
+
+        imagecopy($canvas, $qrImage, intdiv($newWidth - $qrWidth, 2), 0, 0, 0, $qrWidth, $qrHeight);
+
+        $fgRgb = $this->hexToRgb($this->fontColor);
+        $textColor = imagecolorallocate($canvas, $fgRgb['r'], $fgRgb['g'], $fgRgb['b']);
+
+        $x = intdiv($newWidth - $textWidth, 2);
+        $y = $qrHeight + 2;
+
+        if ($textColor !== false) {
+            imagestring($canvas, $fontId, $x, $y, $this->overlayText, $textColor);
+        }
+
+        ob_start();
+        imagepng($canvas);
+        $result = (string) ob_get_clean();
+
+        return $result;
+    }
+
+    /**
+     * @return array{r: int<0, 255>, g: int<0, 255>, b: int<0, 255>}
+     */
+    protected function hexToRgb(string $hex): array
+    {
+        $hex = ltrim($hex, '#');
+
+        if (strlen($hex) === 3) {
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
+        }
+
+        if (! preg_match('/^[0-9a-fA-F]{6}$/', $hex)) {
+            throw new InvalidArgumentException("Invalid hex color [{$hex}]. Expected 3 or 6 hex digits, e.g. '#0f172a'.");
+        }
+
+        $r = min(255, max(0, (int) hexdec(substr($hex, 0, 2))));
+        $g = min(255, max(0, (int) hexdec(substr($hex, 2, 2))));
+        $b = min(255, max(0, (int) hexdec(substr($hex, 4, 2))));
+
+        return [
+            'r' => $r,
+            'g' => $g,
+            'b' => $b,
+        ];
+    }
+}
