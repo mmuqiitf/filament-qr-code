@@ -52,6 +52,9 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app): void
     {
         config()->set('database.default', 'testing');
+        // Pin the cache store: `testbench workbench:build` (browser tests) writes a
+        // skeleton .env with CACHE_STORE=database, which has no table under Pest.
+        config()->set('cache.default', 'array');
         config()->set('app.key', 'base64:6Cu/ozkhw+hgSU47S7oDg2BgSbFixMIWoFsRf5DQOkI=');
         $app->singleton(DataStore::class);
     }

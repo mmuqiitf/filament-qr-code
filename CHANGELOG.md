@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recipe: ZXing decoder adapter (`docs/recipes/zxing-decoder.md`), not bundled.
 - Browser smoke tests (Playwright + Testbench workbench) with a fake camera and a synthetic keyboard-wedge burst, run in CI.
 
+### Changed
+- Internal: `QrCodeService` is now a thin facade over `Rendering\QrRenderer`, `QrRenderCache`, `QrLogoCompositor`, `QrCaptionCompositor`, `QrRenderOptions` and `HexColor`; ZIP packing moved to `Rendering\QrZipArchiver` (`Support\QrZipArchive` still works). Output is byte-identical and the public API is unchanged.
+- Tests: Pest pins the array cache store, so a Testbench skeleton `.env` left by `workbench:build` no longer breaks the suite.
+
 ## [0.6.0] - 2026-10-22
 
 ### Upgrading from 0.5
