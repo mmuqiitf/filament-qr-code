@@ -18,6 +18,8 @@ trait HasCameraScanning
 
     protected bool|Closure|null $preferRearCamera = null;
 
+    protected bool|Closure|null $cameraControls = null;
+
     /**
      * @var array<int, BarcodeFormat|string>|Closure
      */
@@ -43,6 +45,26 @@ trait HasCameraScanning
         $this->preferRearCamera = $condition;
 
         return $this;
+    }
+
+    /**
+     * Torch and zoom controls appear when the running camera supports them;
+     * pass false to keep the viewfinder free of them.
+     */
+    public function cameraControls(bool|Closure $condition = true): static
+    {
+        $this->cameraControls = $condition;
+
+        return $this;
+    }
+
+    public function hasCameraControls(): bool
+    {
+        if ($this->cameraControls === null) {
+            return ConfigValue::bool('qr-code.camera.controls', true);
+        }
+
+        return (bool) $this->evaluate($this->cameraControls);
     }
 
     /**
@@ -133,6 +155,7 @@ trait HasCameraScanning
             'fps' => $this->getEffectiveFps(),
             'qrbox' => $this->getQrbox(),
             'preferRearCamera' => $this->isPreferRearCamera(),
+            'cameraControls' => $this->hasCameraControls(),
             'formats' => $this->getSupportedFormats(),
             'insecureMessage' => __('filament-qr-code::ui.camera_needs_secure_context'),
             'fileScanFailedMessage' => __('filament-qr-code::ui.file_scan_failed'),

@@ -141,6 +141,8 @@ return [
         'fps' => 25,
         'qrbox' => 250,
         'prefer_rear_camera' => true,
+        // Torch / zoom buttons, shown only when the camera supports them.
+        'controls' => true,
     ],
 
     /*

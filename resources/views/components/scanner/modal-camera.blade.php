@@ -16,6 +16,7 @@
 {{-- Viewfinder --}}
 <div class="filament-qr-viewfinder">
     <div :id="scannerElementId" class="w-full h-full"></div>
+    @include('filament-qr-code::components.camera-controls')
 
     {{-- Reticle Box & Laser (decorative: the decoder crop is announced via the modal label) --}}
     <div x-show="isScanning" class="filament-qr-reticle" aria-hidden="true">

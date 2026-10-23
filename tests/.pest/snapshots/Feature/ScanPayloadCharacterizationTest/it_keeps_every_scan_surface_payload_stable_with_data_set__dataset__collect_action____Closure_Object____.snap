@@ -3,6 +3,7 @@
     "beepDurationMs": 80,
     "beepFrequency": 880,
     "burstThresholdMs": 50,
+    "cameraControls": true,
     "fileScanFailedMessage": "No barcode or QR code found in the selected image.",
     "formats": [],
     "fps": 12,

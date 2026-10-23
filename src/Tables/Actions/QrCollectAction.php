@@ -61,6 +61,7 @@ class QrCollectAction extends Action
                 'fps' => $this->getEffectiveFps(),
                 'qrbox' => $this->getQrbox(),
                 'preferRearCamera' => $this->isPreferRearCamera(),
+                'cameraControls' => $this->hasCameraControls(),
                 'formats' => $this->getSupportedFormats(),
             ]);
         });

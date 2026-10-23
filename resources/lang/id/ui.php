@@ -24,6 +24,8 @@ return [
     'pause_scanner' => 'Jeda Pemindai',
     'qr_preview' => 'Pratinjau Kode QR',
     'ready_to_scan' => 'Siap dipindai',
+    'torch' => 'Nyalakan/matikan senter',
+    'zoom' => 'Zoom kamera',
     'retry' => 'Coba Lagi',
     'scan' => 'Pindai',
     'scan_from_image' => 'Pindai dari berkas gambar',
