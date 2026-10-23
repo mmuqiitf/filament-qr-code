@@ -75,7 +75,7 @@ it('QrRenderer renders same SVG bytes', function () {
 it('renders the same bytes as the pre-split service', function (Closure $configure) {
     [$legacy, $new] = configureBoth($configure, 'CHAR-0042', $this->logoPath);
 
-    expect($new)->toBe($legacy);
+    expect(pngWithoutTimestamps($new))->toBe(pngWithoutTimestamps($legacy));
 })->with([
     'svg defaults' => fn ($s, string $logo) => $s,
     'svg short hex, H level' => fn ($s, string $logo) => $s->color('#123')->backgroundColor('#fed')->errorCorrection('H'),
@@ -90,8 +90,14 @@ it('renders the same bytes as the pre-split service', function (Closure $configu
 ]);
 
 it('keeps the data URI and invalid-colour behaviour', function () {
-    expect(QrCodeService::make()->format('png')->generate('URI')->toDataUri())
-        ->toBe(LegacyQrCodeService::make()->format('png')->generate('URI')->toDataUri());
+    $newUri = QrCodeService::make()->format('png')->generate('URI')->toDataUri();
+    $legacyUri = LegacyQrCodeService::make()->format('png')->generate('URI')->toDataUri();
+    [$newPrefix, $newData] = explode(',', $newUri, 2);
+    [$legacyPrefix, $legacyData] = explode(',', $legacyUri, 2);
+
+    expect($newPrefix)->toBe($legacyPrefix)
+        ->and(pngWithoutTimestamps((string) base64_decode($newData)))
+        ->toBe(pngWithoutTimestamps((string) base64_decode($legacyData)));
 
     $legacyMessage = null;
     try {
@@ -117,6 +123,36 @@ it('keeps the persistent cache key format', function () {
 
     expect(Cache::get($key))->toBe($raw);
 });
+
+/**
+ * Imagick stamps PNGs with the wall clock (tIME chunk, date:* tEXt chunks),
+ * so two renders a second apart differ only there. Drop exactly those chunks;
+ * every other byte must still match. Non-PNG input is returned unchanged.
+ */
+function pngWithoutTimestamps(string $bytes): string
+{
+    if (! str_starts_with($bytes, "\x89PNG\r\n\x1a\n")) {
+        return $bytes;
+    }
+
+    $out = substr($bytes, 0, 8);
+    $at = 8;
+    while ($at + 8 <= strlen($bytes)) {
+        $length = (int) unpack('N', substr($bytes, $at, 4))[1];
+        $type = substr($bytes, $at + 4, 4);
+        $chunk = substr($bytes, $at, 12 + $length);
+        $at += 12 + $length;
+
+        $isTimestamp = $type === 'tIME'
+            || (in_array($type, ['tEXt', 'zTXt', 'iTXt'], true) && str_starts_with(substr($chunk, 8), 'date:'));
+
+        if (! $isTimestamp) {
+            $out .= $chunk;
+        }
+    }
+
+    return $out;
+}
 
 /**
  * Zero the DOS mod-time/mod-date fields in local and central headers;
