@@ -16,6 +16,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\View;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Mmuqiitf\FilamentQrCode\FilamentQrCodePlugin;
+use Workbench\App\Filament\Pages\CollectSmoke;
 use Workbench\App\Filament\Pages\ScanSmoke;
 
 /**
@@ -37,7 +38,7 @@ class WorkbenchPanelProvider extends PanelProvider
             ->path('workbench')
             ->topbar(false)
             ->plugin(FilamentQrCodePlugin::make())
-            ->pages([ScanSmoke::class])
+            ->pages([ScanSmoke::class, CollectSmoke::class])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
