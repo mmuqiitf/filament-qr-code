@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Livewire\Livewire;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\TestLivewireFormComponent;
 
 it('renders one scan payload with canonical keys on every scan surface', function () {
     Livewire::test(TestLivewireFormComponent::class)
