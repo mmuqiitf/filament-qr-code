@@ -11,10 +11,5 @@
         </div>
     </div>
 
-    <div x-show="isLoading" class="absolute inset-0 flex items-center justify-center bg-gray-950/80 z-20">
-        <div class="text-center text-white space-y-2">
-            <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent"></div>
-            <p class="text-xs">{{ __('filament-qr-code::ui.loading_camera') }}</p>
-        </div>
-    </div>
+    @include('filament-qr-code::components.camera-status', ['retry' => 'retryCamera()'])
 </div>

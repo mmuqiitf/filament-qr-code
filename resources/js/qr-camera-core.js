@@ -292,6 +292,9 @@ export async function resolveDecoderModule() {
  * `html5Qrcode && isScanning` seam and clears `isScanning` in `finally`.
  */
 export async function stopCameraFeed(component, logLabel = 'scanner') {
+    // Cancel any start still in flight: it checks the run when it resolves.
+    component.cameraRun = (component.cameraRun ?? 0) + 1;
+
     if (component.html5Qrcode && component.isScanning) {
         try {
             await component.html5Qrcode.stop();
@@ -322,4 +325,41 @@ export function emitScanFeedback(feedback, {
         duration: beepDurationMs,
         vibrateDuration: vibrateDurationMs,
     });
+}
+
+/**
+ * The current camera run. Every stop bumps it, so a caller that awaited
+ * device loading can tell the camera was closed in the meantime.
+ */
+export function currentCameraRun(component) {
+    return component.cameraRun ?? 0;
+}
+
+/**
+ * Shared camera start. html5Qrcode.start() takes a second or two on a real
+ * camera; when the modal closes (or Livewire removes the component) during
+ * that window the stop is a no-op, so a start that resolves for a cancelled
+ * run stops its own stream instead of leaving the camera on. Pass the run
+ * captured before any earlier await to also cancel across device loading.
+ */
+export async function startCameraFeed(component, start, run = currentCameraRun(component)) {
+    if (currentCameraRun(component) !== run) {
+        return false;
+    }
+
+    await start();
+
+    if (currentCameraRun(component) !== run) {
+        try {
+            await component.html5Qrcode?.stop();
+        } catch (e) {
+            console.debug('Error stopping a cancelled camera start:', e);
+        }
+
+        return false;
+    }
+
+    component.isScanning = true;
+
+    return true;
 }
