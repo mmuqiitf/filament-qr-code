@@ -2,9 +2,9 @@ name: build-assets
 
 on:
   push:
-    branches: [main]
+    branches: [main, '0.*.x', '1.*.x']
   pull_request:
-    branches: [main]
+    branches: [main, '0.*.x', '1.*.x']
 
 jobs:
   build:
