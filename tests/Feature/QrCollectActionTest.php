@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Livewire\Component;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 use Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction;
 
@@ -35,4 +36,17 @@ it('invokes the onScan callback through handleScan', function () {
 
 it('returns null from handleScan when no callback is registered', function () {
     expect(QrCollectAction::make()->handleScan('PRD-1001'))->toBeNull();
+});
+
+it('tells the browser whether the host defines handleCollectorScan (#35)', function () {
+    $withHook = new class extends Component
+    {
+        public function handleCollectorScan(string $code): void {}
+    };
+
+    $withoutHook = new class extends Component {};
+
+    expect(QrCollectAction::make()->getScanPayload()['wireScanHandler'])->toBeFalse()
+        ->and(QrCollectAction::make()->livewire($withoutHook)->getScanPayload()['wireScanHandler'])->toBeFalse()
+        ->and(QrCollectAction::make()->livewire($withHook)->getScanPayload()['wireScanHandler'])->toBeTrue();
 });

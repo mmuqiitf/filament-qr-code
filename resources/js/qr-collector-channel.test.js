@@ -36,7 +36,7 @@ afterEach(() => {
 describe('collector server-notify channel', () => {
     it('prefers the Livewire hook and skips the event when defined', () => {
         const dispatched = stubWindow();
-        const collector = makeCollector();
+        const collector = makeCollector({ wireScanHandler: true });
         const wire = { handleCollectorScan: vi.fn(), set: vi.fn() };
         collector.$wire = wire;
 
@@ -45,6 +45,19 @@ describe('collector server-notify channel', () => {
         expect(wire.handleCollectorScan).toHaveBeenCalledTimes(1);
         expect(wire.handleCollectorScan).toHaveBeenCalledWith('PRD-1');
         expect(dispatched).toEqual([]);
+    });
+
+    it('uses the window event with a real Livewire $wire proxy when the host has no hook (#35)', () => {
+        const dispatched = stubWindow();
+        const collector = makeCollector();
+        const calls = [];
+        // Livewire's $wire answers every property with a callable proxy.
+        collector.$wire = new Proxy({}, { get: (_, name) => (...args) => calls.push([name, ...args]) });
+
+        collector.handleDetectedCode('PRD-3');
+
+        expect(calls.map(([name]) => name)).not.toContain('handleCollectorScan');
+        expect(dispatched.map((event) => event.type)).toEqual(['qr-collector-item-added']);
     });
 
     it('falls back to the window event when no Livewire hook exists', () => {
@@ -61,7 +74,7 @@ describe('collector server-notify channel', () => {
 
     it('still syncs entangled state on either channel', () => {
         stubWindow();
-        const withHook = makeCollector({ statePath: 'data.codes' });
+        const withHook = makeCollector({ statePath: 'data.codes', wireScanHandler: true });
         withHook.$wire = { handleCollectorScan: vi.fn(), set: vi.fn() };
         withHook.handleDetectedCode('A-1');
         expect(withHook.$wire.set).toHaveBeenCalledWith('data.codes', ['A-1']);
@@ -74,7 +87,7 @@ describe('collector server-notify channel', () => {
 
     it('throttles bursts so one scan yields one delivery', () => {
         stubWindow();
-        const collector = makeCollector({ delayBetweenScansMs: 1200 });
+        const collector = makeCollector({ delayBetweenScansMs: 1200, wireScanHandler: true });
         const wire = { handleCollectorScan: vi.fn(), set: vi.fn() };
         collector.$wire = wire;
 

@@ -13,6 +13,8 @@ import {
     resolveQrboxFor,
     scannerFormatsConfigFor,
     stopCameraFeed,
+    startCameraFeed,
+    currentCameraRun,
     storageKeyFor,
 } from './qr-camera-core.js';
 import { createScanDeduper, normalizeCode, requestScanCheck } from './scan-pipeline.js';
@@ -332,6 +334,8 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
         },
 
         async loadCamerasAndStart() {
+            // Closing the modal while devices load bumps the run: skip the start.
+            const run = currentCameraRun(this);
             let decoder;
             try {
                 decoder = await resolveDecoderModule(this.options.formats);
@@ -352,7 +356,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             });
 
             if (!this.hasError) {
-                await this.startScan();
+                await this.startScan(run);
             }
         },
 
@@ -364,12 +368,14 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             return resolveQrboxFor(this.scannerElementId, this.options.qrbox, this.options.formats);
         },
 
-        async startScan() {
+        async startScan(run = null) {
             if (!this.selectedDeviceId) return;
 
             if (this.isScanning) {
                 await this.stopScan();
             }
+
+            run ??= currentCameraRun(this);
 
             let decoder;
             try {
@@ -402,7 +408,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             };
 
             try {
-                await this.html5Qrcode.start(
+                if (!(await startCameraFeed(this, () => this.html5Qrcode.start(
                     this.selectedDeviceId,
                     config,
                     (decodedText) => {
@@ -411,9 +417,9 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                     () => {
                         // Frame scan error (no QR/barcode detected in frame), silent ignore
                     }
-                );
-
-                this.isScanning = true;
+                ), run))) {
+                    return;
+                }
 
                 refreshCameraControls(this);
                 persistCameraId(storageKey, this.selectedDeviceId);

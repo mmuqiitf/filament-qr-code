@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Breaking for subclasses of `QrCodeService` only: the protected `applyLogo()`, `applyTextOverlay()`, `readPersistentCache()` and `writePersistentCache()` methods and the protected static `$renderCache` property were removed (no shims). Override `generate()` or wrap the service instead.
 - Tests: Pest pins the array cache store, so a Testbench skeleton `.env` left by `workbench:build` no longer breaks the suite.
 
+### Fixed
+- `QrCollectAction` (#35): every scan called `$wire.handleCollectorScan()` even when the host Livewire component had no such method (Livewire's `$wire` proxy answers every name), raising `MethodNotFoundException` and never firing `qr-collector-item-added`. The server now tells the browser whether the hook exists. Same fix for the `QrCollector` field.
+- `QrCollectAction` (#35): the modal now starts the camera on open like the `QrScanner` modal, waits for the viewfinder to be laid out (an opening modal left a zero-sized feed), and shows the shared loading / error overlay with Retry instead of a silent black viewfinder. Start no longer does nothing before the camera list loads.
+- The `QrCollector` field shows the same loading / error overlay. The overlay is one shared partial, `components/camera-status.blade.php`.
+- Camera left running after close: closing the `QrScanner` modal, the `QrCollectAction` modal, or removing a collector / scan sequence (Livewire re-render or navigation) while the camera was still opening left the stream (and the camera light) on. Every stop now cancels an in-flight start, which stops its own stream when it resolves.
+- `QrScanSequence`: Start no longer does nothing before the camera list loads, and camera errors show the shared loading / error overlay with Retry (they were set but never displayed).
+- Docs: README section on adding the package views to the panel theme's Tailwind `@source` list; without it the scan UI renders unstyled.
+
 ## [0.6.0] - 2026-10-22
 
 ### Upgrading from 0.5
