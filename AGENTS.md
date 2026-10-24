@@ -20,7 +20,7 @@ Filament v5 QR package (`mmuqiitf/filament-qr-code`): camera / hardware scanning
 ## Invariants (survive refactors; CI handles the mechanical)
 
 - Keep camera DOM in `wire:ignore` islands: every `$wire.set` morphs and destroys `<video>`, so sync live toggles via window events, not re-renders.
-- Keep one scan funnel per surface: one `$wire` method per scan source; field burst handlers stand down while a page-global listener is mounted unless forced with `->suppressWhenGlobalListener(false)`.
+- Keep one scan funnel per surface: one `$wire` method per scan source; keyboard-wedge bursts reach handlers only through the input router (`FilamentQrCode.router`), which gives each burst one owner.
 - Treat `scanFormat()` / `onScan()` / `onStepScanned()` as programmatic-only (pair with `formatScannedValue()` / `triggerOnScan()`); normalize live values in `normalizeUsing()` / `normalizeStepUsing()` (or `afterStateUpdated()`) and document them that way.
 - Bind sequences through the schema's `statePath()` and read state via `mergeSequenceState()` / `isSequenceComplete()`, not hand-rolled merges.
 - Filter `formats()` on every camera component; `qrbox` is a responsive maximum and `fps` auto-degrades unless set explicitly.

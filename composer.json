@@ -35,6 +35,7 @@
     },
     "require-dev": {
         "larastan/larastan": "^3.0",
+        "nikic/php-parser": "^5.0",
         "laravel/pint": "^1.30",
         "orchestra/testbench": "^9.0|^10.0",
         "pestphp/pest": "^3.0",

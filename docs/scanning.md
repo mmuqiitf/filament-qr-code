@@ -91,7 +91,7 @@ Fields are matched by their exact name — `data-field-name`, `name`, `id`, or a
 
 The interceptor buffers keystrokes and treats gaps under `burstThresholdMs` (default 50) as a scanner burst. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), sanitizes, and routes the value — the delivery point (field, sequence, collector, or this listener) then plays the single confirmation beep, so one burst always yields one beep. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
 
-Held-down keys (keyboard auto-repeat) never count toward a burst, so holding a key and pressing Enter is not a scan. For keyboard-heavy forms, require more consecutive fast keystrokes before a terminator counts with `minFastKeys()` (default `1`, config `hardware_scanner.min_fast_keys`; `3` rejects fast human typing):
+Held-down keys (keyboard auto-repeat) never count toward a burst, so holding a key and pressing Enter is not a scan. For keyboard-heavy forms, require more consecutive fast keystrokes before a terminator counts with `minFastKeys()` (default `3`, config `hardware_scanner.min_fast_keys`; `1` accepts a single fast gap like 0.x did):
 
 ```php
 QrScanner::make('sku')
@@ -121,14 +121,13 @@ QrScanSequence::make([
     ->qrbox(250)
     ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
     ->preferRearCamera()
-    ->statePathPrefix('data') // Livewire form state prefix scans are written to
     ->sound(true)
     ->vibrate(true);
 ```
 
 One feed, one checklist: steps auto-advance, clicking a step re-targets it, and the camera dropdown matches the single-field scanner. It renders stacked on mobile and split-screen on desktop. When the last step lands, the feed stops by itself so the button never gets stuck on "Stop".
 
-`statePathPrefix()` (default `data`) is what keeps the container bound to your form — set it to whatever `statePath()` your schema uses. Live values are normalized with `normalizeStepUsing()` (applied on read/merge) — see [Normalize live scans](reference.md#normalize-live-scans); `scanFormat()` / `onStepScanned()` are programmatic-only — see [Drive scans programmatically](reference.md#drive-scans-programmatically).
+Each step value is also written to `{schema state path}.{step}` (for example `data.step`), so a form that reads the steps as separate fields keeps working; the prefix always follows your schema's `statePath()`. Live values are normalized with `normalizeStepUsing()` (applied on read/merge) — see [Normalize live scans](reference.md#normalize-live-scans); `scanFormat()` / `onStepScanned()` are programmatic-only — see [Drive scans programmatically](reference.md#drive-scans-programmatically).
 
 #### Reading sequence state
 

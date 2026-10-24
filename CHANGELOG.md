@@ -12,12 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Native `BarcodeDetector` decoding when the browser supports every requested format, with html5-qrcode as the fallback.
 - Torch and zoom controls in every viewfinder when the camera supports them; `->cameraControls(false)` / `qr-code.camera.controls` hides them.
 - Recipe: ZXing decoder adapter (`docs/recipes/zxing-decoder.md`), not bundled.
-- Browser smoke tests (Playwright + Testbench workbench) with a fake camera and a synthetic keyboard-wedge burst, run in CI.
+- Browser smoke tests (Playwright + Testbench workbench) with a fake camera and a synthetic keyboard-wedge burst, run in CI, plus a scanner-modal test.
+- The camera stops while the page is hidden (locked phone, background tab) and starts again when it is visible, unless the operator stopped it meanwhile.
+- Docs: events reference (`docs/events.md`), extension points (`docs/extending.md`), a documentation table in the README, an intro to the sequence config, and Pest tests that every fired event is documented and every PHP snippet in the docs parses.
+- CI runs on pushes to `main`, `0.*.x` and `1.*.x` release branches and on pull requests.
 
 ### Changed
 - Internal: `QrCodeService` is now a thin facade over `Rendering\QrRenderer`, `QrRenderCache`, `QrLogoCompositor`, `QrCaptionCompositor`, `QrRenderOptions` and `HexColor`; ZIP packing moved to `Rendering\QrZipArchiver` (`Support\QrZipArchive` still works). Output is byte-identical and the public API is unchanged. The new `Rendering\*` classes are `@internal`.
 - Breaking for subclasses of `QrCodeService` only: the protected `applyLogo()`, `applyTextOverlay()`, `readPersistentCache()` and `writePersistentCache()` methods and the protected static `$renderCache` property were removed (no shims). Override `generate()` or wrap the service instead.
+- Breaking: `hardware_scanner.min_fast_keys` defaults to 3 (was 1), so fast typing is not taken for a scan. `->minFastKeys(1)` restores the old behaviour.
 - Tests: Pest pins the array cache store, so a Testbench skeleton `.env` left by `workbench:build` no longer breaks the suite.
+
+### Removed
+- Breaking: the `filament-qr-code.image` route alias; use `filamentQrCode.image`.
+- Breaking: `suppressWhenGlobalListener()` / `isSuppressedWhenGlobalListenerActive()`, the `suppressWhenGlobalListenerActive` argument of `hardwareScanner()`, and `FilamentQrCode.isGlobalHardwareListenerActive()`; the input router already gives each burst one owner.
+- Breaking: `QrScanSequence::statePathPrefix()`, its mismatch warning and the `ui.sequence_prefix_mismatch` translation; flat step paths follow the schema `statePath()`.
+- Breaking: the `LogQrCodeScan` listener alias; use `LogQrCodeScanListener`.
+
+### Fixed
+- `repeat(n)` finished early with `finishWith()` now runs `validateAllUsing()`, rejecting an invalid set like completion does.
+- `pipe()` stages and step checks see the same `$values` on submit as live (the steps before, plus earlier codes in a repeat step).
+- Scanner modal: the overlay is positioned by the package stylesheet, so it covers the viewport even when the theme does not `@source` the package views.
 
 ## [0.6.1] - 2026-10-24
 

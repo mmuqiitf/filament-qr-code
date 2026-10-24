@@ -1,5 +1,76 @@
 # Upgrade guide
 
+## From 0.6 to 1.0
+
+1.0 removes everything 0.5 and 0.6 deprecated and changes one default. Search your app for each name below; most apps only need steps 1 and 2.
+
+### 1. Rebuild the assets
+
+```bash
+composer update mmuqiitf/filament-qr-code
+php artisan filament:assets
+```
+
+### 2. `min_fast_keys` now defaults to 3
+
+A keyboard-wedge burst now needs three consecutive fast keystrokes before a terminator counts as a scan (it was 1). This keeps fast human typing from being taken for a scan. Every handheld gun we know of types much faster than that. If a slow or Bluetooth gun's short codes are missed, go back to the old value:
+
+```php
+// config/qr-code.php
+'hardware_scanner' => [
+    'min_fast_keys' => 1,
+],
+
+// or per component
+QrScanner::make('sku')->minFastKeys(1);
+```
+
+The JS defaults (`createHardwareScannerHandler()`, `FilamentQrCode.router`) changed the same way.
+
+### 3. Route name `filament-qr-code.image` is removed
+
+Use `filamentQrCode.image`:
+
+```php
+// Before
+URL::signedRoute('filament-qr-code.image', $parameters);
+
+// After
+URL::signedRoute('filamentQrCode.image', $parameters);
+```
+
+### 4. `suppressWhenGlobalListener()` and `isGlobalHardwareListenerActive()` are removed
+
+The input router has given every burst exactly one owner since 0.5, so these did nothing. Delete the calls:
+
+- `->suppressWhenGlobalListener(...)` and `isSuppressedWhenGlobalListenerActive()` on every scan surface;
+- the `suppressWhenGlobalListenerActive:` argument of `hardwareScanner(...)` (if you passed `minFastKeys` positionally, it is now the 7th argument; use the named argument);
+- `window.FilamentQrCode.isGlobalHardwareListenerActive()` in your JS;
+- the `suppressWhenGlobalListenerActive` / `suppressWhenGlobal` payload keys, if you read them.
+
+### 5. `QrScanSequence::statePathPrefix()` is removed
+
+The flat per-step paths (`data.step`, `data.employee`, …) now always follow the schema's `statePath()`, so they can no longer point outside the form. Remove `->statePathPrefix(...)`; the "scans will be lost on submit" warning (`prefixMismatchWarning()`, `ui.sequence_prefix_mismatch`) is gone with it. If you set a prefix different from the schema `statePath()`, give the sequence its own `->statePath()` and read it with `mergeSequenceState()`.
+
+### 6. `LogQrCodeScan` is now `LogQrCodeScanListener`
+
+```php
+// Before
+use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScan;
+
+// After
+use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScanListener;
+```
+
+Only code that references the class (to unregister it, or in an `Event::fake()` assertion) needs the change; the package registers it for you.
+
+### Behaviour changes
+
+- `validateAllUsing()` now also runs when a counted step (`repeat(n)`) is finished early with `finishWith()`. A failing whole-set check reports its own message and jumps to (or restarts from) the invalid step, like a failed completion, instead of the generic "needs n codes" message. When the whole set passes, the count message stays.
+- `->pipe()` stages (and every step check) see the same `$values` live and on submit: the active steps before the step, plus the codes scanned before this one in a repeat step. On submit they used to see the whole form.
+- The camera stops while the page is hidden (a locked phone, a background tab) and starts again when the page is visible, unless the operator stopped it in between.
+- The scanner modal's overlay is now positioned by the package stylesheet, so it covers the viewport even when the panel theme does not `@source` the package views.
+
 ## From 0.5 to 0.6
 
 Most apps only need the first two steps.
