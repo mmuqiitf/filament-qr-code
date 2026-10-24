@@ -35,6 +35,12 @@ const flush = async () => {
 };
 
 let hidden = false;
+let mounted = [];
+
+const track = (c) => {
+    mounted.push(c);
+    return c;
+};
 
 const setHidden = async (value) => {
     hidden = value;
@@ -46,21 +52,21 @@ const element = () => document.body.appendChild(document.createElement('div'));
 
 const subjects = {
     qrScanner: async () => {
-        const c = mountComponent(qrScannerComponent({}), { element: element() });
+        const c = track(mountComponent(qrScannerComponent({}), { element: element() }));
         c.openScannerModal();
         await flush();
         return { c, close: () => c.closeScannerModal() };
     },
     qrCollector: async () => {
-        const c = mountComponent(
+        const c = track(mountComponent(
             qrCollectorComponent({ sound: false, vibrate: false, hardwareScanner: false, autoStart: true }),
             { element: element() },
-        );
+        ));
         await flush();
         return { c, close: () => c.stopCollector() };
     },
     qrScanSequence: async () => {
-        const c = mountComponent(qrScanSequenceComponent({ fields: [{ key: 'a', label: 'A' }] }), { element: element() });
+        const c = track(mountComponent(qrScanSequenceComponent({ fields: [{ key: 'a', label: 'A' }] }), { element: element() }));
         await flush();
         c.startScanner();
         await flush();
@@ -75,8 +81,11 @@ describe.each(Object.keys(subjects))('%s pauses the camera while the page is hid
         Object.assign(camera, { starts: 0, pending: null, instant: true, stop: vi.fn(async () => {}) });
     });
 
-    afterEach(() => {
+    afterEach(async () => {
+        mounted.forEach((c) => c.destroy());
+        mounted = [];
         hidden = false;
+        await flush();
     });
 
     it('stops when hidden and starts again when visible', async () => {
