@@ -16,12 +16,19 @@ const openCollectModal = async (page) => {
 test('collect action modal starts the camera on open and collects codes (#35)', async ({ page }) => {
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
+    page.on('response', (response) => response.status() >= 500 && errors.push(`${response.status()} ${response.url()}`));
     await page.addInitScript(installFakeCamera, { svg });
+    await page.addInitScript(() => {
+        window.__collected = [];
+        window.addEventListener('qr-collector-item-added', (event) => window.__collected.push(event.detail.code));
+    });
 
     const modal = await openCollectModal(page);
 
     await expect(modal.locator('.filament-qr-viewfinder video')).toBeVisible({ timeout: 10_000 });
     await expect(modal).toContainText('CAM-SMOKE-42', { timeout: 15_000 });
+    await expect.poll(() => page.evaluate(() => window.__collected)).toEqual(['CAM-SMOKE-42']);
+    await page.waitForLoadState('networkidle');
     expect(errors).toEqual([]);
 });
 

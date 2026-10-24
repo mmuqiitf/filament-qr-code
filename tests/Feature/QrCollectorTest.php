@@ -26,3 +26,7 @@ it('filters symbologies and prefers the rear camera by default', function () {
     expect($collector->getSupportedFormats())->toBe(['QR_CODE', 'CODE_128'])
         ->and($collector->isPreferRearCamera())->toBeTrue();
 });
+
+it('does not assume a handleCollectorScan hook without a Livewire host (#35)', function () {
+    expect(QrCollector::make('items')->getScanPayload()['wireScanHandler'])->toBeFalse();
+});
