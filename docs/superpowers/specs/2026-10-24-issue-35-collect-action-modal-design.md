@@ -21,6 +21,14 @@ pattern compared to the QrScanner, but it also fails to load the camera view." (
 2. Display pattern: `qr-collector-modal.blade.php` is a hand-rolled copy of the viewfinder without
    the scanner's status overlays and without auto-start, so the two modals behave and look different.
 
+3. Found while testing (likely the main "does not work"): `handleDetectedCode()` checks
+   `typeof this.$wire.handleCollectorScan === 'function'`. Livewire's `$wire` is a proxy that returns a
+   callable for every name, so the check is always true: every scan calls a missing Livewire method
+   (`MethodNotFoundException`, 500 error modal) and `qr-collector-item-added` never fires. Present since the
+   first release. The server now sends `wireScanHandler` (`method_exists` on the host component).
+4. Auto-start in an opening modal can measure a 0px-wide container, so html5-qrcode renders a zero-sized
+   video. `startCollector()` waits (bounded, 2 s) for the viewfinder to get a width.
+
 ## Design
 
 - One shared partial `components/camera-status.blade.php` (spinner + error + Retry) included by the

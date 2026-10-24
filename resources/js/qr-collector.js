@@ -40,6 +40,8 @@ export default function qrCollectorComponent({
     cameraControls = true,
     delayBetweenScansMs = 1200,
     cameraStorageKey = null,
+    autoStart = false,
+    wireScanHandler = false,
     insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
 } = {}) {
     const initialItems = Array.isArray(state)
@@ -97,7 +99,7 @@ export default function qrCollectorComponent({
             }
         },
 
-        async loadCameras() {
+        async loadCameras({ start = autoStart } = {}) {
             let decoder;
             try {
                 decoder = await resolveDecoderModule(formats);
@@ -115,6 +117,21 @@ export default function qrCollectorComponent({
                 insecureMessage,
                 fixedMessage: true,
             });
+
+            if (start && !this.hasError) {
+                await this.startCollector({ reloaded: true });
+            }
+        },
+
+        // Retry button of the shared camera-status overlay.
+        async retryCamera() {
+            this.hasError = false;
+            this.errorMessage = '';
+            await this.loadCameras({ start: false });
+
+            if (this.selectedDeviceId && !this.hasError) {
+                await this.startCollector();
+            }
         },
 
         scannerFormatsConfig() {
@@ -125,8 +142,21 @@ export default function qrCollectorComponent({
             return resolveQrboxFor(this.elementId, qrbox, formats);
         },
 
-        async startCollector() {
-            if (!this.selectedDeviceId) return;
+        async startCollector({ reloaded = false } = {}) {
+            // Start pressed before the permission prompt resolved: load the
+            // cameras now instead of silently doing nothing.
+            if (!this.selectedDeviceId && !reloaded) {
+                await this.loadCameras({ start: false });
+            }
+
+            if (!this.selectedDeviceId) {
+                if (!this.hasError) {
+                    this.hasError = true;
+                    this.errorMessage = 'Camera access unavailable.';
+                }
+
+                return;
+            }
 
             if (this.isScanning) {
                 await this.stopCollector();
@@ -140,6 +170,8 @@ export default function qrCollectorComponent({
                 this.errorMessage = 'Failed to load camera decoder.';
                 return;
             }
+
+            await this.waitForViewfinderLayout();
 
             if (!this.html5Qrcode) {
                 const decoderFormats = decoder.Html5QrcodeSupportedFormats;
@@ -161,6 +193,18 @@ export default function qrCollectorComponent({
             } catch (err) {
                 this.hasError = true;
                 this.errorMessage = 'Failed to start camera.';
+            }
+        },
+
+        // html5-qrcode sizes the <video> from the container's width at start.
+        // Inside an opening action modal that width is still 0, which leaves a
+        // zero-sized, invisible feed, so wait (bounded) for real layout first.
+        async waitForViewfinderLayout(timeoutMs = 2000) {
+            const element = document.getElementById(this.elementId);
+            const deadline = Date.now() + timeoutMs;
+
+            while (element && element.clientWidth === 0 && Date.now() < deadline) {
+                await new Promise((resolve) => requestAnimationFrame(resolve));
             }
         },
 
@@ -192,10 +236,12 @@ export default function qrCollectorComponent({
             });
 
             // Single server-notify channel: prefer the Livewire hook when the
-            // host defines it, otherwise fall back to the window event.
+            // host defines it, otherwise fall back to the window event. The
+            // server reports the hook (`wireScanHandler`): Livewire's $wire is a
+            // proxy that answers every name, so `typeof` cannot detect it.
             // Never both — emitting both double-handles every scan on hosts
             // that wired both channels.
-            if (this.$wire && typeof this.$wire.handleCollectorScan === 'function') {
+            if (wireScanHandler && this.$wire) {
                 this.$wire.handleCollectorScan(trimmed);
             } else {
                 window.dispatchEvent(new CustomEvent('qr-collector-item-added', {
