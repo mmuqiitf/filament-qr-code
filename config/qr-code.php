@@ -14,8 +14,8 @@ return [
     | - default_terminators: Suffix keys that finish a scan (Enter, Tab).
     | - prevent_form_submit: Whether to swallow Enter events during scanner bursts.
     | - min_fast_keys: Consecutive fast keystroke gaps required before a
-    |   terminator counts as a scan. 1 keeps v0.2 behaviour; 3 is stricter
-    |   and rejects fast human typing (planned default for 1.0).
+    |   terminator counts as a scan. 3 (the 1.0 default) rejects fast human
+    |   typing; 1 restores the 0.x behaviour.
     | - fallback_to_any_input: When the page-global listener finds no focused
     |   or registered empty field, write into the first empty form input
     |   (v0.2 behaviour). Set false to dispatch `qr-scan-unrouted` instead.
@@ -28,7 +28,7 @@ return [
         'enabled' => true,
         'burst_threshold_ms' => 50,
         'min_barcode_length' => 2,
-        'min_fast_keys' => 1,
+        'min_fast_keys' => 3,
         'fallback_to_any_input' => true,
         'scan_timeout_ms' => 150,
         'prevent_form_submit' => true,

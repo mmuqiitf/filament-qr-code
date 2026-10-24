@@ -37,7 +37,6 @@ return [
     'scanned_codes' => 'Kode Terpindai',
     'scanned_items_list' => 'Daftar Item Terpindai',
     'sequence_scanner' => 'Pemindai Urutan QR',
-    'sequence_prefix_mismatch' => 'Hasil pindaian masuk ke ":prefix" tetapi formulir ini menyimpan di ":container" — pindaian akan hilang saat dikirim.',
     'sequential_steps' => 'Langkah Berurutan',
     'start' => 'Mulai',
     'start_camera_scanner' => 'Mulai Pemindai Kamera',

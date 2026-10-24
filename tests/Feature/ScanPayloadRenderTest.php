@@ -16,7 +16,6 @@ it('renders one scan payload with canonical keys on every scan surface', functio
         ->assertSeeHtml('burstThresholdMs')
         ->assertSeeHtml('minBarcodeLength')
         ->assertSeeHtml('scanTimeoutMs')
-        ->assertSeeHtml('suppressWhenGlobalListenerActive')
         // Camera keys on the camera surfaces.
         ->assertSeeHtml('preferRearCamera')
         ->assertSeeHtml('insecureMessage')

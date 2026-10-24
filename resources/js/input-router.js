@@ -2,7 +2,7 @@ import { createHardwareScannerHandler } from './qr-hardware-scanner.js';
 
 const DEFAULT_DETECTION = {
     burstThresholdMs: 50,
-    minFastKeys: 1,
+    minFastKeys: 3,
     minBarcodeLength: 2,
     terminators: ['Enter', 'Tab'],
     scanTimeoutMs: 150,
@@ -275,7 +275,6 @@ export function createInputRouter({ win = window, doc = document } = {}) {
             terminators: settings.terminators,
             scanTimeoutMs: settings.scanTimeoutMs,
             preventFormSubmit: settings.preventSubmit,
-            isGlobalListener: true,
             onScan: routeBurst,
         });
     };

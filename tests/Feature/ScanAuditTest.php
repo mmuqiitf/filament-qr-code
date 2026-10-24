@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
-use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScan;
+use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScanListener;
 use Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction;
 
 it('dispatches an audit event for server-observed scans', function () {
@@ -32,13 +32,13 @@ it('logs scans only when auditing is enabled', function () {
 
     config()->set('qr-code.audit.enabled', false);
 
-    (new LogQrCodeScan)->handle(new QrCodeScanned('SKU-1', 'scanner-field', 'sku'));
+    (new LogQrCodeScanListener)->handle(new QrCodeScanned('SKU-1', 'scanner-field', 'sku'));
 
     expect($logged)->toBe([]);
 
     config()->set('qr-code.audit.enabled', true);
 
-    (new LogQrCodeScan)->handle(new QrCodeScanned('SKU-1', 'scanner-field', 'sku'));
+    (new LogQrCodeScanListener)->handle(new QrCodeScanned('SKU-1', 'scanner-field', 'sku'));
 
     expect($logged)->toHaveCount(1)
         ->and($logged[0][1])->toBe('filament-qr-code.scan')

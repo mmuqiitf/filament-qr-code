@@ -34,7 +34,7 @@ export default function qrCollectorComponent({
     burstThresholdMs = 50,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
-    minFastKeys = 1,
+    minFastKeys = 3,
     scanTimeoutMs = 150,
     fps = 25,
     qrbox = 250,

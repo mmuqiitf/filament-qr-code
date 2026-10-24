@@ -61,7 +61,7 @@ trait HasSequenceSteps
 
     abstract public function normalizeStepValue(string $fieldKey, mixed $value): mixed;
 
-    abstract public function getStatePathPrefix(): string;
+    abstract public function getFlatStatePrefix(): string;
 
     abstract public function getComponentStatePath(): ?string;
 
@@ -265,7 +265,7 @@ trait HasSequenceSteps
 
     /**
      * Where each step's value lives in Livewire state: the component's own
-     * state path when it has one, else the legacy statePathPrefix paths.
+     * state path when it has one, else the flat per-step path.
      */
     public function getStepValuePath(string $key): string
     {
@@ -273,7 +273,7 @@ trait HasSequenceSteps
             return "{$statePath}.{$key}";
         }
 
-        $prefix = trim($this->getStatePathPrefix(), '.');
+        $prefix = $this->getFlatStatePrefix();
 
         return $prefix !== '' ? "{$prefix}.{$key}" : $key;
     }
@@ -1147,7 +1147,7 @@ trait HasSequenceSteps
 
     /**
      * Write values the way the browser always has: the component's own state
-     * path plus the legacy statePathPrefix path per step.
+     * path plus the flat per-step path under the parent schema.
      *
      * @param  array<string, mixed>  $values
      */
@@ -1159,7 +1159,7 @@ trait HasSequenceSteps
             data_set($livewire, $statePath, $values);
         }
 
-        $prefix = trim($this->getStatePathPrefix(), '.');
+        $prefix = $this->getFlatStatePrefix();
 
         foreach ($this->getScanSteps() as $step) {
             $key = $step->getKey();
@@ -1168,7 +1168,7 @@ trait HasSequenceSteps
             try {
                 data_set($livewire, $path, $values[$key] ?? null);
             } catch (Throwable) {
-                // The legacy prefix path may not exist on this Livewire component.
+                // The flat path may not exist on this Livewire component.
             }
         }
     }

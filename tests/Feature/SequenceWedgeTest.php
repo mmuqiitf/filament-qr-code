@@ -11,9 +11,11 @@ use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\Livewire;
+use Mmuqiitf\FilamentQrCode\Contracts\ScanCheckStage;
 use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
 use Mmuqiitf\FilamentQrCode\Enums\RepeatComplete;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+use Mmuqiitf\FilamentQrCode\Support\ScanCheckContext;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
 class SequenceWedgeTestComponent extends Component implements HasForms
@@ -372,14 +374,14 @@ it('keeps the repeat count message on early finish when the whole set passes', f
 });
 
 it('stage sees the same codes live and on submit', function (): void {
-    $stage = new class implements \Mmuqiitf\FilamentQrCode\Contracts\ScanCheckStage
+    $stage = new class implements ScanCheckStage
     {
         /** @var array<string, list<array<string, mixed>>> */
         public array $seen = ['live' => [], 'submit' => []];
 
         public string $phase = 'live';
 
-        public function check(\Mmuqiitf\FilamentQrCode\Support\ScanCheckContext $context): bool|string|null
+        public function check(ScanCheckContext $context): bool|string|null
         {
             $this->seen[$this->phase][] = [$context->code, $context->values];
 

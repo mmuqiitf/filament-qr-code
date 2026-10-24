@@ -36,8 +36,6 @@ class QrScanSequence extends Component implements HasValidationRules
      */
     protected array|Closure $scanFields = [];
 
-    protected string|Closure $statePathPrefix = 'data';
-
     protected ?Closure $scanFormatter = null;
 
     protected ?Closure $onStepCallback = null;
@@ -166,16 +164,19 @@ class QrScanSequence extends Component implements HasValidationRules
         return array_map(fn (ScanStep $step): array => $step->toField(), $this->getScanSteps());
     }
 
-    public function statePathPrefix(string|Closure $prefix): static
+    /**
+     * The schema state path the flat per-step paths live under: each step
+     * value is also written to "{prefix}.{key}" for forms that read the steps
+     * as separate fields. Derived from the parent schema, so it always
+     * matches the form state.
+     */
+    public function getFlatStatePrefix(): string
     {
-        $this->statePathPrefix = $prefix;
-
-        return $this;
-    }
-
-    public function getStatePathPrefix(): string
-    {
-        return (string) $this->evaluate($this->statePathPrefix);
+        try {
+            return trim((string) $this->getContainer()->getStatePath(), '.');
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     /**
@@ -260,33 +261,9 @@ class QrScanSequence extends Component implements HasValidationRules
     }
 
     /**
-     * Loud mismatch warning: the legacy statePathPrefix() must equal the
-     * schema's statePath(), otherwise container writes land outside the form
-     * state. Returns the offending pair, or null when they agree (or when
-     * the component is not mounted yet).
-     *
-     * @return array{prefix: string, container: string}|null
-     */
-    public function prefixMismatchWarning(): ?array
-    {
-        try {
-            $prefix = trim($this->getStatePathPrefix(), '.');
-            $container = (string) $this->getContainer()->getStatePath();
-        } catch (\Throwable) {
-            return null;
-        }
-
-        if ($prefix === $container) {
-            return null;
-        }
-
-        return ['prefix' => $prefix, 'container' => $container];
-    }
-
-    /**
      * Absolute Livewire path of this component's own state (null when no
      * statePath is configured). Passed to Alpine as componentStatePath so
-     * every scan syncs both the legacy prefix paths and this component.
+     * every scan syncs both the flat per-step paths and this component.
      */
     public function getComponentStatePath(): ?string
     {
@@ -303,8 +280,8 @@ class QrScanSequence extends Component implements HasValidationRules
 
     /**
      * Read current sequence values from Livewire, preferring this
-     * component's own state and falling back to the legacy
-     * statePathPrefix paths. Applies normalizeStepUsing().
+     * component's own state and falling back to the flat per-step
+     * paths. Applies normalizeStepUsing().
      *
      * @return array<string, mixed>
      */
@@ -332,7 +309,7 @@ class QrScanSequence extends Component implements HasValidationRules
         }
 
         try {
-            $prefix = trim($this->getStatePathPrefix(), '.');
+            $prefix = $this->getFlatStatePrefix();
             $livewire = $this->getLivewire();
         } catch (\Throwable) {
             return $result;
@@ -405,7 +382,7 @@ class QrScanSequence extends Component implements HasValidationRules
 
         return [
             'fields' => $this->getScanFields(),
-            'statePrefix' => $this->getStatePathPrefix(),
+            'statePrefix' => $this->getFlatStatePrefix(),
             'componentStatePath' => $this->getComponentStatePath(),
             'editable' => $this->isEditable(),
             // Server work needs a key to reach handleStepScan: statePath() or key().

@@ -25,7 +25,7 @@
     "insecureMessage": "Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.",
     "keepCameraOpen": false,
     "minBarcodeLength": 2,
-    "minFastKeys": 1,
+    "minFastKeys": 3,
     "mode": "single",
     "nextField": "employee",
     "pauseOnReject": false,
@@ -43,7 +43,6 @@
         ],
         "flash": true
     },
-    "suppressWhenGlobalListenerActive": true,
     "syncOptions": "morph",
     "terminators": [
         "Enter",

@@ -26,8 +26,6 @@ trait HasHardwareScanner
 
     protected int|Closure|null $scanTimeoutMs = null;
 
-    protected bool|Closure $suppressWhenGlobalListenerActive = true;
-
     /**
      * @param  array<int, string>|Closure  $terminators
      */
@@ -38,7 +36,6 @@ trait HasHardwareScanner
         array|Closure $terminators = ['Enter', 'Tab'],
         int|Closure $minBarcodeLength = 2,
         int|Closure $scanTimeoutMs = 150,
-        bool|Closure $suppressWhenGlobalListenerActive = true,
         int|Closure|null $minFastKeys = null,
     ): static {
         $this->isHardwareScannerEnabled = $enabled;
@@ -47,7 +44,6 @@ trait HasHardwareScanner
         $this->terminators = $terminators;
         $this->minBarcodeLength = $minBarcodeLength;
         $this->scanTimeoutMs = $scanTimeoutMs;
-        $this->suppressWhenGlobalListenerActive = $suppressWhenGlobalListenerActive;
         $this->minFastKeys = $minFastKeys;
 
         return $this;
@@ -63,7 +59,7 @@ trait HasHardwareScanner
     public function getMinFastKeys(): int
     {
         if ($this->minFastKeys === null) {
-            return ConfigValue::int('qr-code.hardware_scanner.min_fast_keys', 1, minimum: 1);
+            return ConfigValue::int('qr-code.hardware_scanner.min_fast_keys', 3, minimum: 1);
         }
 
         return max(1, (int) $this->evaluate($this->minFastKeys));
@@ -137,30 +133,6 @@ trait HasHardwareScanner
         return max(0, (int) $this->evaluate($this->scanTimeoutMs));
     }
 
-    /**
-     * @deprecated since 0.5, removal planned for 1.0. The input router gives
-     * every wedge burst exactly one owner, so this setting no longer changes
-     * routing. It is still accepted and still sent in the scan payload.
-     */
-    public function suppressWhenGlobalListener(bool|Closure $condition = true): static
-    {
-        $this->suppressWhenGlobalListenerActive = $condition;
-
-        return $this;
-    }
-
-    /** @deprecated since 0.5, see suppressWhenGlobalListener(). */
-    public function isSuppressedWhenGlobalListenerActive(): bool
-    {
-        return $this->getSuppressWhenGlobalListenerPayloadValue();
-    }
-
-    /** Payload value kept for backward compatibility; the browser no longer reads it. */
-    protected function getSuppressWhenGlobalListenerPayloadValue(): bool
-    {
-        return (bool) $this->evaluate($this->suppressWhenGlobalListenerActive);
-    }
-
     /** @return array<string, mixed> */
     public function getHardwareScannerScanPayload(): array
     {
@@ -171,7 +143,6 @@ trait HasHardwareScanner
             'minBarcodeLength' => $this->getMinBarcodeLength(),
             'minFastKeys' => $this->getMinFastKeys(),
             'scanTimeoutMs' => $this->getScanTimeoutMs(),
-            'suppressWhenGlobalListenerActive' => $this->getSuppressWhenGlobalListenerPayloadValue(),
             'preventSubmit' => $this->shouldPreventFormSubmit(),
         ];
     }
