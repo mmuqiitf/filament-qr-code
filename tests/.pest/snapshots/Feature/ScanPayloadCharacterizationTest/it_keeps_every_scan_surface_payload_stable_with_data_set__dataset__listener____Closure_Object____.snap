@@ -9,11 +9,10 @@
     ],
     "hardwareScanner": true,
     "minBarcodeLength": 2,
-    "minFastKeys": 1,
+    "minFastKeys": 3,
     "preventSubmit": true,
     "scanTimeoutMs": 150,
     "sound": false,
-    "suppressWhenGlobalListenerActive": true,
     "terminators": [
         "Enter",
         "Tab"

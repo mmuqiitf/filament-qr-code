@@ -18,6 +18,8 @@ use Throwable;
  * The live-scan checks shared by QrScanner and sequence steps: rules, then a
  * lookup (model and/or resolver), then closures, then piped stages. The first
  * failure stops the run.
+ *
+ * @internal Not covered by semver; may change in any release.
  */
 final readonly class ScanCheckPipeline
 {

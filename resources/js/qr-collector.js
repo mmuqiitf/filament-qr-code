@@ -13,6 +13,7 @@ import {
     scannerFormatsConfigFor,
     stopCameraFeed,
     startCameraFeed,
+    watchPageVisibility,
     currentCameraRun,
     storageKeyFor,
 } from './qr-camera-core.js';
@@ -33,7 +34,7 @@ export default function qrCollectorComponent({
     burstThresholdMs = 50,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
-    minFastKeys = 1,
+    minFastKeys = 3,
     scanTimeoutMs = 150,
     fps = 25,
     qrbox = 250,
@@ -71,6 +72,11 @@ export default function qrCollectorComponent({
         init() {
             this.elementId = `qr-collector-${this.$id('qr-col')}`;
 
+            this.stopWatchingVisibility = watchPageVisibility(this, {
+                stop: () => this.stopCollector(),
+                resume: () => this.startCollector(),
+            });
+
             if (hardwareScanner) {
                 this.unregisterTarget = inputRouter().register({
                     id: `collector-${this.elementId}-${Math.random().toString(36).slice(2)}`,
@@ -89,6 +95,8 @@ export default function qrCollectorComponent({
         },
 
         destroy() {
+            this.stopWatchingVisibility?.();
+            this.stopWatchingVisibility = null;
             this.unregisterTarget?.();
             this.unregisterTarget = null;
             this.stopCollector();

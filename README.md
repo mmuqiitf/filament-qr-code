@@ -31,7 +31,7 @@ Features:
     - [Which component do I need?](#which-component-do-i-need)
     - [Basic implementation](#basic-implementation)
     - [Advanced implementation](#advanced-implementation)
-    - [Full guides](#full-guides)
+    - [Documentation](#documentation)
   - [Troubleshooting](#troubleshooting)
   - [Reporting issues](#reporting-issues)
   - [Contributing](#contributing)
@@ -103,7 +103,7 @@ public function panel(Panel $panel): Panel
 ```
 
 The camera decoder (`html5-qrcode`) is a separate ES module next to the
-global bundle (~21K). It downloads once on first camera use; pages that
+global bundle (about 15 KB gzipped; the decoder is about 120 KB gzipped). It downloads once on first camera use; pages that
 only render QR images never fetch it. Both files are published by
 `php artisan filament:assets` (the decoder is registered `loadedOnRequest`).
 
@@ -262,16 +262,21 @@ use Mmuqiitf\FilamentQrCode\Support\QrPayload;
 QrPayload::wifi('Shop Floor', 'secret-1');
 ```
 
-UI strings live under `filament-qr-code::ui` (publish with `--tag="filament-qr-code-translations"`); wrap QR images in `.filament-qr-label-sheet` / `.filament-qr-label` for printable shelf labels. Full tables, events, and extension hooks: [Reference](docs/reference.md).
+UI strings live under `filament-qr-code::ui` (publish with `--tag="filament-qr-code-translations"`); wrap QR images in `.filament-qr-label-sheet` / `.filament-qr-label` for printable shelf labels. Full tables: [Reference](docs/reference.md); events: [Events](docs/events.md); every extension seam: [Extension points](docs/extending.md).
 
-### Full guides
+### Documentation
 
-- [Scanning](docs/scanning.md) — camera field, station listener, sequences, focus handoff, POS tutorial.
-- [Batch collecting](docs/collecting.md) — continuous inventory scanning in repeaters and tables.
-- [Generating](docs/generating.md) — display components, download actions, facade, payloads.
-- [Reference](docs/reference.md) — configuration, events, customizing, extending.
-- [Customizing](docs/customizing.md) — custom lookups, check stages, hooks, styling, render hooks.
-- Recipes — [POS checkout](docs/recipes/pos.md) · [Goods receiving](docs/recipes/warehouse.md) · [Work-order station](docs/recipes/manufacturing.md) · [Label generator page](docs/recipes/generator-page.md) · [Custom inputs](docs/recipes/custom-input.md) · [Styling](docs/recipes/styling.md). Each one runs in the [example app](https://github.com/mmuqiitf/filament-qr-code-example).
+| Page | What it covers |
+| --- | --- |
+| [Scanning](docs/scanning.md) | camera field, station listener, sequences, focus handoff, server checks, continuous mode, runtime control, POS tutorial |
+| [Batch collecting](docs/collecting.md) | continuous inventory scanning in repeaters and tables |
+| [Generating](docs/generating.md) | display components, download actions, ZIP export, facade, payloads |
+| [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, macros, styling, render hooks, views |
+| [Extension points](docs/extending.md) | every seam in one table: PHP closures, contracts, macros, render hooks, CSS variables, JS decoder, router, events |
+| [Events](docs/events.md) | every browser event fired or listened for, and every Laravel event with its properties |
+| [Reference](docs/reference.md) | every config key, translations, audit logging |
+| [Upgrade guide](UPGRADE.md) | breaking changes between versions |
+| Recipes | [POS checkout](docs/recipes/pos.md) · [Goods receiving](docs/recipes/warehouse.md) · [Work-order station](docs/recipes/manufacturing.md) · [Label generator page](docs/recipes/generator-page.md) · [Custom inputs](docs/recipes/custom-input.md) · [Styling](docs/recipes/styling.md) · [ZXing decoder](docs/recipes/zxing-decoder.md). Each one runs in the [example app](https://github.com/mmuqiitf/filament-qr-code-example). |
 
 ---
 
@@ -290,11 +295,11 @@ php artisan qr-code:doctor
 | Unstyled buttons, layout differs from the panel | Panel theme doesn't `@source` the package views                    | Add `@source '../../../../vendor/mmuqiitf/filament-qr-code/resources/views/**/*';` to your theme CSS and rebuild ([Styling](#styling-add-the-package-views-to-your-theme)). |
 | Stale scanner UI after updating the package  | Committed `dist/` rebuilt but host serving old assets                     | `npm run build` in the package, then `php artisan filament:assets` in the host app.                                                               |
 | PNG looks wrong / text overlay is blocky     | Missing GD/Imagick or system fonts                                        | Install `gd` or `imagick` plus `fonts-dejavu-core`; the service falls back to GD bitmap fonts otherwise.                                          |
-| Sequence submit misses scanned values        | `statePathPrefix()` doesn't match the schema `statePath()`                | Set both to the same prefix, or give the sequence `->statePath()` and read via `mergeSequenceState()`. A banner warns in the UI when they differ. |
-| Same burst handled twice                     | Field `QrScanner` listener + page `QrHardwareScannerListener` both active | Keep the global listener; field handlers stand down automatically (or `->suppressWhenGlobalListener(false)`).                                     |
+| Sequence submit misses scanned values        | The form reads the steps from a different place than the sequence writes them | Give the sequence `->statePath()` and read it via `mergeSequenceState()`; the flat `{form}.{step}` paths follow the schema `statePath()`. |
+| Same burst handled twice                     | A custom key handler next to the package's wedge router                   | Register the handler with `FilamentQrCode.router.register()` so each burst has one owner ([Extension points](docs/extending.md#browser)).         |
 | Typed text becomes a "scan"                  | `minBarcodeLength` too low for a keyboard-heavy form                      | Raise `minBarcodeLength` to 4–6 on that component.                                                                                                |
 | Scan lands in the wrong input (e.g. search)  | Station Listener fell back to the first empty form input                  | `QrHardwareScannerListener::make([...])->fallbackToAnyInput(false)` (or `hardware_scanner.fallback_to_any_input => false`); listen for `qr-scan-unrouted`. |
-| Holding a key + Enter registered as a scan   | Keyboard auto-repeat looked like a burst (v0.2 and earlier)                   | Auto-repeat keys are now ignored; for stricter detection use `->minFastKeys(3)` (or `hardware_scanner.min_fast_keys`).                            |
+| A slow or Bluetooth gun's short codes are missed | `min_fast_keys` (default 3) needs three fast gaps in a row               | Lower it on that component with `->minFastKeys(1)` (or `hardware_scanner.min_fast_keys`).                                                         |
 | `nextField()` / listener misses a field      | Name does not match exactly                                               | Use the exact field name; nested paths like `items.0.sku` are supported, and `sku` never matches `parent_sku`.                                   |
 | Table page is slow with many QRs             | Eager modal data-URIs per row                                             | Keep `->lazyModal()` (default) and the persistent cache enabled; tune `generator.cache_ttl`.                                                      |
 

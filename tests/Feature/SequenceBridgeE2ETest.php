@@ -94,22 +94,22 @@ it('serves lazy modal QR images through the signed route', function () {
     expect($response->getContent())->toContain('<svg');
 });
 
-class MismatchedPrefixSequenceComponent extends Component implements HasForms
+class OrderStateSequenceComponent extends Component implements HasForms
 {
     use InteractsWithForms;
 
     /**
      * @var array<string, mixed>|null
      */
-    public ?array $data = [];
+    public ?array $order = [];
 
     public function form(Form|Schema $form): Form|Schema
     {
         return $form
             ->schema([
-                QrScanSequence::make(['step'])->statePathPrefix('order'),
+                QrScanSequence::make(['step']),
             ])
-            ->statePath('data');
+            ->statePath('order');
     }
 
     public function render(): string
@@ -120,11 +120,7 @@ class MismatchedPrefixSequenceComponent extends Component implements HasForms
     }
 }
 
-it('warns loudly when the sequence prefix misses the form state path', function () {
-    Livewire::test(SequenceBridgeLivewireComponent::class)
-        ->assertDontSee('will be lost on submit');
-
-    Livewire::test(MismatchedPrefixSequenceComponent::class)
-        ->assertSee('will be lost on submit')
-        ->assertSee('order');
+it('derives the flat step paths from the form state path', function () {
+    Livewire::test(OrderStateSequenceComponent::class)
+        ->assertSeeHtml('&quot;statePrefix&quot;:&quot;order&quot;');
 });

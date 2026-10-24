@@ -21,7 +21,7 @@ it('exposes one scan payload with canonical keys for the scanner field', functio
         ->and($payload['terminators'])->toBe(['Enter', 'Tab'])
         ->and($payload['minBarcodeLength'])->toBe(2)
         ->and($payload['scanTimeoutMs'])->toBe(150)
-        ->and($payload['suppressWhenGlobalListenerActive'])->toBeTrue()
+        ->and(array_key_exists('suppressWhenGlobalListenerActive', $payload))->toBeFalse()
         ->and($payload['qrbox'])->toBe(250)
         ->and($payload['preferRearCamera'])->toBeTrue()
         ->and($payload['formats'])->toBe([])
@@ -37,7 +37,7 @@ it('exposes sequence fields and collector options through the same payload', fun
         ['key' => 'step', 'label' => 'Step'],
         ['key' => 'employee', 'label' => 'Employee'],
     ])
-        ->and($sequence['statePrefix'])->toBe('data')
+        ->and($sequence['statePrefix'])->toBe('')
         ->and($sequence['editable'])->toBeTrue()
         ->and($sequence['sound'])->toBeTrue();
 
@@ -100,12 +100,12 @@ it('prefers explicit setters over config for scan defaults', function () {
         ->and($field->getScanPayload()['sound'])->toBeTrue();
 });
 
-it('exposes min fast keys from config with a v0.2-compatible default', function () {
-    expect(QrScanner::make('sku')->getScanPayload()['minFastKeys'])->toBe(1);
+it('exposes min fast keys from config with a default of three', function () {
+    expect(QrScanner::make('sku')->getScanPayload()['minFastKeys'])->toBe(3);
 
-    config()->set('qr-code.hardware_scanner.min_fast_keys', 3);
+    config()->set('qr-code.hardware_scanner.min_fast_keys', 1);
 
-    expect(QrScanner::make('sku')->getScanPayload()['minFastKeys'])->toBe(3)
+    expect(QrScanner::make('sku')->getScanPayload()['minFastKeys'])->toBe(1)
         ->and(QrScanner::make('sku')->hardwareScanner(minFastKeys: 4)->getScanPayload()['minFastKeys'])->toBe(4);
 });
 

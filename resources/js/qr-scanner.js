@@ -14,6 +14,7 @@ import {
     scannerFormatsConfigFor,
     stopCameraFeed,
     startCameraFeed,
+    watchPageVisibility,
     currentCameraRun,
     storageKeyFor,
 } from './qr-camera-core.js';
@@ -32,7 +33,7 @@ const DEFAULT_OPTIONS = {
     burstThresholdMs: 50,
     terminators: ['Enter', 'Tab'],
     minBarcodeLength: 2,
-    minFastKeys: 1,
+    minFastKeys: 3,
     scanTimeoutMs: 150,
     hardwareScope: 'focus',
     preventSubmit: true,
@@ -110,6 +111,11 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
 
             this.registerWithRouter();
 
+            this.stopWatchingVisibility = watchPageVisibility(this, {
+                stop: () => this.stopScan(),
+                resume: () => this.startScan(),
+            });
+
             this.boundDeliverHandler = (event) => {
                 if (!this.options.serverCheck || !this.options.componentKey) {
                     return;
@@ -139,6 +145,8 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
         },
 
         destroy() {
+            this.stopWatchingVisibility?.();
+            this.stopWatchingVisibility = null;
             if (this.boundDeliverHandler) {
                 this.fieldElement().removeEventListener('qr-scan-deliver', this.boundDeliverHandler);
                 this.boundDeliverHandler = null;

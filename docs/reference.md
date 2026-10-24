@@ -2,9 +2,13 @@
 
 > Back to [README](../README.md) · [Scanning](scanning.md) · [Batch collecting](collecting.md) · [Generating](generating.md) · [Customizing](customizing.md)
 
-Recipes: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/warehouse.md) · [Work-order station](recipes/manufacturing.md) · [Label generator page](recipes/generator-page.md) · [Custom inputs](recipes/custom-input.md) · [Styling](recipes/styling.md). Upgrading from 0.5: [UPGRADE.md](../UPGRADE.md).
+Recipes: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/warehouse.md) · [Work-order station](recipes/manufacturing.md) · [Label generator page](recipes/generator-page.md) · [Custom inputs](recipes/custom-input.md) · [Styling](recipes/styling.md). Upgrading from an earlier release: [UPGRADE.md](../UPGRADE.md).
 
 Configuration, browser events, translations, customizing, and extending.
+
+## Public API and `@internal`
+
+Everything documented here and in the guides is public API and follows semver. Classes and methods tagged `@internal` in a docblock (render cache and spec classes, client payloads, the Livewire and Filament hooks a component must keep public) are not: they can change in any release, including a minor or patch release. Don't call or extend them from app code.
 
 ## Configuration
 
@@ -41,7 +45,7 @@ QrScanner::make('sku')
 | `enabled`             | `true`             | master switch (components also gate individually)  |
 | `burst_threshold_ms`  | `50`               | max gap between keystrokes counted as one burst    |
 | `min_barcode_length`  | `2`                | shorter bursts are treated as typing               |
-| `min_fast_keys`       | `1`                | consecutive fast gaps required before a terminator counts; `3` rejects fast typists (planned 1.0 default) |
+| `min_fast_keys`       | `3`                | consecutive fast gaps required before a terminator counts; `3` rejects fast typists, `1` restores the 0.x behaviour |
 | `fallback_to_any_input` | `true`           | page-global listener may fill the first empty form input when no focused or registered field is free; `false` dispatches `qr-scan-unrouted` instead |
 | `scan_timeout_ms`     | `150`              | flush window for terminator-less guns (0 disables) |
 | `prevent_form_submit` | `true`             | swallow the terminator key during bursts           |
@@ -61,8 +65,6 @@ Every wedge consumer (`QrScanner`, `QrHardwareScannerListener`, `QrCollector`, `
 5. otherwise `qr-scan-unrouted`.
 
 A field that can't take the burst (busy checking a scan, too short for its `min_barcode_length`) is skipped and the next target gets it. When the burst lands somewhere other than the focused input, the characters the gun typed into that input are removed again, unless the input (or an ancestor) has the `data-qr-ignore` attribute.
-
-`suppressWhenGlobalListener()` and the JS `isGlobalHardwareListenerActive()` are deprecated: the router makes them unnecessary.
 
 These values are the defaults behind every scan surface (`QrScanner`, `QrScanSequence`, `QrCollector`, `QrHardwareScannerListener`, `QrCollectAction`): each component ships them to the browser as one payload (`getScanPayload()`), and any explicit setter (`->fps()`, `->sound()`, `->hardwareScanner()`, …) wins over config.
 
@@ -108,6 +110,8 @@ QrHardwareScannerListener::make(['sku'])
 
 ### `sequence`
 
+Every key of `qr-code.sequence`; each has a per-component setter that wins over config. Sequence events are in [events.md](events.md#sequence-qrscansequence).
+
 | Key                  | Default          | Meaning |
 | -------------------- | ---------------- | ------- |
 | `on_invalid`         | `'jump_to_step'` | a failed `validateAllUsing()`: `'jump_to_step'` or `'restart'` (`onInvalidSequence()`) |
@@ -124,30 +128,9 @@ QrHardwareScannerListener::make(['sku'])
 
 ---
 
-## Browser Events
+## Events
 
-| Event                     | Detail                        | Fired when                         |
-| ------------------------- | ----------------------------- | ---------------------------------- |
-| `qr-scanned`              | `{ value, field, nextField, source, recordKey?, mode }` | any accepted `QrScanner` scan |
-| `qr-scan-accepted`        | `{ value, field, source, recordKey, mode }` | a server-checked scan passed |
-| `qr-scan-rejected`        | `{ message, value?, field?, source?, mode? }` | a server-checked scan failed, or a `rejectWhen()` predicate matched |
-| `qr-scan-duplicate`       | `{ value, field, source, mode }` | same code again within the field's cooldown |
-| `qr-hardware-scanned`     | `{ value, field }`            | page-global hardware burst         |
-| `qr-scan-unrouted`        | `{ value }`                   | page-global burst found no target field |
-| `qr-scan-routed`          | `{ value, target, kind, reason, burstId }` | the input router delivered a burst; `reason` is `modal`, `focus`, `first-listening`, `fallback` or `queued` |
-| `qr-scan-dropped`         | `{ value, field, source }`    | a continuous field was busy and already held one queued scan |
-| `qr-scan-paused`          | `{ field }`                   | a continuous field with `pauseOnReject()` paused after a rejection |
-| `qr-scan-resumed`         | `{ field }`                   | the operator resumed a paused field |
-| `qr-sequence-step`        | `{ field, value, index }`     | each container step                |
-| `qr-sequence-completed`   | `{ results }`                 | last container step                |
-| `qr-sequence-edited`      | `{ field, value }`            | operator edits a step              |
-| `qr-sequence-rejected`    | `{ field, value, message, source }` | a checked step rejected a scan |
-| `qr-sequence-invalid`     | `{ field, message, values }`  | `validateAllUsing()` failed on completion |
-| `qr-collector-item-added` | `{ code }`                    | each batch-collector scan          |
-
-`mode` is `'single'` or `'continuous'` (see [Continuous mode](scanning.md#continuous-mode)).
-
-Events you **send** to control a scanner or sequence (`qr-scanner-feed`, `qr-scanner-pause`, `qr-sequence-go-to`, …) are listed in [Runtime control](scanning.md#window-events).
+Every browser event the package fires, every control event a page can send, and every Laravel event with its properties: see [events.md](events.md). For every extension seam in one table, see [extending.md](extending.md).
 
 ---
 
@@ -175,7 +158,7 @@ and translate per locale.
 
 ## Extending
 
-Custom lookups, code normalization presets, check stages (`pipe()`), step hooks, macros, `make:qr-scan-field`, render hooks, CSS variables and per-part view overrides are covered in [Extending and customizing](customizing.md).
+Every seam is listed in [Extension points](extending.md). Custom lookups, code normalization presets, check stages (`pipe()`), step hooks, macros, `make:qr-scan-field`, render hooks, CSS variables and per-part view overrides are covered in [Extending and customizing](customizing.md).
 
 ### Normalize live scans
 

@@ -28,15 +28,8 @@ it('configures sequential scan fields properly', function () {
         ->and($sequence->getQrbox())->toBe(300);
 });
 
-it('binds sequence scans to a configurable form state prefix', function () {
-    $sequence = QrScanSequence::make(['step', 'employee'])
-        ->statePathPrefix('order');
-
-    expect($sequence->getStatePathPrefix())->toBe('order');
-});
-
-it('defaults the state prefix to the conventional form data path', function () {
-    expect(QrScanSequence::make(['step'])->getStatePathPrefix())->toBe('data');
+it('has no flat state prefix before it is mounted in a schema', function () {
+    expect(QrScanSequence::make(['step'])->getFlatStatePrefix())->toBe('');
 });
 
 it('filters symbologies and prefers the rear camera by default', function () {

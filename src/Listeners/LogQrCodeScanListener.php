@@ -7,7 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Listeners;
 use Illuminate\Support\Facades\Log;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 
-class LogQrCodeScan
+class LogQrCodeScanListener
 {
     public function handle(QrCodeScanned $event): void
     {

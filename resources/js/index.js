@@ -3,7 +3,6 @@ import qrScanSequenceComponent from './qr-sequence.js';
 import qrCollectorComponent from './qr-collector.js';
 import {
     createHardwareScannerHandler,
-    isGlobalHardwareListenerActive,
     qrHardwareScannerListenerComponent,
     sanitizeScannedValue,
 } from './qr-hardware-scanner.js';
@@ -18,7 +17,6 @@ export {
     qrCollectorComponent,
     qrHardwareScannerListenerComponent,
     createHardwareScannerHandler,
-    isGlobalHardwareListenerActive,
     sanitizeScannedValue,
     qrFeedback,
     qrCameraCore,
@@ -34,8 +32,7 @@ if (typeof window !== 'undefined') {
         qrCollectorComponent,
         qrHardwareScannerListenerComponent,
         createHardwareScannerHandler,
-        isGlobalHardwareListenerActive,
-        sanitizeScannedValue,
+            sanitizeScannedValue,
         qrFeedback,
         qrCameraCore,
         createInputRouter,

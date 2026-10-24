@@ -182,3 +182,12 @@
         outline: 2px solid var(--fi-qr-flash-danger, rgb(239 68 68));
     }
 }
+
+/* The scanner modal overlay covers the viewport even when the panel theme
+   doesn't scan the package views (the utility classes are a fallback only). */
+.fi-qr-scanner-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    overflow-y: auto;
+}

@@ -7,6 +7,8 @@ namespace Mmuqiitf\FilamentQrCode\Support;
 /**
  * Built-in clean-up presets, applied in the browser (dedupe, step matching)
  * and again on the server: trim, strip the first matching prefix, uppercase.
+ *
+ * @internal Not covered by semver; may change in any release.
  */
 final readonly class CodeNormalizer
 {

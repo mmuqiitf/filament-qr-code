@@ -17,16 +17,14 @@ it('sanitizes hardware scanner framing like the JS interceptor', function () {
         ->and(HasHardwareScanner::sanitizeScannedValue('  ABC-123  '))->toBe('ABC-123');
 });
 
-it('defaults burst suppression and scan timeout, with opt-outs', function () {
+it('defaults the scan timeout, with an opt-out', function () {
     $field = QrScanner::make('sku');
 
-    expect($field->isSuppressedWhenGlobalListenerActive())->toBeTrue()
-        ->and($field->getScanTimeoutMs())->toBe(150);
+    expect($field->getScanTimeoutMs())->toBe(150);
 
-    $field->suppressWhenGlobalListener(false)->scanTimeout(0);
+    $field->scanTimeout(0);
 
-    expect($field->isSuppressedWhenGlobalListenerActive())->toBeFalse()
-        ->and($field->getScanTimeoutMs())->toBe(0);
+    expect($field->getScanTimeoutMs())->toBe(0);
 });
 
 it('auto-degrades fps only when unrestricted and not customized', function () {

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Support;
 
+/**
+ * @internal Not covered by semver; may change in any release.
+ */
 class ConfigValue
 {
     public static function bool(string $key, bool $default): bool
