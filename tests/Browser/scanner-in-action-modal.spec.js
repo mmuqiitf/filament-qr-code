@@ -1,8 +1,8 @@
-import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { installFakeCamera } from './fake-camera.js';
 
-const svg = readFileSync(new URL('./fixtures/camera-qr.svg', import.meta.url), 'utf8');
+// A blank frame: a decoded code would close the scanner before it is measured.
+const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480"><rect width="640" height="480" fill="#fff"/></svg>';
 
 // Filament's modal window and slide-over panel are transformed, and a
 // transformed ancestor is the containing block of position: fixed. The
