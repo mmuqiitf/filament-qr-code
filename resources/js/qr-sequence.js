@@ -14,6 +14,8 @@ import {
     resolveQrboxFor,
     scannerFormatsConfigFor,
     stopCameraFeed,
+    startCameraFeed,
+    currentCameraRun,
     storageKeyFor,
 } from './qr-camera-core.js';
 
@@ -390,12 +392,38 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             return prefix ? `${prefix}.${fieldKey}` : fieldKey;
         },
 
+        // Retry button of the shared camera-status overlay.
+        async retryCamera() {
+            this.hasError = false;
+            this.errorMessage = '';
+            await this.loadCameras();
+
+            if (this.selectedDeviceId && !this.hasError) {
+                await this.startScanner();
+            }
+        },
+
         async startScanner() {
-            if (!this.selectedDeviceId) return;
+            // Start pressed before the permission prompt resolved: load the
+            // cameras now instead of silently doing nothing.
+            if (!this.selectedDeviceId) {
+                await this.loadCameras();
+            }
+
+            if (!this.selectedDeviceId) {
+                if (!this.hasError) {
+                    this.hasError = true;
+                    this.errorMessage = 'Camera access denied or unavailable.';
+                }
+
+                return;
+            }
 
             if (this.isScanning) {
                 await this.stopScanner();
             }
+
+            const run = currentCameraRun(this);
 
             let decoder;
             try {
@@ -417,15 +445,16 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             }
 
             try {
-                await this.html5Qrcode.start(
+                if (!(await startCameraFeed(this, () => this.html5Qrcode.start(
                     this.selectedDeviceId,
                     { fps: this.options.fps, qrbox: this.currentQrbox() },
                     (decodedText) => {
                         this.processScan(decodedText, 'camera');
                     },
                     () => {}
-                );
-                this.isScanning = true;
+                ), run))) {
+                    return;
+                }
                 refreshCameraControls(this);
                 persistCameraId(storageKey, this.selectedDeviceId);
             } catch (err) {

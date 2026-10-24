@@ -42,3 +42,10 @@ pattern compared to the QrScanner, but it also fails to load the camera view." (
 
 - Browser: modal auto-starts and collects without clicking; denied camera shows the message and Retry.
 - Vitest: `autoStart` starts after devices load; no start when off; `retryCamera()` clears the error and starts.
+
+## Addendum: pre-0.6.1 sweep (same bug classes)
+
+- `$wire` checks that are always true: none left. The remaining `$wire` calls are `set`, `entangle` and `callSchemaComponentMethod`, all provided by Livewire / Filament.
+- Camera left on when closed mid-start (scanner modal, collect modal, collector / sequence destroy): `stopCameraFeed` bumps a per-component run counter, and the shared `startCameraFeed` stops a stream whose run was cancelled while it was opening. Covered by `camera-start-race.test.js` and `tests/Browser/camera-lifecycle.spec.js` (slow fake camera).
+- Scan sequence: the #35 collector fixes ported over (on-demand device load, shared `camera-status` overlay, `retryCamera()`).
+- Listener and router cleanup across modal reopen: verified clean in the browser (router targets return to 0 after each close). No change needed.
