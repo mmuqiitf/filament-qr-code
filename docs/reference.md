@@ -6,6 +6,10 @@ Recipes: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/warehouse.m
 
 Configuration, browser events, translations, customizing, and extending.
 
+## Public API and `@internal`
+
+Everything documented here and in the guides is public API and follows semver. Classes and methods tagged `@internal` in a docblock (render cache and spec classes, client payloads, the Livewire and Filament hooks a component must keep public) are not: they can change in any release, including a minor or patch release. Don't call or extend them from app code.
+
 ## Configuration
 
 Publish the config to tune defaults (`config/qr-code.php`):

@@ -62,8 +62,11 @@ class DownloadQrBulkAction extends BulkAction
     }
 
     /**
+     * Render each record's QR code with this action's settings. Records with
+     * empty data are skipped.
+     *
      * @param  Collection<int, mixed>  $records
-     * @return array<string, string> filename => raw image bytes
+     * @return array<string, string> file name (with extension) => raw image bytes
      */
     public function recordsToFiles(Collection $records): array
     {

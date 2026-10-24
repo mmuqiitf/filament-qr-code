@@ -201,6 +201,10 @@ class QrColumn extends Column
         }
     }
 
+    /**
+     * Clear the in-process data-URI cache shared by every QrColumn.
+     * Useful in tests and long-running workers (Octane, queues).
+     */
     public static function flushDataUriCache(): void
     {
         QrCodeService::flushRenderCache();

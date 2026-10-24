@@ -224,6 +224,8 @@ trait InteractsWithScans
     /**
      * The code every check sees: the normalizeWith() presets (or a trim), then
      * the normalizeUsing() closure.
+     *
+     * Public API: custom inputs can call it to get the value the checks will see.
      */
     public function normalizeScannedCode(string $code): string
     {
@@ -269,6 +271,10 @@ trait InteractsWithScans
         return $this;
     }
 
+    /**
+     * Run the field's live-scan checks (rules, lookup, closures, piped stages)
+     * on an already normalized code. The first failure stops the run.
+     */
     public function runScanChecks(string $code, ?ScanInput $source): ScanResult
     {
         return $this->getScanCheckPipeline()->run(

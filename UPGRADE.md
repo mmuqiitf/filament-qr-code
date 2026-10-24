@@ -76,6 +76,10 @@ $uri = $display->getQrSvgOrDataUri();
 $uri = $display->getQrDataUri();
 ```
 
+### `@internal` members
+
+Some classes and methods are now tagged `@internal` (see [Public API and `@internal`](docs/reference.md#public-api-and-internal)). They still work, but they are no longer covered by semver. If you call one from app code, move to the documented API.
+
 ### Behaviour changes
 
 - `validateAllUsing()` now also runs when a counted step (`repeat(n)`) is finished early with `finishWith()`. A failing whole-set check reports its own message and jumps to (or restarts from) the invalid step, like a failed completion, instead of the generic "needs n codes" message. When the whole set passes, the count message stays.

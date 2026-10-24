@@ -8,6 +8,8 @@ use Mmuqiitf\FilamentQrCode\Rendering\QrZipArchiver;
 
 /**
  * Kept for backwards compatibility; delegates to QrZipArchiver.
+ *
+ * @internal Not covered by semver; may change in any release.
  */
 class QrZipArchive
 {

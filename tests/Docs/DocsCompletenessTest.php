@@ -38,3 +38,26 @@ it('documents every Laravel event the package dispatches', function () {
         expect(str_contains($doc, $class))->toBeTrue("docs/events.md does not mention {$class}");
     }
 });
+
+it('documents the public helpers and keeps internal members tagged', function (): void {
+    $root = dirname(__DIR__, 2);
+    $docs = file_get_contents($root.'/README.md');
+    foreach (glob($root.'/docs/{,recipes/}*.md', GLOB_BRACE) as $file) {
+        $docs .= file_get_contents($file);
+    }
+
+    foreach (['recordsToFiles', 'flushDataUriCache', 'normalizeScannedCode', 'runScanChecks', 'effectiveCacheTtl'] as $method) {
+        expect($docs)->toContain($method.'(');
+    }
+
+    foreach (['QrRenderSpec', 'ScanResult', 'SequenceScanResult', 'CodeNormalizer', 'ConfigValue', 'QrZipArchive', 'ScanCheckPipeline'] as $class) {
+        $reflection = new ReflectionClass('Mmuqiitf\\FilamentQrCode\\Support\\'.$class);
+        $docComment = (string) $reflection->getDocComment();
+
+        if ($class === 'ScanResult') {
+            $docComment = (string) $reflection->getMethod('toClient')->getDocComment();
+        }
+
+        expect($docComment)->toContain('@internal');
+    }
+});

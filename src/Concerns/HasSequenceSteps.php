@@ -59,6 +59,9 @@ trait HasSequenceSteps
     /** @return array<string, mixed> */
     abstract public function getSequenceState(): array;
 
+    /**
+     * @internal Not covered by semver.
+     */
     abstract public function normalizeStepValue(string $fieldKey, mixed $value): mixed;
 
     abstract public function getFlatStatePrefix(): string;
@@ -283,6 +286,9 @@ trait HasSequenceSteps
      * like ScanChecksRule does for QrScanner.
      *
      * @param  array<string, array<mixed>>  $rules
+     *
+     * @internal Public only because Filament calls this validation hook;
+     * not covered by semver.
      */
     public function dehydrateValidationRules(array &$rules): void
     {
@@ -297,7 +303,12 @@ trait HasSequenceSteps
         }
     }
 
-    /** @param  array<string, string>  $attributes */
+    /**
+     * @param  array<string, string>  $attributes
+     *
+     * @internal Public only because Filament calls this validation hook;
+     * not covered by semver.
+     */
     public function dehydrateValidationAttributes(array &$attributes): void
     {
         foreach ($this->getScanSteps() as $step) {
@@ -305,7 +316,12 @@ trait HasSequenceSteps
         }
     }
 
-    /** @param  array<string, array<string, string>>  $messages */
+    /**
+     * @param  array<string, array<string, string>>  $messages
+     *
+     * @internal Public only because Filament calls this validation hook;
+     * not covered by semver.
+     */
     public function dehydrateValidationMessages(array &$messages): void {}
 
     /**
@@ -414,6 +430,9 @@ trait HasSequenceSteps
      * Finish a waiting or open-ended repeat step (the Done control).
      *
      * @return array<string, mixed>
+     *
+     * @internal Public only because the sequence JS calls it through
+     * #[ExposedLivewireMethod]; not covered by semver.
      */
     #[ExposedLivewireMethod]
     public function finishStep(string $step): array
@@ -437,6 +456,9 @@ trait HasSequenceSteps
      * Remove one collected code from a repeat step (a mis-scan).
      *
      * @return array<string, mixed>
+     *
+     * @internal Public only because the sequence JS calls it through
+     * #[ExposedLivewireMethod]; not covered by semver.
      */
     #[ExposedLivewireMethod]
     public function removeStepCode(string $step, int $index): array
@@ -466,6 +488,9 @@ trait HasSequenceSteps
      * Clear a step (the Clear control on sticky steps) and ask for it again.
      *
      * @return array<string, mixed>
+     *
+     * @internal Public only because the sequence JS calls it through
+     * #[ExposedLivewireMethod]; not covered by semver.
      */
     #[ExposedLivewireMethod]
     public function clearStep(string $step): array
@@ -694,6 +719,8 @@ trait HasSequenceSteps
      * normalizeStepUsing(), then the step's own normalizeUsing().
      *
      * @param  array<string, mixed>  $values
+     *
+     * @internal Not covered by semver.
      */
     public function normalizeStepCode(ScanStep $step, string $code, array $values): string
     {
@@ -719,6 +746,8 @@ trait HasSequenceSteps
      *
      * @param  array<string, mixed>  $values
      * @return array<string, mixed>
+     *
+     * @internal Not covered by semver.
      */
     public function valuesBeforeStep(ScanStep $step, array $values, ?int $position = null): array
     {
@@ -744,7 +773,11 @@ trait HasSequenceSteps
         return $before;
     }
 
-    /** @param  array<string, mixed>  $values */
+    /**
+     * @param  array<string, mixed>  $values
+     *
+     * @internal Not covered by semver.
+     */
     public function checkStep(ScanStep $step, string $code, ?ScanInput $source, array $values): ScanResult
     {
         return $step->checkPipeline($this)->run(
@@ -871,6 +904,8 @@ trait HasSequenceSteps
     /**
      * @param  array<string, mixed>  $values
      * @return array{0: string, 1: string}|null
+     *
+     * @internal Not covered by semver.
      */
     public function findInvalidStep(array $values): ?array
     {
@@ -1013,7 +1048,11 @@ trait HasSequenceSteps
         return null;
     }
 
-    /** @param  array<string, mixed>  $values */
+    /**
+     * @param  array<string, mixed>  $values
+     *
+     * @internal Not covered by semver.
+     */
     public function allRequiredFilled(array $values): bool
     {
         foreach ($this->getScanSteps() as $step) {
@@ -1062,6 +1101,8 @@ trait HasSequenceSteps
      *
      * @param  array<string, mixed>  $values
      * @return array<string, mixed>
+     *
+     * @internal Not covered by semver.
      */
     public function withoutInactiveSteps(array $values): array
     {

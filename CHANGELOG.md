@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Public API boundary: internal classes and methods are tagged `@internal` and excluded from semver; `recordsToFiles()`, `QrColumn::flushDataUriCache()`, `normalizeScannedCode()`, `runScanChecks()` and `QrCodeService::effectiveCacheTtl()` are documented as public API.
 - Swappable camera decoder: `FilamentQrCode.qrCameraCore.setDecoder(loader)`; `setDecoder(null)` restores the default.
 - Native `BarcodeDetector` decoding when the browser supports every requested format, with html5-qrcode as the fallback.
 - Torch and zoom controls in every viewfinder when the camera supports them; `->cameraControls(false)` / `qr-code.camera.controls` hides them.

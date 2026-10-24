@@ -31,7 +31,7 @@ QrColumn::make('sku')
     ->downloadable();
 ```
 
-Thumbnails and modal previews share a capped in-process render cache plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filamentQrCode.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
+Thumbnails and modal previews share a capped in-process render cache (clear it with `QrColumn::flushDataUriCache()`, for example between tests or in long-running workers) plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filamentQrCode.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
 
 #### In Infolists:
 
@@ -76,6 +76,8 @@ $table->bulkActions([
 
 Rows without data are skipped; the archive downloads as one ZIP (needs the PHP `zip` extension). For printed shelf labels, wrap any QR images in `.filament-qr-label-sheet` / `.filament-qr-label` — the print stylesheet hides camera UI and tiles three labels per row.
 
+To test the export or reuse the renders elsewhere, `recordsToFiles(Collection $records): array` returns the same files without zipping: file name with extension => raw image bytes.
+
 #### Programmatic Standalone Generation:
 
 ```php
@@ -107,7 +109,7 @@ Rules that bite:
 - `logo($path, $size)` forces error-correction level H for scannability.
 - Identical payloads share the render cache, so tables with repeated values encode once.
 - Other builder methods: `font($path)` sets the TTF used by `withText()`, `fileName($name)` sets the default download name (no extension), and `getRaw()` returns the encoded bytes.
-- Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(?int $seconds)`, `flushRenderCache()` (in-process) and `flushPersistentCache()` (Laravel cache).
+- Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(?int $seconds)` and `effectiveCacheTtl()` (the TTL in effect: the override, else `generator.cache_ttl`), `flushRenderCache()` (in-process) and `flushPersistentCache()` (Laravel cache).
 
 #### Common payloads without hand-escaping
 

@@ -117,6 +117,8 @@ class QrScanSequence extends Component implements HasValidationRules
      * Evaluate a ScanStep closure with Filament's injections plus $step and,
      * when the closure asks for it, $values. While values are being read a
      * nested request gets [], so a label that reads $values can't recurse.
+     *
+     * @internal Not covered by semver.
      */
     public function evaluateStepClosure(Closure $closure, ScanStep $step): mixed
     {
@@ -213,6 +215,9 @@ class QrScanSequence extends Component implements HasValidationRules
         return $this;
     }
 
+    /**
+     * @internal Not covered by semver.
+     */
     public function normalizeStepValue(string $fieldKey, mixed $value): mixed
     {
         if ($this->stepNormalizer instanceof Closure) {
