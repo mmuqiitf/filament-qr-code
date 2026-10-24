@@ -15,6 +15,7 @@ import {
     scannerFormatsConfigFor,
     stopCameraFeed,
     startCameraFeed,
+    watchPageVisibility,
     currentCameraRun,
     storageKeyFor,
 } from './qr-camera-core.js';
@@ -101,6 +102,11 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             this.registerWithRouter();
 
+            this.stopWatchingVisibility = watchPageVisibility(this, {
+                stop: () => this.stopScanner(),
+                resume: () => this.startScanner(),
+            });
+
             this.stopObservingOptions = observeOptions(this.$root ?? this.$el, (rendered) => {
                 if (this.options.syncOptions !== 'refresh') {
                     this.setOptions(rendered);
@@ -124,6 +130,8 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
         },
 
         destroy() {
+            this.stopWatchingVisibility?.();
+            this.stopWatchingVisibility = null;
             this.stopObservingOptions?.();
             this.stopObservingOptions = null;
             this.stopListeningForControls?.();

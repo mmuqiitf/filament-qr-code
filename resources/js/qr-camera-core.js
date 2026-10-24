@@ -540,6 +540,8 @@ export function cameraControlsMixin() {
 export async function stopCameraFeed(component, logLabel = 'scanner') {
     // Cancel any start still in flight: it checks the run when it resolves.
     component.cameraRun = (component.cameraRun ?? 0) + 1;
+    // An explicit stop wins over a pending resume (see watchPageVisibility).
+    component.cameraPausedByVisibility = false;
 
     if (component.html5Qrcode && component.isScanning) {
         try {
@@ -595,7 +597,20 @@ export async function startCameraFeed(component, start, run = currentCameraRun(c
         return false;
     }
 
-    await start();
+    // Started while the page is hidden: wait for it to be visible again.
+    if (typeof document !== 'undefined' && document.hidden) {
+        component.cameraPausedByVisibility = true;
+
+        return false;
+    }
+
+    component.cameraStarting = true;
+
+    try {
+        await start();
+    } finally {
+        component.cameraStarting = false;
+    }
 
     if (currentCameraRun(component) !== run) {
         try {
@@ -610,4 +625,37 @@ export async function startCameraFeed(component, start, run = currentCameraRun(c
     component.isScanning = true;
 
     return true;
+}
+
+/**
+ * Stop the camera while the page is hidden (a locked phone, a background
+ * tab) and start it again once the page is visible. `stop` bumps the camera
+ * run, so a start still in flight stops its own stream when it resolves.
+ * An explicit stop in between clears the pause, so a camera the user closed
+ * stays closed. Returns the cleanup function.
+ */
+export function watchPageVisibility(component, { stop, resume }) {
+    if (typeof document === 'undefined') {
+        return () => {};
+    }
+
+    const onChange = () => {
+        if (document.hidden) {
+            if (component.isScanning || component.cameraStarting) {
+                stop();
+                component.cameraPausedByVisibility = true;
+            }
+
+            return;
+        }
+
+        if (component.cameraPausedByVisibility) {
+            component.cameraPausedByVisibility = false;
+            resume();
+        }
+    };
+
+    document.addEventListener('visibilitychange', onChange);
+
+    return () => document.removeEventListener('visibilitychange', onChange);
 }
