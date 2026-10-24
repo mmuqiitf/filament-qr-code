@@ -107,6 +107,29 @@ global bundle (~21K). It downloads once on first camera use; pages that
 only render QR images never fetch it. Both files are published by
 `php artisan filament:assets` (the decoder is registered `loadedOnRequest`).
 
+### Styling: add the package views to your theme
+
+The package CSS only carries the scanner chrome (viewfinder, reticle, flash
+states). Buttons, overlays and layout use Tailwind utility classes in the
+package's Blade views, and Tailwind only generates classes it finds in the
+files it scans. Without a custom theme that scans the package views, those
+classes are missing: unstyled Start/Stop buttons, collapsed overlays, and a
+modal that looks different from the rest of the panel.
+
+Create a theme if your panel doesn't have one (`php artisan make:filament-theme`),
+then add the package views to its `@source` list:
+
+```css
+/* resources/css/filament/admin/theme.css */
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament';
+@source '../../../../resources/views/filament';
+@source '../../../../vendor/mmuqiitf/filament-qr-code/resources/views/**/*';
+```
+
+Rebuild your assets (`npm run build`) after adding the line.
+
 ### Symbologies
 
 Pass `BarcodeFormat` cases (or raw strings) via `->formats([...])` on every camera component. Supported: `QrCode`, `Aztec`, `DataMatrix`, `Maxicode`, `Codabar`, `Code39`, `Code93`, `Code128`, `Itf`, `Ean13`, `Ean8`, `UpcA`, `UpcE`. Filtering formats speeds up decoding and cuts false positives — always set it when you know what you scan. One-dimensional codes automatically get a wide decode band instead of a square.
@@ -264,6 +287,7 @@ php artisan qr-code:doctor
 | -------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Camera modal says no devices / access denied | Page served over plain `http` (not `localhost`)                           | Serve via `https` or test on `localhost`; browsers block cameras in insecure contexts.                                                            |
 | Camera modal empty on first open             | Permission not granted yet, labels unavailable                            | Grant permission, reopen; the remembered `localStorage` choice wins afterwards.                                                                   |
+| Unstyled buttons, layout differs from the panel | Panel theme doesn't `@source` the package views                    | Add `@source '../../../../vendor/mmuqiitf/filament-qr-code/resources/views/**/*';` to your theme CSS and rebuild ([Styling](#styling-add-the-package-views-to-your-theme)). |
 | Stale scanner UI after updating the package  | Committed `dist/` rebuilt but host serving old assets                     | `npm run build` in the package, then `php artisan filament:assets` in the host app.                                                               |
 | PNG looks wrong / text overlay is blocky     | Missing GD/Imagick or system fonts                                        | Install `gd` or `imagick` plus `fonts-dejavu-core`; the service falls back to GD bitmap fonts otherwise.                                          |
 | Sequence submit misses scanned values        | `statePathPrefix()` doesn't match the schema `statePath()`                | Set both to the same prefix, or give the sequence `->statePath()` and read via `mergeSequenceState()`. A banner warns in the UI when they differ. |
