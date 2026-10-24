@@ -343,3 +343,67 @@ it('lets a step finish code override the config one', function (): void {
     expect(wedgeResult(wedgeScan($test, 'parts', 'END')))->toMatchArray(['passes' => false])
         ->and(wedgeResult(wedgeScan($test, 'parts', 'DONE')))->toMatchArray(['finished' => true]);
 });
+
+it('whole-set check runs on early finish of repeat(n)', function (): void {
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(3)->finishWith('DONE'));
+    SequenceWedgeTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence
+        ->validateAllUsing(fn (array $values): ?array => count($values['parts'] ?? []) < 3 ? ['parts' => 'BOM short: missing P3.'] : null);
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'order', 'WO-1');
+    wedgeScan($test, 'parts', 'P1');
+    wedgeScan($test, 'parts', 'P2');
+
+    $test->call('callSchemaComponentMethod', 'form.receipt', 'finishStep', ['step' => 'parts']);
+    expect(wedgeResult($test))->toMatchArray(['passes' => false, 'message' => 'BOM short: missing P3.', 'invalid_step' => 'parts', 'next_step' => 'parts']);
+
+    expect(wedgeResult(wedgeScan($test, 'parts', 'DONE')))->toMatchArray(['passes' => false, 'message' => 'BOM short: missing P3.', 'invalid_step' => 'parts']);
+    $test->assertSet('data.receipt.parts', ['P1', 'P2']);
+});
+
+it('keeps the repeat count message on early finish when the whole set passes', function (): void {
+    SequenceWedgeTestComponent::$steps = bomSteps(fn (ScanStep $step) => $step->repeat(3));
+    SequenceWedgeTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->validateAllUsing(fn (): ?string => null);
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'order', 'WO-1');
+    wedgeScan($test, 'parts', 'P1');
+
+    $test->call('callSchemaComponentMethod', 'form.receipt', 'finishStep', ['step' => 'parts']);
+    expect(wedgeResult($test))->toMatchArray(['passes' => false, 'message' => __('filament-qr-code::ui.repeat_needs_codes', ['count' => 3])]);
+});
+
+it('stage sees the same codes live and on submit', function (): void {
+    $stage = new class implements \Mmuqiitf\FilamentQrCode\Contracts\ScanCheckStage
+    {
+        /** @var array<string, list<array<string, mixed>>> */
+        public array $seen = ['live' => [], 'submit' => []];
+
+        public string $phase = 'live';
+
+        public function check(\Mmuqiitf\FilamentQrCode\Support\ScanCheckContext $context): bool|string|null
+        {
+            $this->seen[$this->phase][] = [$context->code, $context->values];
+
+            return null;
+        }
+    };
+
+    SequenceWedgeTestComponent::$steps = fn (): array => [
+        ScanStep::make('order'),
+        ScanStep::make('parts')->repeat(2)->pipe($stage),
+        ScanStep::make('box')->pipe($stage),
+    ];
+    $test = Livewire::test(SequenceWedgeTestComponent::class);
+    wedgeScan($test, 'order', 'WO-1');
+    wedgeScan($test, 'parts', 'P1');
+    wedgeScan($test, 'parts', 'P2');
+    wedgeScan($test, 'box', 'B1');
+
+    $stage->phase = 'submit';
+    $test->call('validateForm')->assertHasNoErrors();
+
+    expect($stage->seen['live'])->toBe([
+        ['P1', ['order' => 'WO-1']],
+        ['P2', ['order' => 'WO-1', 'parts' => ['P1']]],
+        ['B1', ['order' => 'WO-1', 'parts' => ['P1', 'P2']]],
+    ])->and($stage->seen['submit'])->toBe($stage->seen['live']);
+});
