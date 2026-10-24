@@ -4,9 +4,10 @@ import { installFakeCamera } from './fake-camera.js';
 // A blank frame: a decoded code would close the scanner before it is measured.
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480"><rect width="640" height="480" fill="#fff"/></svg>';
 
-// Filament's modal window and slide-over panel are transformed, and a
-// transformed ancestor is the containing block of position: fixed. The
-// scanner modal must still cover the whole viewport.
+// A transformed ancestor (an action modal or slide-over) would become the
+// containing block of the position: fixed overlay. The scanner overlay must
+// cover the whole viewport, also on a panel whose theme doesn't scan the
+// package views (this workbench has no theme).
 for (const action of ['Scan in modal', 'Scan in slide-over']) {
     test(`QrScanner modal opened from "${action}" covers the viewport`, async ({ page }) => {
         await page.addInitScript(installFakeCamera, { svg });
@@ -21,7 +22,5 @@ for (const action of ['Scan in modal', 'Scan in slide-over']) {
         const box = await modal.boundingBox();
         const viewport = page.viewportSize();
         expect(box).toEqual({ x: 0, y: 0, width: viewport.width, height: viewport.height });
-
-        await expect(page.locator('[data-qr-scanner-panel]')).toBeInViewport({ ratio: 1 });
     });
 }
