@@ -569,6 +569,11 @@ trait HasSequenceSteps
         $count = count($this->repeatCodes($values, $key));
 
         if ($count < $needed && ! ($step->isOptional() && $count === 0)) {
+            // A counted step finished early: the app's whole-set check explains what is missing.
+            if ($limit !== null && ($failure = $this->findInvalidStep($values)) !== null) {
+                return $this->rejectInvalidSet(ScanResult::accept($code, $input), $key, $values, $failure);
+            }
+
             $result = ScanResult::reject($code, $input, __('filament-qr-code::ui.repeat_needs_codes', ['count' => $needed]));
             $this->rejectStep($result, $key, $values);
 
@@ -708,6 +713,37 @@ trait HasSequenceSteps
     /** Provided by HasCodeNormalization. */
     abstract protected function applyCodeNormalizer(string $code): string;
 
+    /**
+     * The values a step saw when it was scanned: the active steps before it,
+     * plus the codes of a repeat step scanned before the one at $position.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    public function valuesBeforeStep(ScanStep $step, array $values, ?int $position = null): array
+    {
+        $values = $this->withoutInactiveSteps($values);
+        $before = [];
+
+        foreach ($this->getScanSteps() as $candidate) {
+            $key = $candidate->getKey();
+
+            if ($key === $step->getKey()) {
+                if ($position !== null && $position > 0 && is_array($values[$key] ?? null)) {
+                    $before[$key] = array_slice(array_values($values[$key]), 0, $position);
+                }
+
+                break;
+            }
+
+            if (array_key_exists($key, $values)) {
+                $before[$key] = $values[$key];
+            }
+        }
+
+        return $before;
+    }
+
     /** @param  array<string, mixed>  $values */
     public function checkStep(ScanStep $step, string $code, ?ScanInput $source, array $values): ScanResult
     {
@@ -727,25 +763,7 @@ trait HasSequenceSteps
     protected function completeSequence(ScanResult $result, string $step, array $values, array $skipped = []): SequenceScanResult
     {
         if (($failure = $this->findInvalidStep($values)) !== null) {
-            [$invalidStep, $message] = $failure;
-            $restart = $this->getInvalidSequenceBehavior() === InvalidSequenceBehavior::Restart;
-
-            if ($restart) {
-                $values = $this->stickyValues($values);
-                $this->writeSequenceValues($values);
-            }
-
-            $this->rejectStep(ScanResult::reject($result->code, $result->source, $message), $invalidStep, $values);
-
-            return new SequenceScanResult(
-                scan: ScanResult::reject($result->code, $result->source, $message),
-                step: $step,
-                nextStep: $restart ? $this->getFirstEmptyStepKey($values) : $invalidStep,
-                values: $values,
-                skipped: $skipped,
-                invalidStep: $invalidStep,
-                reset: $restart,
-            );
+            return $this->rejectInvalidSet($result, $step, $values, $failure, $skipped);
         }
 
         $this->evaluate($this->onCompletedCallback, ['values' => $values]);
@@ -771,6 +789,37 @@ trait HasSequenceSteps
             completed: true,
             submitted: $submitted,
             reset: $reset,
+        );
+    }
+
+    /**
+     * Report a failed whole-set check: keep the values and go to the invalid step, or restart.
+     *
+     * @param  array<string, mixed>  $values
+     * @param  array{0: string, 1: string}  $failure
+     * @param  list<string>  $skipped
+     */
+    protected function rejectInvalidSet(ScanResult $result, string $step, array $values, array $failure, array $skipped = []): SequenceScanResult
+    {
+        [$invalidStep, $message] = $failure;
+        $restart = $this->getInvalidSequenceBehavior() === InvalidSequenceBehavior::Restart;
+
+        if ($restart) {
+            $values = $this->stickyValues($values);
+            $this->writeSequenceValues($values);
+        }
+
+        $rejected = ScanResult::reject($result->code, $result->source, $message);
+        $this->rejectStep($rejected, $invalidStep, $values);
+
+        return new SequenceScanResult(
+            scan: $rejected,
+            step: $step,
+            nextStep: $restart ? $this->getFirstEmptyStepKey($values) : $invalidStep,
+            values: $values,
+            skipped: $skipped,
+            invalidStep: $invalidStep,
+            reset: $restart,
         );
     }
 
