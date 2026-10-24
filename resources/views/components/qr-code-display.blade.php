@@ -1,5 +1,5 @@
 @php
-    $qrDataUri = $getQrSvgOrDataUri();
+    $qrDataUri = $getQrDataUri();
     $isDownloadable = $isDownloadable();
     $downloadDataUri = $isDownloadable ? $getDownloadDataUri() : null;
     $data = $getQrData();

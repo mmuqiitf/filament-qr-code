@@ -170,14 +170,6 @@ class QrCodeDisplay extends Field
         return $this->getRenderSpec()->toDataUri($data);
     }
 
-    /**
-     * @deprecated Use getQrDataUri() instead. Kept for backward compatibility.
-     */
-    public function getQrSvgOrDataUri(): string
-    {
-        return $this->getQrDataUri();
-    }
-
     public function isDownloadable(): bool
     {
         return (bool) $this->evaluate($this->canDownload);

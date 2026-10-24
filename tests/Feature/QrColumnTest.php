@@ -28,7 +28,7 @@ it('configures QrCodeDisplay properly', function () {
         ->color('#ff0000');
 
     expect($display->getName())->toBe('qr')
-        ->and($display->getQrSvgOrDataUri())->toStartWith('data:image/svg+xml;base64,');
+        ->and($display->getQrDataUri())->toStartWith('data:image/svg+xml;base64,');
 });
 
 it('configures QrEntry infolist entry properly', function () {

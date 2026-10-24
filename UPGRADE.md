@@ -64,6 +64,18 @@ use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScanListener;
 
 Only code that references the class (to unregister it, or in an `Event::fake()` assertion) needs the change; the package registers it for you.
 
+### 7. `QrCodeDisplay::getQrSvgOrDataUri()` is removed
+
+It returned the same value as `getQrDataUri()`. Rename the call, including in published `qr-code-display` views (`$getQrSvgOrDataUri()` becomes `$getQrDataUri()`):
+
+```php
+// Before
+$uri = $display->getQrSvgOrDataUri();
+
+// After
+$uri = $display->getQrDataUri();
+```
+
 ### Behaviour changes
 
 - `validateAllUsing()` now also runs when a counted step (`repeat(n)`) is finished early with `finishWith()`. A failing whole-set check reports its own message and jumps to (or restarts from) the invalid step, like a failed completion, instead of the generic "needs n codes" message. When the whole set passes, the count message stays.

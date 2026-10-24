@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Breaking: `suppressWhenGlobalListener()` / `isSuppressedWhenGlobalListenerActive()`, the `suppressWhenGlobalListenerActive` argument of `hardwareScanner()`, and `FilamentQrCode.isGlobalHardwareListenerActive()`; the input router already gives each burst one owner.
 - Breaking: `QrScanSequence::statePathPrefix()`, its mismatch warning and the `ui.sequence_prefix_mismatch` translation; flat step paths follow the schema `statePath()`.
 - Breaking: the `LogQrCodeScan` listener alias; use `LogQrCodeScanListener`.
+- Breaking: `QrCodeDisplay::getQrSvgOrDataUri()`; use `getQrDataUri()` (also in published `qr-code-display` views).
 
 ### Fixed
 - `repeat(n)` finished early with `finishWith()` now runs `validateAllUsing()`, rejecting an invalid set like completion does.
