@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-24
+
 ### Fixed
 - `QrCollectAction` (#35): every scan called `$wire.handleCollectorScan()` even when the host Livewire component had no such method (Livewire's `$wire` proxy answers every name), raising `MethodNotFoundException` and never firing `qr-collector-item-added`. The server now tells the browser whether the hook exists. Same fix for the `QrCollector` field.
 - `QrCollectAction` (#35): the modal now starts the camera on open like the `QrScanner` modal, waits for the viewfinder to be laid out (an opening modal left a zero-sized feed), and shows the shared loading / error overlay with Retry instead of a silent black viewfinder. Start no longer does nothing before the camera list loads.
@@ -329,7 +331,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.3.1...v0.4.0
