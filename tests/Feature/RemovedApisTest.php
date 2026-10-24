@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCodeDisplay;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScanListener;
@@ -21,6 +22,7 @@ function removedApis(): array
         'isGlobalHardwareListenerActive' => '/isGlobalHardwareListenerActive/',
         'statePathPrefix' => '/statePathPrefix|prefixMismatchWarning|sequence_prefix_mismatch/',
         'LogQrCodeScan' => '/LogQrCodeScan\b/',
+        'getQrSvgOrDataUri' => '/getQrSvgOrDataUri/',
     ];
 }
 
@@ -52,6 +54,7 @@ it('removed APIs no longer resolve at runtime', function (): void {
         ->and(method_exists(QrScanSequence::class, 'statePathPrefix'))->toBeFalse()
         ->and(class_exists('Mmuqiitf\\FilamentQrCode\\Listeners\\LogQrCodeScan'))->toBeFalse()
         ->and(class_exists(LogQrCodeScanListener::class))->toBeTrue()
+        ->and(method_exists(QrCodeDisplay::class, 'getQrSvgOrDataUri'))->toBeFalse()
         ->and(QrScanner::make('sku')->getScanPayload())->not->toHaveKey('suppressWhenGlobalListenerActive');
 });
 
