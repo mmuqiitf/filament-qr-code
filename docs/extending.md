@@ -18,7 +18,7 @@ Every seam the package offers, in one place. Each row links to the page that sho
 | Laravel events | `QrCodeScanned`, `ScanAccepted`, `ScanRejected`, `ScanSequenceCompleted` | [events.md](events.md#laravel-events) |
 | Macros | `QrScanner::macro()`, `QrScanSequence::macro()`, `QrCollector::macro()`, `ScanStep::macro()` | [customizing.md](customizing.md#macros) |
 | Global defaults | Filament's `QrScanner::configureUsing(fn (QrScanner $field) => ...)` (any component), plus `config/qr-code.php` | [reference.md](reference.md#configuration) |
-| Reusable fields | `php artisan make:qr-scan-field Name [--sequence]`, publishable stubs | [customizing.md](customizing.md#reusable-field-classes-make-qr-scan-field) |
+| Reusable fields | `php artisan make:qr-scan-field Name [--sequence]`, publishable stubs | [customizing.md](customizing.md#reusable-field-classes-makeqr-scan-field) |
 | Payload builders | `QrPayload::wifi()`, `vcard()`, `mailto()`, `sms()`, `geo()` | [generating.md](generating.md#common-payloads-without-hand-escaping) |
 
 ## Markup and styling

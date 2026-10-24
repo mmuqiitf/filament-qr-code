@@ -103,7 +103,7 @@ public function panel(Panel $panel): Panel
 ```
 
 The camera decoder (`html5-qrcode`) is a separate ES module next to the
-global bundle (~21K). It downloads once on first camera use; pages that
+global bundle (about 15 KB gzipped; the decoder is about 120 KB gzipped). It downloads once on first camera use; pages that
 only render QR images never fetch it. Both files are published by
 `php artisan filament:assets` (the decoder is registered `loadedOnRequest`).
 

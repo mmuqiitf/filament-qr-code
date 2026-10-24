@@ -106,6 +106,8 @@ Rules that bite:
 - Invalid hex colors throw `InvalidArgumentException` instead of silently rendering black.
 - `logo($path, $size)` forces error-correction level H for scannability.
 - Identical payloads share the render cache, so tables with repeated values encode once.
+- Other builder methods: `font($path)` sets the TTF used by `withText()`, `fileName($name)` sets the default download name (no extension), and `getRaw()` returns the encoded bytes.
+- Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(?int $seconds)`, `flushRenderCache()` (in-process) and `flushPersistentCache()` (Laravel cache).
 
 #### Common payloads without hand-escaping
 
