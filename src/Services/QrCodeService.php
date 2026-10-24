@@ -60,9 +60,11 @@ class QrCodeService
     }
 
     /**
-     * Override the persistent (L2) cache TTL in seconds; null caches forever.
+     * Override generator.cache_ttl at runtime: seconds to keep persistent (L2)
+     * entries, false to turn the L2 cache off, null to clear the override and
+     * use the config again.
      */
-    public static function cacheTtl(?int $seconds): void
+    public static function cacheTtl(int|false|null $seconds): void
     {
         QrRenderCache::setTtl($seconds);
     }
@@ -74,9 +76,10 @@ class QrCodeService
 
     /**
      * The persistent (L2) cache TTL in effect: the cacheTtl() override, else
-     * generator.cache_ttl. Null means no expiry.
+     * generator.cache_ttl. An int is seconds, null means no expiry, and false
+     * means the L2 cache is off (the in-process cache still works).
      */
-    public static function effectiveCacheTtl(): ?int
+    public static function effectiveCacheTtl(): int|false|null
     {
         return QrRenderCache::effectiveTtl();
     }

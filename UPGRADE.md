@@ -82,6 +82,8 @@ Some classes and methods are now tagged `@internal` (see [Public API and `@inter
 
 ### Behaviour changes
 
+- `generator.cache_ttl => false` now really turns the persistent render cache off. Before 1.0 it cached forever, like `null`. If you set `false` and relied on that, set `null` instead.
+
 - `validateAllUsing()` now also runs when a counted step (`repeat(n)`) is finished early with `finishWith()`. A failing whole-set check reports its own message and jumps to (or restarts from) the invalid step, like a failed completion, instead of the generic "needs n codes" message. When the whole set passes, the count message stays.
 - `->pipe()` stages (and every step check) see the same `$values` live and on submit: the active steps before the step, plus the codes scanned before this one in a repeat step. On submit they used to see the whole form.
 - The camera stops while the page is hidden (a locked phone, a background tab) and starts again when the page is visible, unless the operator stopped it in between.

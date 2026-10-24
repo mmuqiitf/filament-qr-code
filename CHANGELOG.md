@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `generator.cache_ttl => false` now turns the persistent (Laravel cache) render cache off, as documented; it used to cache forever like `null`. `QrCodeService::cacheTtl(false)` does the same at runtime.
+
 ### Added
 - Public API boundary: internal classes and methods are tagged `@internal` and excluded from semver; `recordsToFiles()`, `QrColumn::flushDataUriCache()`, `normalizeScannedCode()`, `runScanChecks()` and `QrCodeService::effectiveCacheTtl()` are documented as public API.
 - Swappable camera decoder: `FilamentQrCode.qrCameraCore.setDecoder(loader)`; `setDecoder(null)` restores the default.

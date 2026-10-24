@@ -24,7 +24,7 @@ final class QrRenderCache
 
     private static bool $persistentEnabled = true;
 
-    private static ?int $ttl = null;
+    private static int|false|null $ttl = null;
 
     private static ?string $store = null;
 
@@ -62,7 +62,7 @@ final class QrRenderCache
         self::$persistentEnabled = $enabled;
     }
 
-    public static function setTtl(?int $seconds): void
+    public static function setTtl(int|false|null $seconds): void
     {
         self::$ttl = $seconds;
     }
@@ -72,7 +72,10 @@ final class QrRenderCache
         self::$store = $store;
     }
 
-    public static function effectiveTtl(): ?int
+    /**
+     * Seconds to keep L2 entries; null = forever; false = L2 off.
+     */
+    public static function effectiveTtl(): int|false|null
     {
         if (self::$ttl !== null) {
             return self::$ttl;
@@ -81,7 +84,7 @@ final class QrRenderCache
         if (function_exists('config')) {
             $configured = config('qr-code.generator.cache_ttl');
             if ($configured === null || $configured === false) {
-                return null;
+                return $configured;
             }
 
             return is_numeric($configured) ? max(0, (int) $configured) : 86400;
@@ -108,9 +111,14 @@ final class QrRenderCache
         }
     }
 
+    private static function persistentActive(): bool
+    {
+        return self::$persistentEnabled && self::effectiveTtl() !== false;
+    }
+
     private static function readPersistent(string $key): ?string
     {
-        if (! self::$persistentEnabled) {
+        if (! self::persistentActive()) {
             return null;
         }
 
@@ -125,7 +133,7 @@ final class QrRenderCache
 
     private static function writePersistent(string $key, string $value): void
     {
-        if (! self::$persistentEnabled) {
+        if (! self::persistentActive()) {
             return;
         }
 
