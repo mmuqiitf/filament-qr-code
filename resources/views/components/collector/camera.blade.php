@@ -26,5 +26,6 @@
                 <div class="filament-qr-laser"></div>
             </div>
         </div>
+        @include('filament-qr-code::components.camera-status', ['retry' => 'retryCamera()'])
     </div>
 </div>

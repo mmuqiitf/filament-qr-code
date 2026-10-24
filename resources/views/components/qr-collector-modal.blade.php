@@ -1,9 +1,11 @@
 <div
+    data-qr-part="collector.modal"
     x-data="qrCollector({
         ...@js($scanPayload ?? []),
+        autoStart: true,
         cameraStorageKey: @js('filament-qr-code:camera:collect-action:' . ($actionName ?? 'default'))
     })"
-    class="space-y-4"
+    class="fi-qr-collector-modal space-y-4"
     wire:ignore
 >
     <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
@@ -31,6 +33,7 @@
                 <div class="filament-qr-laser"></div>
             </div>
         </div>
+        @include('filament-qr-code::components.camera-status', ['retry' => 'retryCamera()'])
     </div>
 
     <div class="flex items-center gap-2">

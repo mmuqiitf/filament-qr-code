@@ -115,8 +115,12 @@ class QrCollectAction extends Action
     /** @return array<string, mixed> */
     public function getComponentScanPayload(): array
     {
+        $livewire = $this->getLivewire();
+
         return [
             'allowDuplicates' => $this->isDuplicatesAllowed(),
+            // $wire proxies every name, so the browser cannot probe for the hook itself.
+            'wireScanHandler' => $livewire !== null && method_exists($livewire, 'handleCollectorScan'),
         ];
     }
 }

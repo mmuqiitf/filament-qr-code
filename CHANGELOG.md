@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `QrCollectAction` (#35): every scan called `$wire.handleCollectorScan()` even when the host Livewire component had no such method (Livewire's `$wire` proxy answers every name), raising `MethodNotFoundException` and never firing `qr-collector-item-added`. The server now tells the browser whether the hook exists. Same fix for the `QrCollector` field.
+- `QrCollectAction` (#35): the modal now starts the camera on open like the `QrScanner` modal, waits for the viewfinder to be laid out (an opening modal left a zero-sized feed), and shows the shared loading / error overlay with Retry instead of a silent black viewfinder. Start no longer does nothing before the camera list loads.
+- The `QrCollector` field shows the same loading / error overlay. The overlay is one shared partial, `components/camera-status.blade.php`.
+
 ## [0.6.0] - 2026-10-22
 
 ### Upgrading from 0.5

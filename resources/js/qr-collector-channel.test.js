@@ -87,7 +87,7 @@ describe('collector server-notify channel', () => {
 
     it('throttles bursts so one scan yields one delivery', () => {
         stubWindow();
-        const collector = makeCollector({ delayBetweenScansMs: 1200 });
+        const collector = makeCollector({ delayBetweenScansMs: 1200, wireScanHandler: true });
         const wire = { handleCollectorScan: vi.fn(), set: vi.fn() };
         collector.$wire = wire;
 

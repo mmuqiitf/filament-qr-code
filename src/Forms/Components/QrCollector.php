@@ -69,6 +69,8 @@ class QrCollector extends Field
         return [
             'allowDuplicates' => $this->isDuplicatesAllowed(),
             'delayBetweenScansMs' => $this->getDelayBetweenScansMs(),
+            // $wire proxies every name, so the browser cannot probe for the hook itself.
+            'wireScanHandler' => isset($this->livewire) && method_exists($this->livewire, 'handleCollectorScan'),
         ];
     }
 }

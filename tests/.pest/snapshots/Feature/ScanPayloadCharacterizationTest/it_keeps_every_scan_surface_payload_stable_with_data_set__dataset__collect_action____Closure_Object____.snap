@@ -21,5 +21,6 @@
         "Tab"
     ],
     "vibrate": true,
-    "vibrateDurationMs": 100
+    "vibrateDurationMs": 100,
+    "wireScanHandler": false
 }
