@@ -91,3 +91,14 @@ it('themes the scan UI through CSS variables with the old values as fallbacks', 
         expect($css)->toContain('var('.$declaration.')');
     }
 });
+
+it('gives every camera viewfinder a loading and error overlay with retry', function (): void {
+    $html = Livewire::test(ViewsRenderComponent::class)->html();
+
+    // scanner modal, scan sequence and inline collector
+    expect(substr_count($html, 'data-qr-part="camera.status"'))->toBe(3)
+        ->and($html)->toContain('@click="retryCamera()"');
+
+    $sequenceCamera = (string) str($html)->after('data-qr-part="sequence.camera"')->before('data-qr-part="sequence.status"');
+    expect($sequenceCamera)->toContain('data-qr-part="camera.status"');
+});
