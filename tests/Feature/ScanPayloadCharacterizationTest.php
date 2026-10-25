@@ -10,23 +10,26 @@ use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction;
 
 dataset('scan surfaces', [
-    'scanner' => fn () => QrScanner::make('sku')
+    'scanner' => ['scanner', fn () => QrScanner::make('sku')
         ->nextField('employee')
         ->formats([BarcodeFormat::QrCode])
-        ->fps(10),
-    'sequence' => fn () => QrScanSequence::make(['step', 'employee' => 'Employee badge']),
-    'collector' => fn () => QrCollector::make('codes')
+        ->fps(10)],
+    'sequence' => ['sequence', fn () => QrScanSequence::make(['step', 'employee' => 'Employee badge'])],
+    'collector' => ['collector', fn () => QrCollector::make('codes')
         ->allowDuplicates()
-        ->delayBetweenScans(900),
-    'listener' => fn () => QrHardwareScannerListener::make(['sku'])
+        ->delayBetweenScans(900)],
+    'listener' => ['listener', fn () => QrHardwareScannerListener::make(['sku'])
         ->autoFocusNext(false)
-        ->sound(false),
-    'collect action' => fn () => QrCollectAction::make(),
+        ->sound(false)],
+    'collect action' => ['collect-action', fn () => QrCollectAction::make()],
 ]);
 
-it('keeps every scan surface payload stable', function (object $component) {
+// Plain JSON fixtures instead of toMatchSnapshot(): Pest 3 and 4 name snapshot files differently.
+it('keeps every scan surface payload stable', function (string $fixture, object $component) {
     $payload = $component->getScanPayload();
     ksort($payload);
 
-    expect($payload)->toMatchSnapshot();
+    $expected = file_get_contents(__DIR__."/../Fixtures/payloads/{$fixture}.json");
+
+    expect(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE))->toBe($expected);
 })->with('scan surfaces');

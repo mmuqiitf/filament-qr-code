@@ -2,6 +2,8 @@ import { qrFeedback } from './audio-feedback.js';
 import { sanitizeScannedValue } from './qr-hardware-scanner.js';
 import { normalizeCode } from './scan-pipeline.js';
 import { inputRouter } from './input-router.js';
+import { announcerMixin, formatMessage } from './announcer.js';
+import { fallbackMessages } from './messages.js';
 import { changedKeys, feedSource, listenForControlEvents, observeOptions, readOptionsAttribute } from './runtime-control.js';
 import {
     emitScanFeedback,
@@ -41,8 +43,7 @@ const DEFAULT_OPTIONS = {
     serverCheck: false,
     steps: [],
     componentKey: null,
-    scanFailedMessage: 'Scan failed.',
-    insecureMessage: 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
+    ...fallbackMessages,
     syncOptions: 'morph',
 };
 
@@ -67,6 +68,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
     return {
         ...cameraControlsMixin(),
+        ...announcerMixin(),
         fields: fields, // array of { key: string, label: string }
         currentFieldIndex: 0,
         results: {},
@@ -373,7 +375,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
                 decoder = await resolveDecoderModule(this.options.formats);
             } catch {
                 this.hasError = true;
-                this.errorMessage = 'Failed to load camera decoder.';
+                this.errorMessage = this.options.decoderFailedMessage;
                 return;
             }
 
@@ -381,7 +383,8 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
                 Html5QrcodeClass: decoder.Html5Qrcode,
                 preferRearCamera: this.options.preferRearCamera,
                 storageKey,
-                deniedMessage: 'Camera access denied or unavailable.',
+                deniedMessage: this.options.cameraUnavailableMessage,
+                emptyMessage: this.options.noCamerasMessage,
                 insecureMessage: this.options.insecureMessage,
                 fixedMessage: true,
             });
@@ -421,7 +424,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             if (!this.selectedDeviceId) {
                 if (!this.hasError) {
                     this.hasError = true;
-                    this.errorMessage = 'Camera access denied or unavailable.';
+                    this.errorMessage = this.options.cameraUnavailableMessage;
                 }
 
                 return;
@@ -438,7 +441,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
                 decoder = await resolveDecoderModule(this.options.formats);
             } catch {
                 this.hasError = true;
-                this.errorMessage = 'Failed to load camera decoder.';
+                this.errorMessage = this.options.decoderFailedMessage;
                 return;
             }
 
@@ -466,8 +469,9 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
                 refreshCameraControls(this);
                 persistCameraId(storageKey, this.selectedDeviceId);
             } catch (err) {
+                console.debug('Sequence camera start failed:', err);
                 this.hasError = true;
-                this.errorMessage = 'Failed to start camera feed.';
+                this.errorMessage = this.options.cameraStartFailedMessage;
             }
         },
 
@@ -520,6 +524,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             // Auto-advance to the next active field, or stop the feed when
             // complete so the button never gets stuck on "Stop".
             const nextIndex = this.fields.findIndex((field, index) => index > this.currentFieldIndex && this.isActive(field.key));
+            this.announceAccepted(currentField.key, trimmed, nextIndex < 0);
 
             if (nextIndex >= 0) {
                 this.currentFieldIndex = nextIndex;
@@ -571,6 +576,17 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             const { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs } = this.options;
 
             emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
+        },
+
+        // One polite announcement per accepted scan; completion rides along so it is not overwritten.
+        announceAccepted(stepKey, code, completed) {
+            const parts = [];
+            const label = this.fields[this.indexOfStep(stepKey)]?.label || stepKey;
+
+            if (stepKey && code) parts.push(formatMessage(this.options.stepAddedAnnouncement, { code, step: label }));
+            if (completed) parts.push(this.options.completedAnnouncement);
+
+            this.announce(parts.join('. '));
         },
 
         indexOfStep(key) {
@@ -684,6 +700,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             if (!result.passes) {
                 this.stepError = result.message || scanFailedMessage;
+                this.announce(formatMessage(this.options.rejectedAnnouncement, { reason: this.stepError }));
 
                 if (result.invalid_step) {
                     window.dispatchEvent(new CustomEvent('qr-sequence-invalid', {
@@ -704,6 +721,8 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             if (quiet) return result;
 
             if (source !== 'manual') this.emitFeedback();
+
+            this.announceAccepted(result.finished ? null : result.step, result.code ?? code, Boolean(result.completed));
 
             if (!result.finished) window.dispatchEvent(new CustomEvent('qr-sequence-step', {
                 detail: {

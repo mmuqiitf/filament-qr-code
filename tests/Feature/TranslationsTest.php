@@ -1,6 +1,11 @@
 <?php
 
 declare(strict_types=1);
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
+use Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction;
 
 it('loads namespaced package translations', function () {
     expect(__('filament-qr-code::ui.scan'))->toBe('Scan')
@@ -82,7 +87,7 @@ it('has no duplicate keys in a lang file', function () {
 
 it('keeps the JS fallback messages equal to the en strings', function () {
     $fallbacks = jsFallbackMessages();
-    $map = \Mmuqiitf\FilamentQrCode\Support\ScanMessages::keys();
+    $map = ScanMessages::keys();
 
     expect(array_keys($fallbacks))->toEqualCanonicalizing(array_keys($map));
 
@@ -121,15 +126,15 @@ it('assigns no untranslated sentence to a user-facing message in JS', function (
     expect($offenders)->toBe([]);
 });
 
-it('sends every message in the scan payload of each camera surface', function (string $component) {
-    $payload = \Mmuqiitf\FilamentQrCode\Support\ScanOptions::payload($component::make('codes'));
+it('sends every message in the scan payload of each camera surface', function (object $component) {
+    $payload = $component->getScanPayload();
 
-    foreach (array_keys(\Mmuqiitf\FilamentQrCode\Support\ScanMessages::forCamera()) as $name) {
+    foreach (array_keys(ScanMessages::forCamera()) as $name) {
         expect($payload)->toHaveKey($name);
     }
 })->with([
-    \Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner::class,
-    \Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector::class,
-    \Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence::class,
-    \Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction::class,
+    'scanner' => fn () => QrScanner::make('code'),
+    'collector' => fn () => QrCollector::make('codes'),
+    'sequence' => fn () => QrScanSequence::make(['po', 'sku']),
+    'collect action' => fn () => QrCollectAction::make('collect'),
 ]);

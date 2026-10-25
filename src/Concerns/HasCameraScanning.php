@@ -7,6 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Concerns;
 use Closure;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
+use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
 
 trait HasCameraScanning
 {
@@ -157,8 +158,7 @@ trait HasCameraScanning
             'preferRearCamera' => $this->isPreferRearCamera(),
             'cameraControls' => $this->hasCameraControls(),
             'formats' => $this->getSupportedFormats(),
-            'insecureMessage' => __('filament-qr-code::ui.camera_needs_secure_context'),
-            'fileScanFailedMessage' => __('filament-qr-code::ui.file_scan_failed'),
+            ...ScanMessages::forCamera(),
         ];
     }
 }

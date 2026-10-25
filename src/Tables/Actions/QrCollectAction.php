@@ -12,6 +12,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
+use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
 
 class QrCollectAction extends Action
 {
@@ -56,7 +57,6 @@ class QrCollectAction extends Action
                 'terminators' => $this->getTerminators(),
                 'minBarcodeLength' => $this->getMinBarcodeLength(),
                 'scanTimeoutMs' => $this->getScanTimeoutMs(),
-                'insecureMessage' => __('filament-qr-code::ui.camera_needs_secure_context'),
                 'fps' => $this->getEffectiveFps(),
                 'qrbox' => $this->getQrbox(),
                 'preferRearCamera' => $this->isPreferRearCamera(),
@@ -121,6 +121,7 @@ class QrCollectAction extends Action
             'allowDuplicates' => $this->isDuplicatesAllowed(),
             // $wire proxies every name, so the browser cannot probe for the hook itself.
             'wireScanHandler' => $livewire !== null && method_exists($livewire, 'handleCollectorScan'),
+            ...ScanMessages::forAnnouncements(),
         ];
     }
 }

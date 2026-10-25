@@ -1,6 +1,8 @@
 import { qrFeedback } from './audio-feedback.js';
 import { sanitizeScannedValue } from './qr-hardware-scanner.js';
 import { inputRouter } from './input-router.js';
+import { announcerMixin, formatMessage } from './announcer.js';
+import { messagesFrom } from './messages.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -45,8 +47,9 @@ export default function qrCollectorComponent({
     cameraStorageKey = null,
     autoStart = false,
     wireScanHandler = false,
-    insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
+    ...messageOptions
 } = {}) {
+    const messages = messagesFrom(messageOptions);
     const initialItems = Array.isArray(state)
         ? state.map(item => typeof item === 'object' && item !== null && item.code ? item : { code: String(item), scanned_at: new Date().toLocaleTimeString() })
         : [];
@@ -55,7 +58,9 @@ export default function qrCollectorComponent({
 
     return {
         ...cameraControlsMixin(),
+        ...announcerMixin(),
         items: initialItems,
+        lastAddedCode: null,
         statePath: statePath,
         scannedSet: new Set(initialItems.map(i => i.code)),
         isScanning: false,
@@ -117,7 +122,7 @@ export default function qrCollectorComponent({
                 decoder = await resolveDecoderModule(formats);
             } catch {
                 this.hasError = true;
-                this.errorMessage = 'Failed to load camera decoder.';
+                this.errorMessage = messages.decoderFailedMessage;
                 return;
             }
 
@@ -125,8 +130,9 @@ export default function qrCollectorComponent({
                 Html5QrcodeClass: decoder.Html5Qrcode,
                 preferRearCamera,
                 storageKey,
-                deniedMessage: 'Camera access unavailable.',
-                insecureMessage,
+                deniedMessage: messages.cameraUnavailableMessage,
+                emptyMessage: messages.noCamerasMessage,
+                insecureMessage: messages.insecureMessage,
                 fixedMessage: true,
             });
 
@@ -164,7 +170,7 @@ export default function qrCollectorComponent({
             if (!this.selectedDeviceId) {
                 if (!this.hasError) {
                     this.hasError = true;
-                    this.errorMessage = 'Camera access unavailable.';
+                    this.errorMessage = messages.cameraUnavailableMessage;
                 }
 
                 return;
@@ -181,7 +187,7 @@ export default function qrCollectorComponent({
                 decoder = await resolveDecoderModule(formats);
             } catch {
                 this.hasError = true;
-                this.errorMessage = 'Failed to load camera decoder.';
+                this.errorMessage = messages.decoderFailedMessage;
                 return;
             }
 
@@ -206,8 +212,9 @@ export default function qrCollectorComponent({
                 refreshCameraControls(this, cameraControls);
                 persistCameraId(storageKey, this.selectedDeviceId);
             } catch (err) {
+                console.debug('Collector camera start failed:', err);
                 this.hasError = true;
-                this.errorMessage = 'Failed to start camera.';
+                this.errorMessage = messages.cameraStartFailedMessage;
             }
         },
 
@@ -232,6 +239,11 @@ export default function qrCollectorComponent({
             if (!trimmed || this.isProcessing) return;
 
             if (!allowDuplicates && this.scannedSet.has(trimmed)) {
+                // The code just added is usually still in view: not a new rejection.
+                if (trimmed !== this.lastAddedCode) {
+                    this.announce(formatMessage(messages.rejectedAnnouncement, { reason: messages.duplicateMessage }));
+                }
+
                 return;
             }
 
@@ -241,6 +253,8 @@ export default function qrCollectorComponent({
                 code: trimmed,
                 scanned_at: new Date().toLocaleTimeString(),
             });
+            this.lastAddedCode = trimmed;
+            this.announce(formatMessage(messages.addedAnnouncement, { code: trimmed, count: this.items.length }));
 
             emitScanFeedback(qrFeedback, {
                 sound,

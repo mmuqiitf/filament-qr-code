@@ -24,6 +24,7 @@
         @include('filament-qr-code::components.sequence.camera-select')
 
         @include('filament-qr-code::components.sequence.status')
+        @include('filament-qr-code::components.announcer')
 
         @include('filament-qr-code::components.sequence.camera')
     </div>

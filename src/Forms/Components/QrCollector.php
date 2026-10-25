@@ -11,6 +11,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
+use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
 use Mmuqiitf\FilamentQrCode\Validation\DistinctCodes;
 
 class QrCollector extends Field
@@ -71,6 +72,7 @@ class QrCollector extends Field
             'delayBetweenScansMs' => $this->getDelayBetweenScansMs(),
             // $wire proxies every name, so the browser cannot probe for the hook itself.
             'wireScanHandler' => isset($this->livewire) && method_exists($this->livewire, 'handleCollectorScan'),
+            ...ScanMessages::forAnnouncements(),
         ];
     }
 }

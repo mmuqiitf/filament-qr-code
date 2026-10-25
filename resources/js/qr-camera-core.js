@@ -10,6 +10,8 @@
  * bundle stays light for pages that only render QR images.
  */
 
+import { fallbackMessages } from './messages.js';
+
 const ONE_DIMENSIONAL_FORMATS = new Set([
     'CODABAR',
     'CODE_39',
@@ -219,9 +221,9 @@ export async function loadCameraDevices(component, {
     preferRearCamera = true,
     storageKey = null,
     requireDevices = false,
-    emptyMessage = 'No camera devices detected on this system.',
-    deniedMessage = 'Camera access unavailable.',
-    insecureMessage = 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
+    emptyMessage = fallbackMessages.noCamerasMessage,
+    deniedMessage = fallbackMessages.cameraUnavailableMessage,
+    insecureMessage = fallbackMessages.insecureMessage,
     fixedMessage = false,
 } = {}) {
     // Browsers block getUserMedia outside secure contexts with a generic
@@ -236,13 +238,14 @@ export async function loadCameraDevices(component, {
 
     component.isLoading = true;
     component.hasError = false;
+    const noDevices = new Error(emptyMessage);
 
     try {
         const devices = await Html5QrcodeClass.getCameras();
         component.devices = devices || [];
 
         if (requireDevices && component.devices.length === 0) {
-            throw new Error(emptyMessage);
+            throw noDevices;
         }
 
         if (component.devices.length > 0) {
@@ -256,7 +259,9 @@ export async function loadCameraDevices(component, {
     } catch (err) {
         component.isLoading = false;
         component.hasError = true;
-        component.errorMessage = fixedMessage ? deniedMessage : (err?.message || deniedMessage);
+        // Raw browser errors are English and technical: log them, show the translated text.
+        console.debug('Camera devices unavailable:', err);
+        component.errorMessage = !fixedMessage && err === noDevices ? emptyMessage : deniedMessage;
     }
 }
 

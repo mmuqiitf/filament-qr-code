@@ -16,6 +16,7 @@ use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
 use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
 use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 use Mmuqiitf\FilamentQrCode\Support\ScanCheckPipeline;
+use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 use Mmuqiitf\FilamentQrCode\Validation\ScanChecksRule;
 use Throwable;
@@ -380,7 +381,7 @@ trait InteractsWithScans
             'serverCheck' => $this->hasServerScanChecks(),
             'cooldownMs' => $this->getCooldownMs(),
             'clearOnReject' => $this->shouldClearOnReject(),
-            'scanFailedMessage' => __('filament-qr-code::ui.scan_failed'),
+            'scanFailedMessage' => ScanMessages::scanFailed(),
         ];
 
         try {

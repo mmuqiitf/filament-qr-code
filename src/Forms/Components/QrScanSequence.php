@@ -15,6 +15,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasOptionsSync;
 use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequenceSteps;
+use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 use ReflectionFunction;
 
@@ -392,7 +393,8 @@ class QrScanSequence extends Component implements HasValidationRules
             'editable' => $this->isEditable(),
             // Server work needs a key to reach handleStepScan: statePath() or key().
             'serverCheck' => filled($key) && $this->hasServerSequenceWork(),
-            'scanFailedMessage' => __('filament-qr-code::ui.scan_failed'),
+            'scanFailedMessage' => ScanMessages::scanFailed(),
+            ...ScanMessages::forAnnouncements(),
             'steps' => $this->getStepsPayload(),
             'values' => $this->withoutInactiveSteps($this->getSequenceState()),
             ...(filled($key) ? ['componentKey' => $key] : []),

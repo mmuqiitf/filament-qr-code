@@ -191,3 +191,16 @@
     z-index: 50;
     overflow-y: auto;
 }
+
+/* Visually hidden, still read by screen readers (live-region announcer). */
+.fi-qr-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
