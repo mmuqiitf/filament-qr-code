@@ -144,6 +144,12 @@ php artisan vendor:publish --tag="filament-qr-code-translations"
 
 and translate per locale.
 
+Camera errors and screen-reader announcements are translated too: the browser components receive them from PHP, so a published `ui.php` covers them. The announcement keys take placeholders: `announce_added` (`:code`, `:count`), `announce_step_added` (`:code`, `:step`) and `announce_rejected` (`:reason`); `camera_device` takes `:id`.
+
+### Screen-reader announcements
+
+The collector, the collect-action modal and the scan sequence each have a visually hidden polite live region (`data-qr-part="announcer"`, `role="status"`). It reads each accepted scan ("Added ABC-1 (3 items)", "Added PO-1 to PO") and each rejection ("Rejected: Unknown PO") once; the same message is not repeated within 3 seconds. Camera errors stay in a `role="alert"` region.
+
 ---
 
 ## Customizing

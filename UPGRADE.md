@@ -80,6 +80,10 @@ $uri = $display->getQrDataUri();
 
 Some classes and methods are now tagged `@internal` (see [Public API and `@internal`](docs/reference.md#public-api-and-internal)). They still work, but they are no longer covered by semver. If you call one from app code, move to the documented API.
 
+### `bacon/bacon-qr-code` 3.0.4 or newer
+
+The package now requires `bacon/bacon-qr-code` `^3.0.4`. If your lock file has an older 3.0.x, `composer update mmuqiitf/filament-qr-code --with-dependencies` updates it.
+
 ### Behaviour changes
 
 - `generator.cache_ttl => false` now really turns the persistent render cache off. Before 1.0 it cached forever, like `null`. If you set `false` and relied on that, set `null` instead.
@@ -88,6 +92,8 @@ Some classes and methods are now tagged `@internal` (see [Public API and `@inter
 - `->pipe()` stages (and every step check) see the same `$values` live and on submit: the active steps before the step, plus the codes scanned before this one in a repeat step. On submit they used to see the whole form.
 - The camera stops while the page is hidden (a locked phone, a background tab) and starts again when the page is visible, unless the operator stopped it in between.
 - The scanner modal's overlay is now positioned by the package stylesheet, so it covers the viewport even when the panel theme does not `@source` the package views.
+- Camera errors are translated and no longer show the raw browser error text. If you published `ui.php`, add the new keys (`camera_*`, `announce_*`; see the [changelog](CHANGELOG.md)); missing keys fall back to the key name. `ui.loading_camera` is gone.
+- The collector, collect-action modal and scan sequence announce accepted and rejected scans to screen readers. If you override the `qr-collector`, `qr-collector-modal` or `qr-scan-sequence` views, include `filament-qr-code::components.announcer`. The sequence rejection text is no longer `role="alert"`.
 
 ## From 0.5 to 0.6
 

@@ -20,11 +20,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The camera stops while the page is hidden (locked phone, background tab) and starts again when it is visible, unless the operator stopped it meanwhile.
 - Docs: events reference (`docs/events.md`), extension points (`docs/extending.md`), a documentation table in the README, an intro to the sequence config, and Pest tests that every fired event is documented and every PHP snippet in the docs parses.
 - CI runs on pushes to `main`, `0.*.x` and `1.*.x` release branches and on pull requests.
+- CI tests Laravel 11, 12 and 13 with both lowest and latest dependencies (Laravel 13 from PHP 8.3).
+- Screen-reader announcements: a polite live region in the collector, the collect-action modal and the scan sequence reads accepted ("Added ABC-1 (3 items)") and rejected ("Rejected: …") scans once each.
+- Translations for camera errors and announcements (`camera_decoder_failed`, `camera_unavailable`, `camera_none_found`, `camera_start_failed`, `camera_device`, `announce_added`, `announce_step_added`, `announce_completed`, `announce_rejected`) in English and Indonesian.
 
 ### Changed
 - Internal: `QrCodeService` is now a thin facade over `Rendering\QrRenderer`, `QrRenderCache`, `QrLogoCompositor`, `QrCaptionCompositor`, `QrRenderOptions` and `HexColor`; ZIP packing moved to `Rendering\QrZipArchiver` (`Support\QrZipArchive` still works). Output is byte-identical and the public API is unchanged. The new `Rendering\*` classes are `@internal`.
 - Breaking for subclasses of `QrCodeService` only: the protected `applyLogo()`, `applyTextOverlay()`, `readPersistentCache()` and `writePersistentCache()` methods and the protected static `$renderCache` property were removed (no shims). Override `generate()` or wrap the service instead.
 - Breaking: `hardware_scanner.min_fast_keys` defaults to 3 (was 1), so fast typing is not taken for a scan. `->minFastKeys(1)` restores the old behaviour.
+- Camera errors are translated in every component; the raw browser error is logged with `console.debug` instead of being shown.
+- The sequence rejection text is no longer `role="alert"`; the polite announcer reads it. The collector remove buttons have an `aria-label`.
+- Requires `bacon/bacon-qr-code` `^3.0.4` (was `^3.0`): older 3.0.x releases write SVG numbers differently, found by the prefer-lowest CI jobs.
+- Dev dependencies: `orchestra/testbench` `^9.0|^10.0|^11.0`, `pestphp/pest` and `pestphp/pest-plugin-laravel` `^3.0|^4.0`, and `mockery/mockery` `^1.6.10` (older releases break `Log::spy()` assertions).
+- Tests: the scan payload characterization compares plain JSON fixtures (`tests/Fixtures/payloads`) instead of Pest snapshots, which Pest 3 and 4 name differently.
 - Tests: Pest pins the array cache store, so a Testbench skeleton `.env` left by `workbench:build` no longer breaks the suite.
 
 ### Removed
@@ -33,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Breaking: `QrScanSequence::statePathPrefix()`, its mismatch warning and the `ui.sequence_prefix_mismatch` translation; flat step paths follow the schema `statePath()`.
 - Breaking: the `LogQrCodeScan` listener alias; use `LogQrCodeScanListener`.
 - Breaking: `QrCodeDisplay::getQrSvgOrDataUri()`; use `getQrDataUri()` (also in published `qr-code-display` views).
+- The unused `ui.loading_camera` translation and the duplicate `ui.done` entry.
 
 ### Fixed
 - `repeat(n)` finished early with `finishWith()` now runs `validateAllUsing()`, rejecting an invalid set like completion does.
