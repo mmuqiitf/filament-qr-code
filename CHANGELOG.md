@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The sequence rejection text is no longer `role="alert"`; the polite announcer reads it. The collector remove buttons have an `aria-label`.
 - Requires `bacon/bacon-qr-code` `^3.0.4` (was `^3.0`): older 3.0.x releases write SVG numbers differently, found by the prefer-lowest CI jobs.
 - Dev dependencies: `orchestra/testbench` `^9.0|^10.0|^11.0`, `pestphp/pest` and `pestphp/pest-plugin-laravel` `^3.0|^4.0`, and `mockery/mockery` `^1.6.10` (older releases break `Log::spy()` assertions).
+- Tests: `phpunit.xml.dist` no longer configures coverage reports; with PHPUnit 12 and `failOnWarning` the "no coverage driver" warning failed the run. Pass `--coverage` to get a report.
 - Tests: the scan payload characterization compares plain JSON fixtures (`tests/Fixtures/payloads`) instead of Pest snapshots, which Pest 3 and 4 name differently.
 - Tests: Pest pins the array cache store, so a Testbench skeleton `.env` left by `workbench:build` no longer breaks the suite.
 
