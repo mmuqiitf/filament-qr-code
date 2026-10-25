@@ -45,6 +45,22 @@ UPGRADE.md gets a "From 0.6 to 1.0" section with one numbered entry per row. The
 
    Vitest first.
 
+## 5. Pre-1.0 polish (approved 2026-10-25)
+
+1. **Translate camera errors.** Every user-facing string in `resources/js` comes from `filament-qr-code::ui.*`, passed in the scan payload like `insecureMessage`:
+   - New keys: `camera_decoder_failed`, `camera_unavailable`, `camera_none_found`, `camera_start_failed`, `camera_device` (the `Camera :id` fallback label in the device pickers). en + id.
+   - The JS fallbacks live in one module, `resources/js/messages.js`, used only when a component mounts without a payload (tests, custom wiring).
+   - `loadCameraDevices()` shows the translated message instead of the raw browser error text (the raw error goes to `console.debug`).
+   - The unused `ui.loading_camera` key and the duplicate `done` key are removed.
+   - Pest guard (`TranslationsTest`): every `ui.*` key used in `src/` and `resources/views` exists in every lang file; every lang file has the same keys; `messages.js` fallbacks equal the en strings; no JS source outside `messages.js` assigns a sentence literal to a message sink (`errorMessage =`, `…Message:` / `…Message =` defaults, `|| '…'`).
+2. **Screen-reader announcements.** A visually hidden polite live region (`role="status"`, `aria-live="polite"`, `aria-atomic="true"`, partial `components/announcer`) in the collector field, the collect-action modal and the sequence:
+   - Collector: accepted `Added :code (:count items)`; a duplicate is `Rejected: Duplicate codes are not allowed.`
+   - Sequence: accepted `Added :code to :step`, `Sequence complete.` at the end; rejected `Rejected: :reason`.
+   - No duplicates: an identical announcement within 3 s is skipped (a code held under the camera is not repeated every frame); an identical one later is cleared and re-set so it is read again. The visible sequence error box drops `role="alert"` (the live region speaks it once); camera errors keep `role="alert"` (assertive is for errors only).
+   - Remove buttons in the collector lists get `aria-label` (`ui.remove_code`).
+   - Tests: vitest (`announcer.test.js`, collector and sequence wiring), Pest view test (live region markup), Playwright assertion in `collect-action.spec.js`.
+3. **CI Laravel matrix.** `run-tests.yml` runs Laravel 11/12/13 × prefer-lowest/prefer-stable × PHP 8.2–8.5 (Spatie skeleton pattern: `composer require "laravel/framework:<v>" "orchestra/testbench:<v>" --no-update`, then `composer update --<dependency-version>`). Laravel 11 → testbench 9, Laravel 12 → testbench 10, Laravel 13 → testbench 11 (Pest 4, PHP 8.3+). PHP 8.2 × Laravel 13 is excluded. `composer.json` dev constraints widen to testbench `^11`, Pest `^4`; any minimum raised to make prefer-lowest pass is listed in CHANGELOG and UPGRADE.
+
 ## Out of scope
 
 No layout or behaviour changes beyond the above. No tag or release.
