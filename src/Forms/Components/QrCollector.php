@@ -28,6 +28,7 @@ class QrCollector extends Field
 
     protected int|Closure $delayBetweenScansMs = 1200;
 
+    /** Accept the same code more than once in the list (browser-side check). */
     public function allowDuplicates(bool|Closure $condition = true): static
     {
         $this->allowDuplicates = $condition;
@@ -35,6 +36,7 @@ class QrCollector extends Field
         return $this;
     }
 
+    /** Pause in milliseconds before the next camera scan is accepted. */
     public function delayBetweenScans(int|Closure $ms): static
     {
         $this->delayBetweenScansMs = $ms;

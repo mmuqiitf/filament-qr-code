@@ -23,6 +23,7 @@ trait HasScanMode
     /** @var array<string, true> */
     protected static array $warnedRequiredContinuousFields = [];
 
+    /** Single (default) or continuous scanning for this field. */
     public function mode(ScanMode|Closure $mode): static
     {
         $this->scanMode = $mode;
@@ -42,6 +43,7 @@ trait HasScanMode
         return $this->getMode() === ScanMode::Continuous;
     }
 
+    /** What a continuous field shows after an accepted scan: empty or the last code. */
     public function continuousDisplay(ContinuousDisplay|Closure $display): static
     {
         $this->continuousDisplay = $display;
@@ -64,6 +66,7 @@ trait HasScanMode
         return $display instanceof ContinuousDisplay ? $display : ContinuousDisplay::Empty;
     }
 
+    /** Continuous mode: pause until the error is dismissed instead of scanning on. */
     public function pauseOnReject(bool|Closure $condition = true): static
     {
         $this->pauseOnReject = $condition;
@@ -80,6 +83,7 @@ trait HasScanMode
         return (bool) $this->evaluate($this->pauseOnReject);
     }
 
+    /** Continuous mode: keep the camera running between scans. */
     public function keepCameraOpen(bool|Closure $condition = true): static
     {
         $this->keepCameraOpen = $condition;

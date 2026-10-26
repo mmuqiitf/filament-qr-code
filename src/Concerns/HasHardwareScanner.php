@@ -27,6 +27,8 @@ trait HasHardwareScanner
     protected int|Closure|null $scanTimeoutMs = null;
 
     /**
+     * Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`).
+     *
      * @param  array<int, string>|Closure  $terminators
      */
     public function hardwareScanner(
@@ -49,6 +51,7 @@ trait HasHardwareScanner
         return $this;
     }
 
+    /** Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). */
     public function minFastKeys(int|Closure $count): static
     {
         $this->minFastKeys = $count;
@@ -117,6 +120,7 @@ trait HasHardwareScanner
         return max(1, (int) $this->evaluate($this->minBarcodeLength));
     }
 
+    /** Flush window in milliseconds for guns that send no terminator; 0 disables (config `hardware_scanner.scan_timeout_ms`). */
     public function scanTimeout(int|Closure $milliseconds): static
     {
         $this->scanTimeoutMs = $milliseconds;

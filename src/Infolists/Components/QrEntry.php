@@ -38,6 +38,7 @@ class QrEntry extends Entry
 
     protected bool|Closure $canDownload = true;
 
+    /** Error-correction level: L, M, Q or H. */
     public function errorCorrection(string|Closure|null $level): static
     {
         $this->errorCorrectionLevel = $level;
@@ -45,6 +46,7 @@ class QrEntry extends Entry
         return $this;
     }
 
+    /** Embed a logo image in the centre (forces PNG). */
     public function logo(string|Closure|null $path, int|Closure $size = 50): static
     {
         $this->logoPath = $path;
@@ -53,6 +55,7 @@ class QrEntry extends Entry
         return $this;
     }
 
+    /** Value to encode; a closure receives the record. */
     public function data(string|Closure|null $data): static
     {
         $this->qrData = $data;
@@ -60,6 +63,7 @@ class QrEntry extends Entry
         return $this;
     }
 
+    /** Rendered size in pixels. */
     public function size(int|Closure $size): static
     {
         $this->size = $size;
@@ -67,6 +71,7 @@ class QrEntry extends Entry
         return $this;
     }
 
+    /** Quiet-zone margin in modules. */
     public function margin(int|Closure $margin): static
     {
         $this->margin = $margin;
@@ -74,6 +79,7 @@ class QrEntry extends Entry
         return $this;
     }
 
+    /** Render as SVG or PNG. */
     public function format(QrFormat|string|Closure $format): static
     {
         $this->format = $format;
@@ -81,6 +87,7 @@ class QrEntry extends Entry
         return $this;
     }
 
+    /** Foreground colour as hex. */
     public function color(string|Closure $hexColor): static
     {
         $this->foregroundColor = $hexColor;
@@ -88,6 +95,7 @@ class QrEntry extends Entry
         return $this;
     }
 
+    /** Background colour as hex. */
     public function backgroundColor(string|Closure $hexColor): static
     {
         $this->backgroundColor = $hexColor;
@@ -95,6 +103,7 @@ class QrEntry extends Entry
         return $this;
     }
 
+    /** Caption text under the QR (forces PNG). */
     public function caption(?string $text): static
     {
         $this->captionText = $text;
@@ -107,6 +116,7 @@ class QrEntry extends Entry
         return $this->captionText;
     }
 
+    /** Show a download link under the QR. */
     public function downloadable(bool|Closure $condition = true): static
     {
         $this->canDownload = $condition;
@@ -126,6 +136,7 @@ class QrEntry extends Entry
         return is_scalar($state) ? (string) $state : null;
     }
 
+    /** @internal Returns an internal render spec; use the component setters. */
     public function getRenderSpec(): QrRenderSpec
     {
         $format = $this->evaluate($this->format);

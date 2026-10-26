@@ -15,6 +15,7 @@ trait HasOutcomeFeedback
 
     protected bool|Closure|null $hasFlash = null;
 
+    /** Beep on accepted / rejected scans of server-checked fields; null keeps the config default. */
     public function beep(bool|Closure|null $success = null, bool|Closure|null $error = null): static
     {
         $this->successBeep = $success ?? $this->successBeep;
@@ -23,6 +24,7 @@ trait HasOutcomeFeedback
         return $this;
     }
 
+    /** Flash the field green / red on accepted / rejected scans of server-checked fields. */
     public function flash(bool|Closure $condition = true): static
     {
         $this->hasFlash = $condition;

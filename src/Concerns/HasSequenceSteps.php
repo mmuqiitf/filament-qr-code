@@ -147,6 +147,7 @@ trait HasSequenceSteps
         return [$livewire::class, $livewire->getId()];
     }
 
+    /** Callback run with every step value once the whole sequence is complete. */
     public function onCompleted(?Closure $callback): static
     {
         $this->onCompletedCallback = $callback;
@@ -168,6 +169,7 @@ trait HasSequenceSteps
         return $this;
     }
 
+    /** What a failed validateAllUsing() check does: jump back to the failing step or restart. */
     public function onInvalidSequence(InvalidSequenceBehavior|Closure|null $behavior): static
     {
         $this->invalidSequenceBehavior = $behavior;
@@ -189,6 +191,7 @@ trait HasSequenceSteps
             : InvalidSequenceBehavior::JumpToStep;
     }
 
+    /** Clear the non-sticky steps after a successful submit. */
     public function resetAfterSubmit(bool|Closure|null $condition = true): static
     {
         $this->shouldResetAfterSubmit = $condition;
@@ -222,6 +225,7 @@ trait HasSequenceSteps
         return (bool) $this->evaluate($this->isContinuousSequence);
     }
 
+    /** Call the Livewire submit method once the sequence completes. */
     public function autoSubmit(bool|Closure|null $condition = true, string|Closure|null $method = null): static
     {
         $this->shouldAutoSubmit = $condition;
@@ -347,7 +351,11 @@ trait HasSequenceSteps
         return $key;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Run the server checks for one step scan; called by the sequence JS, usable from tests.
+     *
+     * @return array<string, mixed>
+     */
     #[ExposedLivewireMethod]
     public function handleStepScan(string $step, string $code, string $source): array
     {
@@ -652,7 +660,11 @@ trait HasSequenceSteps
         return $count >= ($this->getRepeatLimit($step, $values) ?? 1);
     }
 
-    /** @param  array<string, mixed>  $values */
+    /**
+     * Resolved repeat(n) count for a step.
+     *
+     * @param  array<string, mixed>  $values
+     */
     public function getRepeatLimit(ScanStep $step, array $values): ?int
     {
         $override = $this->getRepeatCountOverride($step->getKey());
@@ -675,6 +687,7 @@ trait HasSequenceSteps
         return is_numeric($times) ? max(1, (int) $times) : null;
     }
 
+    /** Resolved repeat-complete behaviour for a step. */
     public function getRepeatComplete(ScanStep $step): RepeatComplete
     {
         if ($step->getRepeatTimesUsing() === null) {
@@ -691,6 +704,7 @@ trait HasSequenceSteps
         return is_string($behavior) ? (RepeatComplete::tryFrom($behavior) ?? RepeatComplete::Advance) : RepeatComplete::Advance;
     }
 
+    /** Resolved finish code for a step. */
     public function getFinishCode(ScanStep $step): ?string
     {
         $code = $this->evaluate($step->getFinishCodeUsing())
@@ -1158,6 +1172,7 @@ trait HasSequenceSteps
         $this->getLivewire()->dispatch('qr-sequence-refresh', field: $this->getControlKey());
     }
 
+    /** Repeat count set at runtime with setRepeatCount(), if any. */
     public function getRepeatCountOverride(string $step): ?int
     {
         try {

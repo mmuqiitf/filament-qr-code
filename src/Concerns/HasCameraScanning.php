@@ -26,6 +26,7 @@ trait HasCameraScanning
      */
     protected array|Closure $supportedFormats = [];
 
+    /** Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. */
     public function fps(int|Closure $fps): static
     {
         $this->fps = $fps;
@@ -34,6 +35,7 @@ trait HasCameraScanning
         return $this;
     }
 
+    /** Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). */
     public function qrbox(int|Closure $qrbox): static
     {
         $this->qrbox = $qrbox;
@@ -41,6 +43,7 @@ trait HasCameraScanning
         return $this;
     }
 
+    /** Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). */
     public function preferRearCamera(bool|Closure $condition = true): static
     {
         $this->preferRearCamera = $condition;
@@ -69,6 +72,8 @@ trait HasCameraScanning
     }
 
     /**
+     * Symbologies the camera decodes (BarcodeFormat cases or strings); filtering speeds decoding.
+     *
      * @param  array<int, BarcodeFormat|string>|Closure  $formats
      */
     public function formats(array|Closure $formats): static

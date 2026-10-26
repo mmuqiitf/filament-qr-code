@@ -36,6 +36,7 @@ class DownloadQrAction extends Action
         });
     }
 
+    /** The value to encode for a record. */
     public function getQrData(?Model $record): ?string
     {
         if ($this->qrData !== null) {
@@ -55,6 +56,7 @@ class DownloadQrAction extends Action
         return null;
     }
 
+    /** The download file name for a record. */
     public function getQrFileName(?Model $record): ?string
     {
         if ($this->qrFileName !== null) {

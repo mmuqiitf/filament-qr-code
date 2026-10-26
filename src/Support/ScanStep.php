@@ -64,6 +64,7 @@ final class ScanStep
 
     private function __construct(private readonly string $key) {}
 
+    /** Create a sequence step bound to a field key. */
     public static function make(string $key): self
     {
         return new self($key);
@@ -90,6 +91,7 @@ final class ScanStep
         return self::make($key)->label($label);
     }
 
+    /** Step label shown in the progress list. */
     public function label(string|Closure|null $label): self
     {
         $this->label = $label;
@@ -97,7 +99,11 @@ final class ScanStep
         return $this;
     }
 
-    /** @param  array<int, mixed>|ValidationRule|Closure  $rules */
+    /**
+     * Laravel rules or a closure each scan for this step must pass.
+     *
+     * @param  array<int, mixed>|ValidationRule|Closure  $rules
+     */
     public function validateUsing(array|ValidationRule|Closure $rules): self
     {
         if ($rules instanceof Closure) {
@@ -111,7 +117,11 @@ final class ScanStep
         return $this;
     }
 
-    /** @param  class-string<Model>|Closure  $model */
+    /**
+     * Find a model by the scanned code; the scan is rejected when none matches.
+     *
+     * @param  class-string<Model>|Closure  $model
+     */
     public function lookup(string|Closure $model, string|Closure $column = 'code', ?Closure $modifyQueryUsing = null): self
     {
         $this->lookupModel = $model;
@@ -177,6 +187,7 @@ final class ScanStep
         return $this->evaluator instanceof Closure ? ($this->evaluator)($value, $this) : value($value);
     }
 
+    /** Allow the sequence to complete without this step. */
     public function optional(bool|Closure $condition = true): self
     {
         $this->isOptional = $condition;
@@ -209,6 +220,7 @@ final class ScanStep
         return $this;
     }
 
+    /** What a full repeat(n) step does next: advance or wait for a finish scan. */
     public function onRepeatComplete(RepeatComplete|Closure|null $behavior): self
     {
         $this->repeatComplete = $behavior;
@@ -224,6 +236,7 @@ final class ScanStep
         return $this;
     }
 
+    /** Accept the same code more than once in a repeat step. */
     public function allowDuplicates(bool|Closure $condition = true): self
     {
         $this->allowsDuplicates = $condition;
@@ -268,6 +281,7 @@ final class ScanStep
         return $this->finishCode;
     }
 
+    /** Whether this repeat step accepts duplicate codes. */
     public function allowsDuplicates(): bool
     {
         return (bool) $this->resolve($this->allowsDuplicates);
@@ -299,6 +313,7 @@ final class ScanStep
             || $this->stages !== [];
     }
 
+    /** @internal Called by QrScanSequence; returns an internal pipeline. */
     public function checkPipeline(?object $component = null): ScanCheckPipeline
     {
         /** @var class-string<Model>|null $model */
@@ -318,7 +333,11 @@ final class ScanStep
         );
     }
 
-    /** @return array{key: string, label: string} */
+    /**
+     * The step as a plain array for the browser.
+     *
+     * @return array{key: string, label: string}
+     */
     public function toField(): array
     {
         return ['key' => $this->key, 'label' => $this->getLabel()];

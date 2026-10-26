@@ -10,7 +10,11 @@ class ScanSequenceCompleted
 {
     use Dispatchable;
 
-    /** @param  array<string, mixed>  $values */
+    /**
+     * Dispatched when a sequence has every required step.
+     *
+     * @param  array<string, mixed>  $values
+     */
     public function __construct(
         public array $values,
         public ?string $statePath = null,

@@ -86,6 +86,7 @@ class QrScanner extends Field
         ];
     }
 
+    /** Show the image-upload fallback in the camera modal. */
     public function allowUpload(bool|Closure $condition = true): static
     {
         $this->allowUpload = $condition;
@@ -193,6 +194,7 @@ class QrScanner extends Field
         return (bool) $this->evaluate($this->allowUpload);
     }
 
+    /** Run the scanFormat() closure on a value (programmatic only; live scans use normalizeUsing()). */
     public function formatScannedValue(string $rawValue): mixed
     {
         if ($this->scanFormatter instanceof Closure) {
@@ -202,6 +204,7 @@ class QrScanner extends Field
         return $rawValue;
     }
 
+    /** Run the onScan() closure and fire QrCodeScanned (programmatic only). */
     public function triggerOnScan(string $scannedValue): void
     {
         event(new QrCodeScanned(

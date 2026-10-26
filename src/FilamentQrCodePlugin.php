@@ -9,11 +9,13 @@ use Filament\Panel;
 
 class FilamentQrCodePlugin implements Plugin
 {
+    /** Create the plugin for `$panel->plugin()`. */
     public static function make(): static
     {
         return app(static::class);
     }
 
+    /** The plugin instance registered on the current panel. */
     public static function get(): static
     {
         /** @var static $plugin */

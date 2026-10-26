@@ -55,7 +55,11 @@ trait InteractsWithScans
 
     protected bool|Closure|null $clearOnReject = null;
 
-    /** @param  array<int, mixed>|ValidationRule|Closure  $rules */
+    /**
+     * Laravel rules or a closure each live scan must pass on the server.
+     *
+     * @param  array<int, mixed>|ValidationRule|Closure  $rules
+     */
     public function validateUsing(array|ValidationRule|Closure $rules): static
     {
         $this->registerScanChecksRule();
@@ -71,7 +75,11 @@ trait InteractsWithScans
         return $this;
     }
 
-    /** @return array{passes: bool, code: string, source: ?string, message: ?string, record_key: mixed} */
+    /**
+     * Run the server checks for a scan; called by the field JS, usable from tests.
+     *
+     * @return array{passes: bool, code: string, source: ?string, message: ?string, record_key: mixed}
+     */
     #[ExposedLivewireMethod]
     public function handleScan(string $code, string $source): array
     {
@@ -146,6 +154,7 @@ trait InteractsWithScans
         return $this->isContinuous();
     }
 
+    /** Callback run on an accepted server-checked scan (injects $code, $record, $source, $result). */
     public function onScanned(?Closure $callback): static
     {
         $this->onScannedCallback = $callback;
@@ -170,6 +179,7 @@ trait InteractsWithScans
         ]);
     }
 
+    /** Callback run on a rejected server-checked scan (injects $code, $record, $source, $result). */
     public function onRejected(?Closure $callback): static
     {
         $this->onRejectedCallback = $callback;
@@ -177,6 +187,7 @@ trait InteractsWithScans
         return $this;
     }
 
+    /** Clear the field when a live scan is rejected (config `scan.clear_on_reject`). */
     public function clearOnReject(bool|Closure $condition = true): static
     {
         $this->clearOnReject = $condition;
@@ -304,7 +315,11 @@ trait InteractsWithScans
         );
     }
 
-    /** @param  class-string<Model>|Closure  $model */
+    /**
+     * Find a model by the scanned code; the scan is rejected when none matches.
+     *
+     * @param  class-string<Model>|Closure  $model
+     */
     public function lookup(string|Closure $model, string|Closure $column = 'code', ?Closure $modifyQueryUsing = null): static
     {
         $this->registerScanChecksRule();
@@ -350,6 +365,7 @@ trait InteractsWithScans
         $this->rule(fn (): ScanChecksRule => new ScanChecksRule($this));
     }
 
+    /** Ignore the same code scanned again within this many milliseconds. */
     public function cooldown(int|Closure $milliseconds): static
     {
         $this->cooldownMs = $milliseconds;

@@ -10,11 +10,13 @@ namespace Mmuqiitf\FilamentQrCode\Support;
  */
 class QrPayload
 {
+    /** URL payload. */
     public static function url(string $url): string
     {
         return trim($url);
     }
 
+    /** Escaped Wi-Fi join payload (`WIFI:`). */
     public static function wifi(string $ssid, ?string $password = null, string $encryption = 'WPA', bool $hidden = false): string
     {
         $type = strtoupper($encryption) === 'NOPASS' ? 'nopass' : strtoupper($encryption);
@@ -32,6 +34,7 @@ class QrPayload
         return $payload.';';
     }
 
+    /** mailto: payload with optional subject and body. */
     public static function mailto(string $to, ?string $subject = null, ?string $body = null): string
     {
         $query = [];
@@ -53,6 +56,7 @@ class QrPayload
         return $payload;
     }
 
+    /** SMSTO: payload with an optional message. */
     public static function sms(string $number, ?string $body = null): string
     {
         $payload = 'SMSTO:'.trim($number);
@@ -64,6 +68,7 @@ class QrPayload
         return $payload;
     }
 
+    /** geo: payload from latitude and longitude. */
     public static function geo(float $latitude, float $longitude, ?string $query = null): string
     {
         $payload = "geo:{$latitude},{$longitude}";
@@ -76,6 +81,8 @@ class QrPayload
     }
 
     /**
+     * Escaped vCard 3.0 payload from name, phone, email, … keys.
+     *
      * @param  array{firstName?: string, lastName?: string, organization?: string, title?: string, phone?: string, email?: string, url?: string}  $contact
      */
     public static function vcard(array $contact): string

@@ -28,6 +28,8 @@ class QrHardwareScannerListener extends Component
     protected bool|Closure|null $fallbackToAnyInput = null;
 
     /**
+     * Create a Station Listener routing gun scans into these fields.
+     *
      * @param  array<int, string>|Closure  $fields
      */
     public static function make(array|Closure $fields = []): static
@@ -39,6 +41,8 @@ class QrHardwareScannerListener extends Component
     }
 
     /**
+     * Field names (dot paths allowed) the listener routes scans into.
+     *
      * @param  array<int, string>|Closure  $fields
      */
     public function fields(array|Closure $fields): static
@@ -48,6 +52,7 @@ class QrHardwareScannerListener extends Component
         return $this;
     }
 
+    /** Focus the next registered field after each routed scan. */
     public function autoFocusNext(bool|Closure $condition = true): static
     {
         $this->autoFocusNext = $condition;
@@ -75,6 +80,7 @@ class QrHardwareScannerListener extends Component
         return $result;
     }
 
+    /** Fill the first empty form input when no registered field is free; false dispatches `qr-scan-unrouted` (config `hardware_scanner.fallback_to_any_input`). */
     public function fallbackToAnyInput(bool|Closure $condition = true): static
     {
         $this->fallbackToAnyInput = $condition;

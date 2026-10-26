@@ -53,6 +53,8 @@ class QrScanSequence extends Component implements HasValidationRules
     }
 
     /**
+     * Create a sequence over these field keys (or ScanStep objects).
+     *
      * @param  array<int, array{key: string, label: string}|string>|Closure  $fields
      */
     public static function make(array|Closure $fields = []): static
@@ -67,6 +69,8 @@ class QrScanSequence extends Component implements HasValidationRules
     }
 
     /**
+     * Field keys the sequence fills, in order.
+     *
      * @param  array<int, array{key: string, label: string}|string>|Closure  $fields
      */
     public function fields(array|Closure $fields): static
@@ -77,6 +81,8 @@ class QrScanSequence extends Component implements HasValidationRules
     }
 
     /**
+     * ScanStep definitions, in order (replaces fields()).
+     *
      * @param  array<int, ScanStep>|Closure  $steps
      */
     public function steps(array|Closure $steps): static
@@ -195,6 +201,7 @@ class QrScanSequence extends Component implements HasValidationRules
         return $this;
     }
 
+    /** Run the scanFormat() closure on a value (programmatic only; live scans use normalizeStepUsing()). */
     public function formatScannedValue(string $rawValue): mixed
     {
         if ($this->scanFormatter instanceof Closure) {
@@ -244,6 +251,7 @@ class QrScanSequence extends Component implements HasValidationRules
         return $this;
     }
 
+    /** Run the onStepScanned() closure for a step (programmatic only). */
     public function triggerOnStep(string $fieldKey, string $scannedValue): void
     {
         if ($this->onStepCallback instanceof Closure) {
@@ -352,6 +360,8 @@ class QrScanSequence extends Component implements HasValidationRules
     }
 
     /**
+     * Required step keys that still have no value.
+     *
      * @param  array<string, mixed>|null  $mergedState
      * @return array<int, string>
      */
@@ -374,6 +384,8 @@ class QrScanSequence extends Component implements HasValidationRules
     }
 
     /**
+     * Whether every required step has a value.
+     *
      * @param  array<string, mixed>|null  $mergedState
      */
     public function isSequenceComplete(?array $mergedState = null): bool

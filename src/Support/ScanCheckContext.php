@@ -9,7 +9,11 @@ use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 /** What a ScanCheckStage sees: the code after normalizing and the record the lookup found. */
 final readonly class ScanCheckContext
 {
-    /** @param  array<string, mixed>  $values  the sequence values so far (empty for a QrScanner) */
+    /**
+     * Built by the package; read its properties in a check stage.
+     *
+     * @param  array<string, mixed>  $values  the sequence values so far (empty for a QrScanner)
+     */
     public function __construct(
         public string $code,
         public ?ScanInput $source,

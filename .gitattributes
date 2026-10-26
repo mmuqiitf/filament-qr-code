@@ -24,3 +24,4 @@
 /resources/js/*.test.js      export-ignore
 /resources/js/decoder-entry.js export-ignore
 /resources/js/alpine-test-harness.js export-ignore
+/bin                         export-ignore

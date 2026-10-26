@@ -19,6 +19,7 @@ trait HasFeedback
 
     protected int|Closure|null $vibrateDurationMs = null;
 
+    /** Play the synthesized beep on a successful scan (config `feedback.sound`). */
     public function sound(bool|Closure $condition = true): static
     {
         $this->hasSound = $condition;
@@ -33,6 +34,8 @@ trait HasFeedback
     protected ?array $errorVibrationPattern = null;
 
     /**
+     * Vibrate on a successful scan; success / error patterns apply to server-checked fields.
+     *
      * @param  list<int>|null  $success
      * @param  list<int>|null  $error
      */
@@ -45,6 +48,7 @@ trait HasFeedback
         return $this;
     }
 
+    /** Beep pitch in hertz (config `feedback.beep_frequency`). */
     public function beepFrequency(int|Closure $hertz): static
     {
         $this->beepFrequencyHz = $hertz;
@@ -52,6 +56,7 @@ trait HasFeedback
         return $this;
     }
 
+    /** Beep length in milliseconds (config `feedback.beep_duration_ms`). */
     public function beepDuration(int|Closure $milliseconds): static
     {
         $this->beepDurationMs = $milliseconds;
@@ -59,6 +64,7 @@ trait HasFeedback
         return $this;
     }
 
+    /** Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). */
     public function vibrateDuration(int|Closure $milliseconds): static
     {
         $this->vibrateDurationMs = $milliseconds;

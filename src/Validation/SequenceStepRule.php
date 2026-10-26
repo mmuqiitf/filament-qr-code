@@ -11,6 +11,7 @@ use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
 final readonly class SequenceStepRule implements ValidationRule
 {
+    /** Submit-time rule that runs one sequence step's checks. */
     public function __construct(
         private QrScanSequence $component,
         private ScanStep $step,

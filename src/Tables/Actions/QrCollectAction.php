@@ -66,6 +66,7 @@ class QrCollectAction extends Action
         });
     }
 
+    /** Accept the same code more than once in the collected list. */
     public function allowDuplicates(bool|Closure $condition = true): static
     {
         $this->allowDuplicates = $condition;
@@ -73,6 +74,7 @@ class QrCollectAction extends Action
         return $this;
     }
 
+    /** Callback run for each collected code. */
     public function onScan(?Closure $callback): static
     {
         $this->onItemScanned = $callback;

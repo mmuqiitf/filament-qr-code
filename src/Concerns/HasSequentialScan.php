@@ -10,6 +10,7 @@ trait HasSequentialScan
 {
     protected string|Closure|null $nextField = null;
 
+    /** Move focus to this field after a successful scan. */
     public function nextField(string|Closure|null $fieldName): static
     {
         $this->nextField = $fieldName;

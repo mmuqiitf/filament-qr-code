@@ -64,7 +64,8 @@
         ],
         "analyse": "vendor/bin/phpstan analyse",
         "format": "vendor/bin/pint",
-        "test-style": "vendor/bin/pint --test"
+        "test-style": "vendor/bin/pint --test",
+        "docs": "@php bin/generate-api-docs.php"
     },
     "config": {
         "sort-packages": true,

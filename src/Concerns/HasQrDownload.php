@@ -32,6 +32,7 @@ trait HasQrDownload
 
     protected string|Closure|null $qrCaption = null;
 
+    /** Value to encode; a closure receives the record. */
     public function qrData(string|Closure|null $data): static
     {
         $this->qrData = $data;
@@ -39,6 +40,7 @@ trait HasQrDownload
         return $this;
     }
 
+    /** Download file name without extension. */
     public function qrFileName(string|Closure|null $name): static
     {
         $this->qrFileName = $name;
@@ -46,6 +48,7 @@ trait HasQrDownload
         return $this;
     }
 
+    /** Output format of the downloaded file (SVG or PNG). */
     public function qrFormat(QrFormat|string|Closure $format): static
     {
         $this->qrFormat = $format;
@@ -53,6 +56,7 @@ trait HasQrDownload
         return $this;
     }
 
+    /** Downloaded image size in pixels. */
     public function qrImageSize(int|Closure $size): static
     {
         $this->qrImageSize = $size;
@@ -60,6 +64,7 @@ trait HasQrDownload
         return $this;
     }
 
+    /** Quiet-zone margin in modules. */
     public function qrMargin(int|Closure $margin): static
     {
         $this->qrMargin = $margin;
@@ -67,6 +72,7 @@ trait HasQrDownload
         return $this;
     }
 
+    /** Foreground colour as hex. */
     public function qrColor(string|Closure $hexColor): static
     {
         $this->qrForegroundColor = $hexColor;
@@ -74,6 +80,7 @@ trait HasQrDownload
         return $this;
     }
 
+    /** Background colour as hex. */
     public function qrBackgroundColor(string|Closure $hexColor): static
     {
         $this->qrBackgroundColor = $hexColor;
@@ -81,6 +88,7 @@ trait HasQrDownload
         return $this;
     }
 
+    /** Error-correction level: L, M, Q or H. */
     public function qrErrorCorrection(string|Closure|null $level): static
     {
         $this->qrErrorCorrection = $level;
@@ -88,6 +96,7 @@ trait HasQrDownload
         return $this;
     }
 
+    /** Embed a logo image in the centre (forces PNG). */
     public function qrLogo(string|Closure|null $path, int|Closure $size = 50): static
     {
         $this->qrLogoPath = $path;
@@ -96,6 +105,7 @@ trait HasQrDownload
         return $this;
     }
 
+    /** Caption text under the QR (forces PNG). */
     public function qrCaption(string|Closure|null $text): static
     {
         $this->qrCaption = $text;
