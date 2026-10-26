@@ -1,0 +1,36 @@
+# Filament QR Code
+
+> `mmuqiitf/filament-qr-code` is a Filament v5 package (Laravel 11/12/13, PHP 8.2+) that scans QR codes and barcodes with the camera, image upload or a keyboard-wedge Hardware Scanner, and generates QR codes (SVG/PNG) for forms, tables, infolists and downloads.
+
+Scanned values write straight into the Livewire form state. Lookups and validation run on the server for each scan. Everything under `@internal` is outside semver. Every public class, method and config key is listed in the API map. Vocabulary: QR Scanner Field (`QrScanner`), Station Listener (`QrHardwareScannerListener`), Scan Sequence Container (`QrScanSequence`), Batch Collector Scanning (`QrCollector`, `QrCollectAction`), QR Generator.
+
+## Docs
+
+- [README](https://github.com/mmuqiitf/filament-qr-code/blob/main/README.md): install, getting started in five minutes, component picker, troubleshooting
+- [Getting started](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/getting-started.md): from `composer require` to a server-checked scan
+- [AI guide](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/ai.md): component picker, do/don't rules, common mistakes and full-import examples for coding agents
+- [API map](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/api.md): every public class, method, enum case and config key (generated)
+- [Scanning](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/scanning.md): QR Scanner Field, Station Listener, Scan Sequence Container, server checks, continuous mode, runtime control
+- [Batch collecting](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/collecting.md): `QrCollector` and `QrCollectAction`
+- [Generating](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/generating.md): display components, download actions, ZIP export, facade, payload builders
+- [Customizing](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/customizing.md): lookups, normalization, check stages, hooks, auditing, macros, styling, views
+- [Extension points](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/extending.md): every seam in one table
+- [Events](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/events.md): browser and Laravel events with their payloads
+- [Reference](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/reference.md): config keys, hardware routing, translations, the `@internal` policy
+- [FAQ](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/faq.md): iOS torch, secure context, offline use, guns, multiple panels
+
+## Recipes
+
+- [POS checkout](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/pos.md): POS checkout with continuous scanning
+- [Goods receiving](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/warehouse.md): goods receiving with a handheld scanner
+- [Work-order station](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/manufacturing.md): a work-order scanning station
+- [Label generator page](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/generator-page.md): a page that generates QR labels
+- [Custom inputs](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/custom-input.md): custom inputs and reusable scan fields
+- [Styling](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/styling.md): styling a scanner or sequence
+- [ZXing decoder](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/zxing-decoder.md): use ZXing as the camera decoder
+
+## Optional
+
+- [llms-full.txt](https://github.com/mmuqiitf/filament-qr-code/blob/main/llms-full.txt): every doc above in one file
+- [Upgrade guide](https://github.com/mmuqiitf/filament-qr-code/blob/main/UPGRADE.md): breaking changes between versions
+- [Changelog](https://github.com/mmuqiitf/filament-qr-code/blob/main/CHANGELOG.md)
