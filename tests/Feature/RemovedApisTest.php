@@ -32,7 +32,6 @@ function shippedFiles(): array
     $root = dirname(__DIR__, 2);
     $finder = Finder::create()->files()
         ->in(["{$root}/src", "{$root}/config", "{$root}/resources/js", "{$root}/resources/views", "{$root}/resources/lang", "{$root}/docs"])
-        ->exclude('superpowers')
         ->notName('*.test.js');
 
     return [...array_map(fn ($file): string => $file->getRealPath(), iterator_to_array($finder, false)), "{$root}/README.md"];

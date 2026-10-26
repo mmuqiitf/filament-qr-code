@@ -24,7 +24,7 @@ function docLinkFiles(): array
     $files = [$root.'/README.md', $root.'/UPGRADE.md', $root.'/CHANGELOG.md'];
 
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root.'/docs')) as $file) {
-        if ($file->getExtension() === 'md' && ! str_contains($file->getPathname(), '/superpowers/')) {
+        if ($file->getExtension() === 'md') {
             $files[] = $file->getPathname();
         }
     }

@@ -11,7 +11,7 @@ function qrSnippetFiles(): array
     $root = dirname(__DIR__, 2);
     $files = [$root.'/README.md', $root.'/UPGRADE.md'];
 
-    foreach (Finder::create()->files()->in($root.'/docs')->name('*.md')->exclude('superpowers') as $file) {
+    foreach (Finder::create()->files()->in($root.'/docs')->name('*.md') as $file) {
         $files[] = $file->getRealPath();
     }
 
