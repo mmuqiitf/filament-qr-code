@@ -155,22 +155,22 @@ Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, 
 
 | Method | Purpose |
 | --- | --- |
-| `allowDuplicates(Closure\|bool $condition = true): self` | Accept the same code more than once in a repeat step. |
-| `finishWith(Closure\|string\|null $code): self` | A scan that finishes this repeat step instead of being stored. |
-| `static fromField(string\|int $index, mixed $field): ?self` | Adapter for the legacy fields() shapes: 'key', 'key' => 'Label' and ['key' => ..., 'label' => ...]. |
-| `label(Closure\|string\|null $label): self` | Step label shown in the progress list. |
-| `lookup(Closure\|string $model, Closure\|string $column = 'code', ?Closure $modifyQueryUsing = null): self` | Find a model by the scanned code; the scan is rejected when none matches. |
-| `lookupUsing(?Closure $resolver, bool $fallback = false): self` | Find the step's record yourself. Replaces lookup() unless $fallback, when it runs only after the model lookup found nothing. |
-| `static make(string $key): self` | Create a sequence step bound to a field key. |
-| `normalizeUsing(?Closure $normalizer): self` | Clean this step's codes before its checks (after the sequence's own normalizers). |
-| `onRepeatComplete(RepeatComplete\|Closure\|null $behavior): self` | What a full repeat(n) step does next: advance or wait for a finish scan. |
-| `optional(Closure\|bool $condition = true): self` | Allow the sequence to complete without this step. |
-| `pipe(ScanCheckStage\|string ...$stages): self` | Custom checks that run after the rules, lookup and closures. |
-| `repeat(Closure\|int\|null $times = null): self` | Collect several codes into a list. With a count (or a closure receiving $values) the step fills up; without one it stays open until finished. |
-| `sticky(Closure\|bool $condition = true): self` | Keep the value across resetAfterSubmit(), continuous() and Restart rounds. |
+| `allowDuplicates(Closure\|bool $condition = true): ScanStep` | Accept the same code more than once in a repeat step. |
+| `finishWith(Closure\|string\|null $code): ScanStep` | A scan that finishes this repeat step instead of being stored. |
+| `static fromField(string\|int $index, mixed $field): ?ScanStep` | Adapter for the legacy fields() shapes: 'key', 'key' => 'Label' and ['key' => ..., 'label' => ...]. |
+| `label(Closure\|string\|null $label): ScanStep` | Step label shown in the progress list. |
+| `lookup(Closure\|string $model, Closure\|string $column = 'code', ?Closure $modifyQueryUsing = null): ScanStep` | Find a model by the scanned code; the scan is rejected when none matches. |
+| `lookupUsing(?Closure $resolver, bool $fallback = false): ScanStep` | Find the step's record yourself. Replaces lookup() unless $fallback, when it runs only after the model lookup found nothing. |
+| `static make(string $key): ScanStep` | Create a sequence step bound to a field key. |
+| `normalizeUsing(?Closure $normalizer): ScanStep` | Clean this step's codes before its checks (after the sequence's own normalizers). |
+| `onRepeatComplete(RepeatComplete\|Closure\|null $behavior): ScanStep` | What a full repeat(n) step does next: advance or wait for a finish scan. |
+| `optional(Closure\|bool $condition = true): ScanStep` | Allow the sequence to complete without this step. |
+| `pipe(ScanCheckStage\|string ...$stages): ScanStep` | Custom checks that run after the rules, lookup and closures. |
+| `repeat(Closure\|int\|null $times = null): ScanStep` | Collect several codes into a list. With a count (or a closure receiving $values) the step fills up; without one it stays open until finished. |
+| `sticky(Closure\|bool $condition = true): ScanStep` | Keep the value across resetAfterSubmit(), continuous() and Restart rounds. |
 | `toField(): array` | The step as a plain array for the browser. |
-| `validateUsing(ValidationRule\|Closure\|array $rules): self` | Laravel rules or a closure each scan for this step must pass. |
-| `when(?Closure $condition): self` | Make the step conditional. The sequence evaluates the closure with $values and $step; while it returns false the step is skipped, not required, and its value is dropped. |
+| `validateUsing(ValidationRule\|Closure\|array $rules): ScanStep` | Laravel rules or a closure each scan for this step must pass. |
+| `when(?Closure $condition): ScanStep` | Make the step conditional. The sequence evaluates the closure with $values and $step; while it returns false the step is skipped, not required, and its value is dropped. |
 
 Getters (read the resolved option; used by the views): `allowsDuplicates()`, `getFinishCodeUsing()`, `getKey()`, `getLabel()`, `getNormalizeUsing()`, `getRepeatCompleteUsing()`, `getRepeatTimesUsing()`, `getWhenUsing()`, `hasChecks()`, `isOptional()`, `isRepeating()`, `isSticky()`
 
@@ -343,27 +343,27 @@ Getters (read the resolved option; used by the views): `getCaption()`, `getDownl
 | Method | Purpose |
 | --- | --- |
 | `__construct()` | Create a renderer seeded with the `generator` config defaults. |
-| `backgroundColor(string $hexColor): self` | Background colour as hex. |
+| `backgroundColor(string $hexColor): QrCodeService` | Background colour as hex. |
 | `static cacheStore(?string $store): void` | Laravel cache store for the persistent render cache; null uses the default store. |
 | `static cacheTtl(int\|false\|null $seconds): void` | Override generator.cache_ttl at runtime: seconds to keep persistent (L2) entries, false to turn the L2 cache off, null to clear the override and use the config again. |
-| `color(string $hexColor): self` | Foreground colour as hex. |
+| `color(string $hexColor): QrCodeService` | Foreground colour as hex. |
 | `download(?string $fileName = null): StreamedResponse` | Render the QR as a download response. |
 | `static effectiveCacheTtl(): int\|false\|null` | The persistent (L2) cache TTL in effect: the cacheTtl() override, else generator.cache_ttl. An int is seconds, null means no expiry, and false means the L2 cache is off (the in-process cache still works). |
-| `errorCorrection(ErrorCorrectionLevel\|string $level): self` | Error-correction level: L, M, Q or H. |
-| `fileName(string $fileName): self` | File name used by download() and stream(). |
+| `errorCorrection(ErrorCorrectionLevel\|string $level): QrCodeService` | Error-correction level: L, M, Q or H. |
+| `fileName(string $fileName): QrCodeService` | File name used by download() and stream(). |
 | `static flushPersistentCache(): void` | Clear the persistent (Laravel cache) render cache. |
 | `static flushRenderCache(): void` | Clear the in-process render cache. |
-| `font(string $fontPath): self` | TrueType font file for withText() overlays. |
-| `format(QrFormat\|string $format): self` | Output SVG or PNG. |
-| `generate(string $data): self` | Render the QR and return the raw SVG or PNG bytes. |
-| `logo(string $path, int $size = 50): self` | Embed a logo image in the centre (forces PNG). |
-| `static make(): self` | Start a fresh render (same as the `FilamentQrCode` facade). |
-| `margin(int $margin): self` | Quiet-zone margin in modules. |
+| `font(string $fontPath): QrCodeService` | TrueType font file for withText() overlays. |
+| `format(QrFormat\|string $format): QrCodeService` | Output SVG or PNG. |
+| `generate(string $data): QrCodeService` | Render the QR and return the raw SVG or PNG bytes. |
+| `logo(string $path, int $size = 50): QrCodeService` | Embed a logo image in the centre (forces PNG). |
+| `static make(): QrCodeService` | Start a fresh render (same as the `FilamentQrCode` facade). |
+| `margin(int $margin): QrCodeService` | Quiet-zone margin in modules. |
 | `static persistentCache(bool $enabled = true): void` | Toggle the persistent (Laravel Cache) L2 layer. The in-process L1 stays active regardless so repeated renders in one request encode once. |
-| `size(int $size): self` | Image size in pixels. |
+| `size(int $size): QrCodeService` | Image size in pixels. |
 | `stream(?string $fileName = null): StreamedResponse` | Render the QR as an inline image response. |
 | `toDataUri(): string` | Render the QR as a `data:` URI for `<img src>`. |
-| `withText(string $text, int $fontSize = 16, string $fontColor = '#000000', ?string $fontPath = null): self` | Text overlay under the QR (forces PNG; falls back to GD bitmap fonts). |
+| `withText(string $text, int $fontSize = 16, string $fontColor = '#000000', ?string $fontPath = null): QrCodeService` | Text overlay under the QR (forces PNG; falls back to GD bitmap fonts). |
 
 Getters (read the resolved option; used by the views): `getRaw()`
 
@@ -522,7 +522,7 @@ Cases: `Camera` (`camera`), `Hardware` (`hardware`), `Upload` (`upload`), `Manua
 
 | Method | Purpose |
 | --- | --- |
-| `static fromClient(string $value): self` | Map a browser source string to a case; unknown values become Camera. |
+| `static fromClient(string $value): ScanInput` | Map a browser source string to a case; unknown values become Camera. |
 
 ### `ScanMode`
 

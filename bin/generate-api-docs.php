@@ -153,7 +153,7 @@ function isInternal(string|false $docComment): bool
     return $docComment !== false && str_contains($docComment, '@internal');
 }
 
-function typeString(?ReflectionType $type): string
+function typeString(?ReflectionType $type, ?string $self = null): string
 {
     if ($type === null) {
         return '';
@@ -163,7 +163,11 @@ function typeString(?ReflectionType $type): string
 
     return (string) preg_replace_callback(
         '/[\\\\\w]+/',
-        fn (array $match): string => str_contains($match[0], '\\') ? ltrim(substr($match[0], (int) strrpos($match[0], '\\')), '\\') : $match[0],
+        fn (array $match): string => match (true) {
+            $match[0] === 'self' && $self !== null => $self,
+            str_contains($match[0], '\\') => ltrim(substr($match[0], (int) strrpos($match[0], '\\')), '\\'),
+            default => $match[0],
+        },
         $name,
     );
 }
@@ -205,7 +209,7 @@ function parameterString(ReflectionParameter $parameter): string
 function methodSignature(ReflectionMethod $method): string
 {
     $parameters = implode(', ', array_map(parameterString(...), $method->getParameters()));
-    $return = typeString($method->getReturnType());
+    $return = typeString($method->getReturnType(), $method->getDeclaringClass()->getShortName());
 
     return ($method->isStatic() ? 'static ' : '').$method->getName().'('.$parameters.')'.($return === '' ? '' : ': '.$return);
 }
