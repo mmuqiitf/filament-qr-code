@@ -9,7 +9,7 @@ Every seam the package offers, in one place. Each row links to the page that sho
 | Record lookup | `->lookup(Model::class, 'column')`, `->lookupUsing(fn (string $code, ...) => mixed, fallback: false)` on `QrScanner` and `ScanStep` | [customizing.md](customizing.md#find-records-yourself-lookupusing) |
 | Code normalization | `->normalizeWith(trim: true, uppercase: false, stripPrefix: null)`, `->normalizeUsing(fn ($rawValue) => string)`, `QrScanSequence::normalizeStepUsing()` | [customizing.md](customizing.md#clean-codes-normalizewith-and-normalizeusing) |
 | Check stages | `->pipe(ScanCheckStage\|class-string ...$stages)`; `ScanCheckStage::check(ScanCheckContext $context): bool\|string\|null` | [customizing.md](customizing.md#custom-check-stages-pipe) |
-| Reject rules | `QrScanner::rejectWhen(fn ($state) => bool, string\|Closure $message)` | [reference.md](reference.md#normalize-live-scans) |
+| Reject rules | `QrScanner::rejectWhen(fn ($state) => bool, string\|Closure $message)` | [reference.md](customizing.md#normalize-live-scans) |
 | Whole-set check | `QrScanSequence::validateAllUsing(array\|Closure $rules)`, `->onInvalidSequence(InvalidSequenceBehavior)` | [recipes/manufacturing.md](recipes/manufacturing.md#the-whole-bom) |
 | Step closures | `$get`, `$values`, `$step` injected into every step closure | [customizing.md](customizing.md#step-closures-get-get-values-and-step) |
 | Step hooks | `->onStepAccepted(fn ($step, $result, $code, $record, $source, $values) => ...)`, `->onStepRejected(...)`, `->onCompleted(fn (array $values) => ...)` | [customizing.md](customizing.md#step-hooks-onstepaccepted--onsteprejected) |
@@ -41,3 +41,9 @@ Every seam the package offers, in one place. Each row links to the page that sho
 | Wedge router | `FilamentQrCode.router.register({ id, element, kind, scope, detection, accept, deliver, hold, ownsFocus })` returns `unregister()` | [scanning.md](scanning.md#your-own-inputs-in-the-hardware-router), [recipes/custom-input.md](recipes/custom-input.md) |
 | Burst detection | `FilamentQrCode.createHardwareScannerHandler({ burstThresholdMs, minFastKeys, terminators, ... })`, `sanitizeScannedValue()` | [reference.md](reference.md#hardware_scanner) |
 | Feedback | `FilamentQrCode.qrFeedback` (beep, vibrate, flash) | [scanning.md](scanning.md#feedback) |
+
+## Related
+
+- **Runtime control**: Change options at runtime, feed codes, pause, resume and reset scanners and sequences from page code, drive a sequence from PHP (`goToStep()`, `resetSequence()`, `setRepeatCount()`), make steps conditional with `ScanStep::when()`, and register your own inputs with `window.FilamentQrCode.router`. See [Runtime control](scanning.md#runtime-control).
+- **Common payload builders**: `QrPayload::wifi()`, `::vcard()`, `::mailto()`, `::sms()`, `::geo()` build correctly escaped payloads — see [Common payloads](generating.md#common-payloads-without-hand-escaping).
+- **Validate on submit**: `QrScanner::scanRules([...])` adds submit-time rules for the field; `QrCollector::distinctItems()` rejects duplicates server-side to match `->allowDuplicates(false)` in the browser.

@@ -7,6 +7,8 @@ Worked examples: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/war
 ## Find records yourself: `lookupUsing()`
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 QrScanner::make('sku')
     ->lookupUsing(fn (string $code) => Http::get("https://erp.test/items/{$code}")->json() ?: null);
 ```
@@ -25,12 +27,16 @@ To run the resolver only when the model lookup finds nothing, pass `fallback: tr
 Sequence steps work the same way. The resolver gets `$code`, `$values` (the other steps' values) and `$step`:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+
 ScanStep::make('serial')->lookupUsing(fn (string $code, array $values) => Serial::forPo($values['po'])->firstWhere('number', $code))
 ```
 
 ## Clean codes: `normalizeWith()` and `normalizeUsing()`
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 QrScanner::make('sku')
     ->normalizeWith(uppercase: true, stripPrefix: [']C1', 'SKU:'])   // trim is on by default
     ->normalizeUsing(fn (string $code) => str_replace(' ', '-', $code));
@@ -44,7 +50,9 @@ QrScanner::make('sku')
 
 ```php
 use Mmuqiitf\FilamentQrCode\Contracts\ScanCheckStage;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Support\ScanCheckContext;
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
 final class RejectOutOfStock implements ScanCheckStage
 {
@@ -65,15 +73,64 @@ Stages run after the built-in rules, the lookup and the `validateUsing()` closur
 There is no config list of global stages. Use Filament's `configureUsing()` instead:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 // AppServiceProvider::boot()
 QrScanner::configureUsing(fn (QrScanner $scanner) => $scanner->pipe(RejectOutOfStock::class));
 ```
+
+## Normalize live scans
+
+`scanFormat()` / `onScan()` / `onStepScanned()` never run on live camera or hardware scans — they are programmatic-only. Normalize live values instead:
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
+QrScanner::make('sku')
+    ->normalizeUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
+
+QrScanSequence::make([...])
+    ->normalizeStepUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
+```
+
+Filament's `afterStateUpdated()` works too. Reject bad live scans with `->rejectWhen(fn ($state) => ..., 'message')`, which clears the value and dispatches `qr-scan-rejected`.
+
+## Drive scans programmatically
+
+Pair the programmatic-only hooks with their triggers in custom flows and tests:
+
+```php
+$scanner->formatScannedValue($raw); // runs scanFormat()
+$scanner->triggerOnScan($value);    // runs onScan()
+$sequence->formatScannedValue($raw);
+$sequence->triggerOnStep($fieldKey, $value); // runs onStepScanned()
+```
+
+Every `handleScan()` / `triggerOnScan()` call also fires a `QrCodeScanned` event.
+
+## Audit scans
+
+Live scans stay client-side until they reach the server. Flip `audit.enabled` on to log server-observed scans through your log stack (`audit.channel`, default stack), or listen yourself:
+
+```php
+use Illuminate\Support\Facades\Event;
+use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
+
+Event::listen(QrCodeScanned::class, function (QrCodeScanned $event): void {
+    logger()->info("Scanned {$event->code} via {$event->source}");
+});
+```
+
+The event carries `code`, `source`, `field`, and `context`.
 
 ## Step closures get `$get`, `$values` and `$step`
 
 `label()`, `optional()`, `sticky()`, `allowDuplicates()` and lookup model/column closures on a `ScanStep` are evaluated by the sequence. That gives them Filament's usual injections (`$get`, `$set`, `$livewire`, `$record`) plus `$step` and, if they ask for it, `$values`:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+
 ScanStep::make('lot')->optional(fn (array $values) => ! Product::find($values['sku'] ?? null)?->tracksLots)
 ScanStep::make('box')->label(fn (Get $get) => $get('mode') === 'inbound' ? 'Inbound box' : 'Box')
 ```
@@ -83,6 +140,9 @@ While `$values` are being read, a closure that asks for them again gets `[]`, so
 ## Step hooks: `onStepAccepted()` / `onStepRejected()`
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+use Mmuqiitf\FilamentQrCode\Support\ScanResult;
+
 QrScanSequence::make([...])
     ->onStepAccepted(fn (string $step, ScanResult $result, array $values) => Log::info("{$step}: {$result->code}"))
     ->onStepRejected(fn (string $step, ScanResult $result) => Notification::make()->danger()->title($result->message)->send());
@@ -99,6 +159,9 @@ Hooks are for side effects only. Their return value is ignored, and they can't c
 `QrScanner`, `QrScanSequence`, `QrCollector` and `ScanStep` are macroable:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+
 QrScanner::macro('sku', fn () => $this->lookup(Product::class, 'sku')->normalizeWith(uppercase: true));
 ScanStep::macro('serial', fn () => $this->repeat()->allowDuplicates(false));
 ```
@@ -112,6 +175,10 @@ php artisan vendor:publish --tag=filament-qr-code-stubs  # customise the stubs
 ```
 
 This creates `app/Filament/Forms/Components/{Name}.php` with a `setUp()` stub. It refuses to overwrite an existing file unless you pass `--force`. Published stubs in `stubs/filament-qr-code/` take precedence over the package's.
+
+## Print sheets
+
+Wrap QR images in `.filament-qr-label-sheet` / `.filament-qr-label` for a three-per-row shelf-label print sheet (the camera UI hides itself in print). Generator look (`size()`, `margin()`, `color()`, `backgroundColor()`, `errorCorrection()`, `caption()`, `withText()`, `logo()`) is in [generating.md](generating.md#qr-generator-components); `withText()` / `logo()` force PNG output.
 
 ## Styling
 

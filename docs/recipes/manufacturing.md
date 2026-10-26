@@ -129,6 +129,8 @@ final class ComponentBelongsToBom implements ScanCheckStage
 Stages are resolved from the container, so constructor injection works. To add one to every sequence step or scanner in the app, use `configureUsing()` in a service provider (there is no config list):
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 QrScanner::configureUsing(fn (QrScanner $scanner) => $scanner->pipe(RejectBlockedCodes::class));
 ```
 
@@ -161,6 +163,8 @@ public function missingComponents(array $values): ?string
 `onStepAccepted()` / `onStepRejected()` receive `$step`, `$result`, `$code`, `$record`, `$source` and `$values`, and can't change the outcome:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Support\ScanResult;
+
 public function logActivity(string $step, ScanResult $result): void
 {
     $text = match (true) {

@@ -4,11 +4,12 @@
 
 Continuous camera multi-scan for inventory and repeater flows. For cashier/POS gun flows, see the [POS tutorial](scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
 
-### 5. Batch Collector Scanning (Repeaters & Tables)
+## Batch Collector Scanning (`QrCollector`, `QrCollectAction`)
 
-#### In Form Repeaters:
+### In Form Repeaters
 
 ```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 
 QrCollector::make('scanned_items')
@@ -18,9 +19,10 @@ QrCollector::make('scanned_items')
     ->preferRearCamera();
 ```
 
-#### As a Table / Repeater Action:
+### As a Table / Repeater Action
 
 ```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 use Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction;
 
 $table->headerActions([
@@ -33,6 +35,6 @@ $table->headerActions([
 
 Each scan notifies the server through exactly one channel: `$wire.handleCollectorScan($code)` when the host Livewire component defines it, otherwise a `qr-collector-item-added` window event (with `{ code }`) that the host forwards — e.g. `x-on:qr-collector-item-added.window` calling your Livewire method, which can then invoke `$action->handleScan($code)` to run the `onScan` callback. The component picks deterministically, so a scan is never handled twice.
 
-Every `handleScan()` call also fires a `QrCodeScanned` event — see [Audit scans](reference.md#audit-scans).
+Every `handleScan()` call also fires a `QrCodeScanned` event — see [Audit scans](customizing.md#audit-scans).
 
 Custom terminators and minimum lengths are configurable via `->hardwareScanner(terminators: [...], minBarcodeLength: 3)` and feedback pitch/duration via `->beepFrequency(660)`, `->beepDuration(120)`, `->vibrateDuration(200)`. Server-side, `->distinctItems()` rejects duplicate codes on submit to match `->allowDuplicates(false)` in the browser.

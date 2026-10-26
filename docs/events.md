@@ -75,4 +75,4 @@ All live in `Mmuqiitf\FilamentQrCode\Events`. Listen with `Event::listen()` or a
 | `ScanRejected` | same as `ScanAccepted` | a server check failed |
 | `ScanSequenceCompleted` | `array $values`, `?string $statePath`, `?string $livewireClass`, `?string $livewireId` | a sequence completed on the server and the whole-set check passed |
 
-With `audit.enabled`, the package's own `Listeners\LogQrCodeScanListener` logs every `QrCodeScanned` (see [Audit scans](reference.md#audit-scans)).
+With `audit.enabled`, the package's own `Listeners\LogQrCodeScanListener` logs every `QrCodeScanned` (see [Audit scans](customizing.md#audit-scans)).

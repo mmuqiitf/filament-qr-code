@@ -4,7 +4,7 @@
 
 Recipes: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/warehouse.md) · [Work-order station](recipes/manufacturing.md) · [Label generator page](recipes/generator-page.md) · [Custom inputs](recipes/custom-input.md) · [Styling](recipes/styling.md). Upgrading from an earlier release: [UPGRADE.md](../UPGRADE.md).
 
-Configuration, browser events, translations, customizing, and extending.
+Configuration, browser events and translations. How-to material lives in [customizing.md](customizing.md) and [extending.md](extending.md); every public method is in the [API map](api.md).
 
 ## Public API and `@internal`
 
@@ -21,6 +21,9 @@ php artisan vendor:publish --tag="filament-qr-code-config"
 Per-component options override these defaults:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 QrScanner::make('sku')
     ->fps(25)
     ->qrbox(250) // responsive max; the decode box scales to the viewfinder
@@ -71,6 +74,8 @@ These values are the defaults behind every scan surface (`QrScanner`, `QrScanSeq
 The Station Listener adds its own routing switch:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
+
 QrHardwareScannerListener::make(['sku'])
     ->fallbackToAnyInput(false); // no first-empty-input fallback; dispatch qr-scan-unrouted instead
 ```
@@ -126,6 +131,13 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 
 `size` (300), `margin` (2), `format` (`svg`), `foreground_color`, `background_color`, `error_correction` (`M`), `cache_ttl` (86400; `null` = forever, `false` = L2 off), `cache_store` (`null` = default store).
 
+### `audit`
+
+| Key       | Default | Meaning |
+| --------- | ------- | ------- |
+| `enabled` | `false` | log every server-observed scan (`QrCodeScanned`) — see [Audit scans](customizing.md#audit-scans) |
+| `channel` | `null`  | log channel for the audit lines; `null` uses the default stack |
+
 ---
 
 ## Events
@@ -152,70 +164,10 @@ The collector, the collect-action modal and the scan sequence each have a visual
 
 ---
 
-## Customizing
-
-- **Defaults**: publish `config/qr-code.php` (`php artisan vendor:publish --tag="filament-qr-code-config"`) and tune `hardware_scanner`, `feedback`, `camera`, `generator`, `audit`. Every per-component method (`->fps()`, `->beepFrequency()`, `->hardwareScanner(...)`, …) overrides its config default — see [Configuration](#configuration).
-- **Language**: UI strings live under `filament-qr-code::ui`. Publish with `--tag="filament-qr-code-translations"` and translate per locale — see [Translations](#translations).
-- **Look and markup**: `extraAttributes()`, `fi-qr-*` classes, CSS variables, render hooks and per-part views. See [customizing.md](customizing.md#styling).
-- **Print**: wrap QR images in `.filament-qr-label-sheet` / `.filament-qr-label` for a three-per-row shelf-label print sheet (camera UI auto-hides in print).
-- **Generator look**: `size()`, `margin()`, `color()`, `backgroundColor()`, `errorCorrection()`, `caption()`, `withText()`, `logo()` — see [§6](generating.md#6-qr-code-generator-components). `withText()` / `logo()` force PNG output.
-
 ---
 
-## Extending
+## Customizing and extending
 
-Every seam is listed in [Extension points](extending.md). Custom lookups, code normalization presets, check stages (`pipe()`), step hooks, macros, `make:qr-scan-field`, render hooks, CSS variables and per-part view overrides are covered in [Extending and customizing](customizing.md).
-
-### Normalize live scans
-
-`scanFormat()` / `onScan()` / `onStepScanned()` never run on live camera or hardware scans — they are programmatic-only. Normalize live values instead:
-
-```php
-QrScanner::make('sku')
-    ->normalizeUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
-
-QrScanSequence::make([...])
-    ->normalizeStepUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
-```
-
-Filament's `afterStateUpdated()` works too. Reject bad live scans with `->rejectWhen(fn ($state) => ..., 'message')`, which clears the value and dispatches `qr-scan-rejected`.
-
-### Drive scans programmatically
-
-Pair the programmatic-only hooks with their triggers in custom flows and tests:
-
-```php
-$scanner->formatScannedValue($raw); // runs scanFormat()
-$scanner->triggerOnScan($value);    // runs onScan()
-$sequence->formatScannedValue($raw);
-$sequence->triggerOnStep($fieldKey, $value); // runs onStepScanned()
-```
-
-Every `handleScan()` / `triggerOnScan()` call also fires a `QrCodeScanned` event.
-
-### Audit scans
-
-Live scans stay client-side until they reach the server. Flip `audit.enabled` on to log server-observed scans through your log stack (`audit.channel`, default stack), or listen yourself:
-
-```php
-use Illuminate\Support\Facades\Event;
-use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
-
-Event::listen(QrCodeScanned::class, function (QrCodeScanned $event): void {
-    logger()->info("Scanned {$event->code} via {$event->source}");
-});
-```
-
-The event carries `code`, `source`, `field`, and `context`.
-
-### Runtime control
-
-Change options at runtime, feed codes, pause, resume and reset scanners and sequences from page code, drive a sequence from PHP (`goToStep()`, `resetSequence()`, `setRepeatCount()`), make steps conditional with `ScanStep::when()`, and register your own inputs with `window.FilamentQrCode.router`. See [Runtime control](scanning.md#runtime-control).
-
-### Common payload builders
-
-`QrPayload::wifi()`, `::vcard()`, `::mailto()`, `::sms()`, `::geo()` build correctly escaped payloads — see [Common payloads](generating.md#common-payloads-without-hand-escaping).
-
-### Validate on submit
-
-`QrScanner::scanRules([...])` adds submit-time rules for the field; `QrCollector::distinctItems()` rejects duplicates server-side to match `->allowDuplicates(false)` in the browser.
+- Config defaults, translations, styling, print sheets and generator look: [customizing.md](customizing.md).
+- Live-scan normalization, programmatic triggers and scan auditing: [Normalize live scans](customizing.md#normalize-live-scans), [Drive scans programmatically](customizing.md#drive-scans-programmatically), [Audit scans](customizing.md#audit-scans).
+- Every extension seam in one table: [extending.md](extending.md).

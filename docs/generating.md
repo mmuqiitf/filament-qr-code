@@ -4,9 +4,9 @@
 
 Render QR codes in forms, tables, and infolists, offer downloads and bulk ZIP exports, or generate standalone via the facade.
 
-### 6. QR Code Generator Components
+## QR Generator components
 
-#### In Form Schemas:
+### In Form Schemas
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCodeDisplay;
@@ -19,7 +19,7 @@ QrCodeDisplay::make('qr')
     ->downloadable();
 ```
 
-#### In Table Columns:
+### In Table Columns
 
 ```php
 use Mmuqiitf\FilamentQrCode\Tables\Columns\QrColumn;
@@ -33,7 +33,7 @@ QrColumn::make('sku')
 
 Thumbnails and modal previews share a capped in-process render cache (clear it with `QrColumn::flushDataUriCache()`, for example between tests or in long-running workers) plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s: an int is seconds, `null` keeps entries forever, `false` turns the L2 off while the in-process cache keeps working; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filamentQrCode.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
 
-#### In Infolists:
+### In Infolists
 
 ```php
 use Mmuqiitf\FilamentQrCode\Infolists\Components\QrEntry;
@@ -43,9 +43,10 @@ QrEntry::make('verification_code')
     ->caption('Official Verification QR');
 ```
 
-#### As a Download Action:
+### As a Download Action
 
 ```php
+use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 use Mmuqiitf\FilamentQrCode\Tables\Actions\DownloadQrAction;
 
 $table->actions([
@@ -60,9 +61,10 @@ $table->actions([
 
 Both download actions share one render spec and default to black on white. Opt into the full surface to match a styled display — `->qrColor()`, `->qrBackgroundColor()`, `->qrErrorCorrection()`, `->qrLogo($path)`, `->qrCaption()` — and bulk filenames follow forced-PNG output (a logo or caption rasterizes) in their extension.
 
-#### As a Bulk ZIP Export:
+### As a Bulk ZIP Export
 
 ```php
+use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 use Mmuqiitf\FilamentQrCode\Tables\Actions\DownloadQrBulkAction;
 
 $table->bulkActions([
@@ -78,7 +80,7 @@ Rows without data are skipped; the archive downloads as one ZIP (needs the PHP `
 
 To test the export or reuse the renders elsewhere, `recordsToFiles(Collection $records): array` returns the same files without zipping: file name with extension => raw image bytes.
 
-#### Programmatic Standalone Generation:
+### Programmatic Standalone Generation
 
 ```php
 use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
@@ -111,7 +113,7 @@ Rules that bite:
 - Other builder methods: `font($path)` sets the TTF used by `withText()`, `fileName($name)` sets the default download name (no extension), and `getRaw()` returns the encoded bytes.
 - Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(int|false|null $seconds)` (overrides `generator.cache_ttl`; `null` clears the override) and `effectiveCacheTtl()` (the value in effect), `flushRenderCache()` (in-process) and `flushPersistentCache()` (Laravel cache).
 
-#### Common payloads without hand-escaping
+### Common payloads without hand-escaping
 
 ```php
 use Mmuqiitf\FilamentQrCode\Support\QrPayload;

@@ -24,14 +24,12 @@ Features:
   - [Try it](#try-it)
   - [Requirements](#requirements)
   - [How it works](#how-it-works)
-  - [Installation](#installation)
-    - [Symbologies](#symbologies)
-  - [Quick start](#quick-start)
+  - [Getting started in 5 minutes](#getting-started-in-5-minutes)
   - [Usage](#usage)
     - [Which component do I need?](#which-component-do-i-need)
-    - [Basic implementation](#basic-implementation)
-    - [Advanced implementation](#advanced-implementation)
+    - [Next steps](#next-steps)
     - [Documentation](#documentation)
+    - [For AI agents and LLMs](#for-ai-agents-and-llms)
   - [Troubleshooting](#troubleshooting)
   - [Reporting issues](#reporting-issues)
   - [Contributing](#contributing)
@@ -73,78 +71,61 @@ composer dev              # http://localhost:8081/admin
 
 ---
 
-## Installation
+## Getting started in 5 minutes
 
-You can install the package via composer:
+1. **Install** the package:
 
-```bash
-composer require mmuqiitf/filament-qr-code
-```
+   ```bash
+   composer require mmuqiitf/filament-qr-code
+   ```
 
-Publish the configuration file (optional):
+2. **Register the plugin** in your panel provider. This step is optional, because the service provider registers the JS and CSS for every panel, but it keeps the setup explicit:
 
-```bash
-php artisan vendor:publish --tag="filament-qr-code-config"
-```
+   ```php
+   use Filament\Panel;
+   use Mmuqiitf\FilamentQrCode\FilamentQrCodePlugin;
 
-Register the plugin in your Filament Panel Provider (optional — JS/CSS
-auto-register globally via the service provider, so existing installs that
-already call `->plugin()` keep working with no duplicate tags):
+   public function panel(Panel $panel): Panel
+   {
+       return $panel
+           // ...
+           ->plugin(FilamentQrCodePlugin::make());
+   }
+   ```
 
-```php
-use Mmuqiitf\FilamentQrCode\FilamentQrCodePlugin;
+3. **Add the package views to your theme.** Buttons, overlays and layout use Tailwind classes in the package views, so your panel theme must scan them. Create a theme if you don't have one (`php artisan make:filament-theme`), add the `@source` line, then run `npm run build`:
 
-public function panel(Panel $panel): Panel
-{
-    return $panel
-        // ...
-        ->plugin(FilamentQrCodePlugin::make());
-}
-```
+   ```css
+   /* resources/css/filament/admin/theme.css */
+   @source '../../../../vendor/mmuqiitf/filament-qr-code/resources/views/**/*';
+   ```
 
-The camera decoder (`html5-qrcode`) is a separate ES module next to the
-global bundle (about 15 KB gzipped; the decoder is about 120 KB gzipped). It downloads once on first camera use; pages that
-only render QR images never fetch it. Both files are published by
-`php artisan filament:assets` (the decoder is registered `loadedOnRequest`).
+4. **Publish the assets** (run it again after every package update):
 
-### Styling: add the package views to your theme
+   ```bash
+   php artisan filament:assets
+   ```
 
-The package CSS only carries the scanner chrome (viewfinder, reticle, flash
-states). Buttons, overlays and layout use Tailwind utility classes in the
-package's Blade views, and Tailwind only generates classes it finds in the
-files it scans. Without a custom theme that scans the package views, those
-classes are missing: unstyled Start/Stop buttons, collapsed overlays, and a
-modal that looks different from the rest of the panel.
+5. **Add your first field** to a resource form:
 
-Create a theme if your panel doesn't have one (`php artisan make:filament-theme`),
-then add the package views to its `@source` list:
+   ```php
+   use Filament\Schemas\Schema;
+   use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+   use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 
-```css
-/* resources/css/filament/admin/theme.css */
-@import '../../../../vendor/filament/filament/resources/css/theme.css';
+   public static function configure(Schema $schema): Schema
+   {
+       return $schema->components([
+           QrScanner::make('sku')
+               ->label('SKU')
+               ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128]),
+       ]);
+   }
+   ```
 
-@source '../../../../app/Filament';
-@source '../../../../resources/views/filament';
-@source '../../../../vendor/mmuqiitf/filament-qr-code/resources/views/**/*';
-```
+**Expected result:** the form shows a text input with a camera button. The button opens a modal viewfinder. It needs `https` or `localhost` and asks for camera permission. The modal also has an image-upload fallback. A decoded code fills the input and closes the modal. A USB or Bluetooth gun typing into the focused input fills it too, and its `Enter` doesn't submit the form. If the buttons look unstyled, step 3 is missing. Run `php artisan qr-code:doctor` to check your setup.
 
-Rebuild your assets (`npm run build`) after adding the line.
-
-### Symbologies
-
-Pass `BarcodeFormat` cases (or raw strings) via `->formats([...])` on every camera component. Supported: `QrCode`, `Aztec`, `DataMatrix`, `Maxicode`, `Codabar`, `Code39`, `Code93`, `Code128`, `Itf`, `Ean13`, `Ean8`, `UpcA`, `UpcE`. Filtering formats speeds up decoding and cuts false positives — always set it when you know what you scan. One-dimensional codes automatically get a wide decode band instead of a square.
-
----
-
-## Quick start
-
-```php
-use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
-
-QrScanner::make('sku')->label('SKU'),
-```
-
-Camera modal, upload fallback, and hardware-scanner capture all work out of the box. Add `->formats([...])` when you know the symbology — the guides below are upgrades to this.
+The full walkthrough, with config publishing, symbologies and a first server check, is in [Getting started](docs/getting-started.md).
 
 ---
 
@@ -154,129 +135,44 @@ Camera modal, upload fallback, and hardware-scanner capture all work out of the 
 
 | Job                                                 | Use                                                                                                                                                                                                                      | Why not the others                                                                 |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| One input scanned by camera, upload, typing, or gun | [`QrScanner`](docs/scanning.md#1-individual-qr-scanner-field)                                                                                                                                                            | Sequence/collector add moving parts a single field doesn't need.                   |
-| Cashier/POS gun, no camera UI                       | [`QrHardwareScannerListener`](docs/scanning.md#2-hands-free-station-mode-qrhardwarescannerlistener) + [one funnel method](docs/scanning.md#step-2--funnel-every-scan-into-one-method)                                    | `QrScanner`'s field listener would double-handle the same burst.                   |
-| One camera walking many fields in order             | [`QrScanSequence`](docs/scanning.md#3-sequential-scanning--one-scanner-many-fields)                                                                                                                                      | Chained `nextField()` hops between separate cameras; the sequence shares one feed. |
-| Two fields, hand focus from one to the next         | [`QrScanner::nextField()`](docs/scanning.md#4-focus-handoff-between-fields)                                                                                                                                              | A sequence is overkill without a shared checklist.                                 |
-| Many scans into one list (stocktake, receiving)     | [`QrCollector` / `QrCollectAction`](docs/collecting.md#5-batch-collector-scanning-repeaters--tables)                                                                                                                     | Sequences map one scan to one field; collectors append.                            |
+| One input scanned by camera, upload, typing, or gun | [`QrScanner`](docs/scanning.md#qr-scanner-field-qrscanner)                                                                                                                                                            | Sequence/collector add moving parts a single field doesn't need.                   |
+| Cashier/POS gun, no camera UI                       | [`QrHardwareScannerListener`](docs/scanning.md#station-listener-qrhardwarescannerlistener) + [one funnel method](docs/scanning.md#step-2--funnel-every-scan-into-one-method)                                    | `QrScanner`'s field listener would double-handle the same burst.                   |
+| One camera walking many fields in order             | [`QrScanSequence`](docs/scanning.md#scan-sequence-container-qrscansequence)                                                                                                                                      | Chained `nextField()` hops between separate cameras; the sequence shares one feed. |
+| Two fields, hand focus from one to the next         | [`QrScanner::nextField()`](docs/scanning.md#sequential-field-scanning-nextfield)                                                                                                                                              | A sequence is overkill without a shared checklist.                                 |
+| Many scans into one list (stocktake, receiving)     | [`QrCollector` / `QrCollectAction`](docs/collecting.md#batch-collector-scanning-qrcollector-qrcollectaction)                                                                                                                     | Sequences map one scan to one field; collectors append.                            |
 | Show a QR (form, table, infolist, download)         | [`QrCodeDisplay`](docs/generating.md#in-form-schemas) / [`QrColumn`](docs/generating.md#in-table-columns) / [`QrEntry`](docs/generating.md#in-infolists) / [`DownloadQrAction`](docs/generating.md#as-a-download-action) | Scanner components capture; these only render.                                     |
 | Many QRs out at once (labels, handover)             | [`DownloadQrBulkAction`](docs/generating.md#as-a-bulk-zip-export) + print sheet                                                                                                                                          | Single downloads don't scale past a handful of rows.                               |
 
-### Basic implementation
+### Next steps
 
-Single field with camera, upload fallback, and hardware-scanner capture:
-
-```php
-use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
-use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
-
-QrScanner::make('sku')
-    ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
-    ->sound(true);
-```
-
-Hands-free station — one gun driving the whole page, no camera UI:
-
-```php
-use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
-
-QrHardwareScannerListener::make(['sku', 'quantity'])
-    ->autoFocusNext(true);
-```
-
-One camera walking many fields in order:
-
-```php
-use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
-
-QrScanSequence::make(['batch_number', 'serial_number'])
-    ->statePath('sequence')
-    ->formats([BarcodeFormat::QrCode]);
-```
-
-Continuous batch scanning into a list:
-
-```php
-use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
-
-QrCollector::make('scanned_items')
-    ->allowDuplicates(false);
-```
-
-Render a QR from record data:
-
-```php
-use Mmuqiitf\FilamentQrCode\Forms\Components\QrCodeDisplay;
-use Mmuqiitf\FilamentQrCode\Tables\Columns\QrColumn;
-
-QrCodeDisplay::make('qr')
-    ->data(fn ($record) => $record?->uuid)
-    ->size(200);
-
-QrColumn::make('sku')
-    ->thumbnailSize(48)
-    ->previewable();
-```
-
-Cashier/POS flow with a handheld gun: see the [POS tutorial](docs/scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
-
-### Advanced implementation
-
-Tune defaults globally (`php artisan vendor:publish --tag="filament-qr-code-config"` → `config/qr-code.php`), or per component — component options always win:
-
-```php
-QrScanner::make('sku')
-    ->fps(25)
-    ->qrbox(250)
-    ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2)
-    ->beepFrequency(880)
-    ->beepDuration(80);
-```
-
-Normalize and reject live scans (`scanFormat()` / `onScan()` never run on live scans — they are programmatic-only):
-
-```php
-QrScanner::make('sku')
-    ->normalizeUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)))
-    ->rejectWhen(fn ($state) => strlen((string) $state) < 3, 'Barcode too short.');
-```
-
-Audit server-observed scans (live scans stay client-side until they reach the server):
-
-```php
-use Illuminate\Support\Facades\Event;
-use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
-
-// config/qr-code.php
-'audit' => ['enabled' => true, 'channel' => null],
-
-// or listen yourself:
-Event::listen(QrCodeScanned::class, fn ($event) => logger()->info("Scanned {$event->code}"));
-```
-
-Build payloads without hand-escaping:
-
-```php
-use Mmuqiitf\FilamentQrCode\Support\QrPayload;
-
-QrPayload::wifi('Shop Floor', 'secret-1');
-```
-
-UI strings live under `filament-qr-code::ui` (publish with `--tag="filament-qr-code-translations"`); wrap QR images in `.filament-qr-label-sheet` / `.filament-qr-label` for printable shelf labels. Full tables: [Reference](docs/reference.md); events: [Events](docs/events.md); every extension seam: [Extension points](docs/extending.md).
+- **Scanning**: [QR Scanner Field](docs/scanning.md#qr-scanner-field-qrscanner), [Station Listener](docs/scanning.md#station-listener-qrhardwarescannerlistener) for hands-free guns, [Scan Sequence Container](docs/scanning.md#scan-sequence-container-qrscansequence), [server-side checks](docs/scanning.md#server-side-checks) and the [cashier POS tutorial](docs/scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
+- **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
+- **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
+- **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
+- **Every public method**: the generated [API map](docs/api.md).
 
 ### Documentation
 
 | Page | What it covers |
 | --- | --- |
-| [Scanning](docs/scanning.md) | camera field, station listener, sequences, focus handoff, server checks, continuous mode, runtime control, POS tutorial |
+| [Getting started](docs/getting-started.md) | install to first working scan, step by step |
+| [Scanning](docs/scanning.md) | QR Scanner Field, Station Listener, Scan Sequence Container, focus handoff, server checks, continuous mode, runtime control, POS tutorial |
 | [Batch collecting](docs/collecting.md) | continuous inventory scanning in repeaters and tables |
 | [Generating](docs/generating.md) | display components, download actions, ZIP export, facade, payloads |
-| [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, macros, styling, render hooks, views |
+| [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, auditing, macros, styling, render hooks, views |
 | [Extension points](docs/extending.md) | every seam in one table: PHP closures, contracts, macros, render hooks, CSS variables, JS decoder, router, events |
 | [Events](docs/events.md) | every browser event fired or listened for, and every Laravel event with its properties |
-| [Reference](docs/reference.md) | every config key, translations, audit logging |
+| [Reference](docs/reference.md) | every config key, translations, the `@internal` policy |
+| [API map](docs/api.md) | every public class, method, enum and config key (generated) |
+| [FAQ](docs/faq.md) | iOS torch, secure context, offline use, guns, multiple panels |
 | [Upgrade guide](UPGRADE.md) | breaking changes between versions |
 | Recipes | [POS checkout](docs/recipes/pos.md) · [Goods receiving](docs/recipes/warehouse.md) · [Work-order station](docs/recipes/manufacturing.md) · [Label generator page](docs/recipes/generator-page.md) · [Custom inputs](docs/recipes/custom-input.md) · [Styling](docs/recipes/styling.md) · [ZXing decoder](docs/recipes/zxing-decoder.md). Each one runs in the [example app](https://github.com/mmuqiitf/filament-qr-code-example). |
+
+### For AI agents and LLMs
+
+- [AI guide](docs/ai.md): a component picker, invariants, common mistakes and full-import examples for coding agents.
+- [`llms.txt`](llms.txt) is the index, and [`llms-full.txt`](llms-full.txt) has every doc in one file.
+- [Laravel Boost](https://laravel.com/docs/boost) picks up the bundled guideline (`resources/boost/guidelines/core.blade.php`) and skill when you run `php artisan boost:install`.
 
 ---
 
@@ -292,7 +188,7 @@ php artisan qr-code:doctor
 | -------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Camera modal says no devices / access denied | Page served over plain `http` (not `localhost`)                           | Serve via `https` or test on `localhost`; browsers block cameras in insecure contexts.                                                            |
 | Camera modal empty on first open             | Permission not granted yet, labels unavailable                            | Grant permission, reopen; the remembered `localStorage` choice wins afterwards.                                                                   |
-| Unstyled buttons, layout differs from the panel | Panel theme doesn't `@source` the package views                    | Add `@source '../../../../vendor/mmuqiitf/filament-qr-code/resources/views/**/*';` to your theme CSS and rebuild ([Styling](#styling-add-the-package-views-to-your-theme)). |
+| Unstyled buttons, layout differs from the panel | Panel theme doesn't `@source` the package views                    | Add `@source '../../../../vendor/mmuqiitf/filament-qr-code/resources/views/**/*';` to your theme CSS and rebuild ([Styling](docs/getting-started.md#3-add-the-package-views-to-your-theme)). |
 | Stale scanner UI after updating the package  | Committed `dist/` rebuilt but host serving old assets                     | `npm run build` in the package, then `php artisan filament:assets` in the host app.                                                               |
 | PNG looks wrong / text overlay is blocky     | Missing GD/Imagick or system fonts                                        | Install `gd` or `imagick` plus `fonts-dejavu-core`; the service falls back to GD bitmap fonts otherwise.                                          |
 | Sequence submit misses scanned values        | The form reads the steps from a different place than the sequence writes them | Give the sequence `->statePath()` and read it via `mergeSequenceState()`; the flat `{form}.{step}` paths follow the schema `statePath()`. |
