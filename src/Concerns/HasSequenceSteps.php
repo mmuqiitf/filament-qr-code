@@ -59,9 +59,12 @@ trait HasSequenceSteps
     /** @return array<string, mixed> */
     abstract public function getSequenceState(): array;
 
+    /**
+     * @internal Not covered by semver.
+     */
     abstract public function normalizeStepValue(string $fieldKey, mixed $value): mixed;
 
-    abstract public function getStatePathPrefix(): string;
+    abstract public function getFlatStatePrefix(): string;
 
     abstract public function getComponentStatePath(): ?string;
 
@@ -144,6 +147,7 @@ trait HasSequenceSteps
         return [$livewire::class, $livewire->getId()];
     }
 
+    /** Callback run with every step value once the whole sequence is complete. */
     public function onCompleted(?Closure $callback): static
     {
         $this->onCompletedCallback = $callback;
@@ -165,6 +169,7 @@ trait HasSequenceSteps
         return $this;
     }
 
+    /** What a failed validateAllUsing() check does: jump back to the failing step or restart. */
     public function onInvalidSequence(InvalidSequenceBehavior|Closure|null $behavior): static
     {
         $this->invalidSequenceBehavior = $behavior;
@@ -186,6 +191,7 @@ trait HasSequenceSteps
             : InvalidSequenceBehavior::JumpToStep;
     }
 
+    /** Clear the non-sticky steps after a successful submit. */
     public function resetAfterSubmit(bool|Closure|null $condition = true): static
     {
         $this->shouldResetAfterSubmit = $condition;
@@ -219,6 +225,7 @@ trait HasSequenceSteps
         return (bool) $this->evaluate($this->isContinuousSequence);
     }
 
+    /** Call the Livewire submit method once the sequence completes. */
     public function autoSubmit(bool|Closure|null $condition = true, string|Closure|null $method = null): static
     {
         $this->shouldAutoSubmit = $condition;
@@ -265,7 +272,7 @@ trait HasSequenceSteps
 
     /**
      * Where each step's value lives in Livewire state: the component's own
-     * state path when it has one, else the legacy statePathPrefix paths.
+     * state path when it has one, else the flat per-step path.
      */
     public function getStepValuePath(string $key): string
     {
@@ -273,7 +280,7 @@ trait HasSequenceSteps
             return "{$statePath}.{$key}";
         }
 
-        $prefix = trim($this->getStatePathPrefix(), '.');
+        $prefix = $this->getFlatStatePrefix();
 
         return $prefix !== '' ? "{$prefix}.{$key}" : $key;
     }
@@ -283,6 +290,9 @@ trait HasSequenceSteps
      * like ScanChecksRule does for QrScanner.
      *
      * @param  array<string, array<mixed>>  $rules
+     *
+     * @internal Public only because Filament calls this validation hook;
+     * not covered by semver.
      */
     public function dehydrateValidationRules(array &$rules): void
     {
@@ -297,7 +307,12 @@ trait HasSequenceSteps
         }
     }
 
-    /** @param  array<string, string>  $attributes */
+    /**
+     * @param  array<string, string>  $attributes
+     *
+     * @internal Public only because Filament calls this validation hook;
+     * not covered by semver.
+     */
     public function dehydrateValidationAttributes(array &$attributes): void
     {
         foreach ($this->getScanSteps() as $step) {
@@ -305,7 +320,12 @@ trait HasSequenceSteps
         }
     }
 
-    /** @param  array<string, array<string, string>>  $messages */
+    /**
+     * @param  array<string, array<string, string>>  $messages
+     *
+     * @internal Public only because Filament calls this validation hook;
+     * not covered by semver.
+     */
     public function dehydrateValidationMessages(array &$messages): void {}
 
     /**
@@ -331,7 +351,11 @@ trait HasSequenceSteps
         return $key;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Run the server checks for one step scan; called by the sequence JS, usable from tests.
+     *
+     * @return array<string, mixed>
+     */
     #[ExposedLivewireMethod]
     public function handleStepScan(string $step, string $code, string $source): array
     {
@@ -414,6 +438,9 @@ trait HasSequenceSteps
      * Finish a waiting or open-ended repeat step (the Done control).
      *
      * @return array<string, mixed>
+     *
+     * @internal Public only because the sequence JS calls it through
+     * #[ExposedLivewireMethod]; not covered by semver.
      */
     #[ExposedLivewireMethod]
     public function finishStep(string $step): array
@@ -437,6 +464,9 @@ trait HasSequenceSteps
      * Remove one collected code from a repeat step (a mis-scan).
      *
      * @return array<string, mixed>
+     *
+     * @internal Public only because the sequence JS calls it through
+     * #[ExposedLivewireMethod]; not covered by semver.
      */
     #[ExposedLivewireMethod]
     public function removeStepCode(string $step, int $index): array
@@ -466,6 +496,9 @@ trait HasSequenceSteps
      * Clear a step (the Clear control on sticky steps) and ask for it again.
      *
      * @return array<string, mixed>
+     *
+     * @internal Public only because the sequence JS calls it through
+     * #[ExposedLivewireMethod]; not covered by semver.
      */
     #[ExposedLivewireMethod]
     public function clearStep(string $step): array
@@ -569,6 +602,11 @@ trait HasSequenceSteps
         $count = count($this->repeatCodes($values, $key));
 
         if ($count < $needed && ! ($step->isOptional() && $count === 0)) {
+            // A counted step finished early: the app's whole-set check explains what is missing.
+            if ($limit !== null && ($failure = $this->findInvalidStep($values)) !== null) {
+                return $this->rejectInvalidSet(ScanResult::accept($code, $input), $key, $values, $failure);
+            }
+
             $result = ScanResult::reject($code, $input, __('filament-qr-code::ui.repeat_needs_codes', ['count' => $needed]));
             $this->rejectStep($result, $key, $values);
 
@@ -622,7 +660,11 @@ trait HasSequenceSteps
         return $count >= ($this->getRepeatLimit($step, $values) ?? 1);
     }
 
-    /** @param  array<string, mixed>  $values */
+    /**
+     * Resolved repeat(n) count for a step.
+     *
+     * @param  array<string, mixed>  $values
+     */
     public function getRepeatLimit(ScanStep $step, array $values): ?int
     {
         $override = $this->getRepeatCountOverride($step->getKey());
@@ -645,6 +687,7 @@ trait HasSequenceSteps
         return is_numeric($times) ? max(1, (int) $times) : null;
     }
 
+    /** Resolved repeat-complete behaviour for a step. */
     public function getRepeatComplete(ScanStep $step): RepeatComplete
     {
         if ($step->getRepeatTimesUsing() === null) {
@@ -661,6 +704,7 @@ trait HasSequenceSteps
         return is_string($behavior) ? (RepeatComplete::tryFrom($behavior) ?? RepeatComplete::Advance) : RepeatComplete::Advance;
     }
 
+    /** Resolved finish code for a step. */
     public function getFinishCode(ScanStep $step): ?string
     {
         $code = $this->evaluate($step->getFinishCodeUsing())
@@ -689,6 +733,8 @@ trait HasSequenceSteps
      * normalizeStepUsing(), then the step's own normalizeUsing().
      *
      * @param  array<string, mixed>  $values
+     *
+     * @internal Not covered by semver.
      */
     public function normalizeStepCode(ScanStep $step, string $code, array $values): string
     {
@@ -708,7 +754,44 @@ trait HasSequenceSteps
     /** Provided by HasCodeNormalization. */
     abstract protected function applyCodeNormalizer(string $code): string;
 
-    /** @param  array<string, mixed>  $values */
+    /**
+     * The values a step saw when it was scanned: the active steps before it,
+     * plus the codes of a repeat step scanned before the one at $position.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     *
+     * @internal Not covered by semver.
+     */
+    public function valuesBeforeStep(ScanStep $step, array $values, ?int $position = null): array
+    {
+        $values = $this->withoutInactiveSteps($values);
+        $before = [];
+
+        foreach ($this->getScanSteps() as $candidate) {
+            $key = $candidate->getKey();
+
+            if ($key === $step->getKey()) {
+                if ($position !== null && $position > 0 && is_array($values[$key] ?? null)) {
+                    $before[$key] = array_slice(array_values($values[$key]), 0, $position);
+                }
+
+                break;
+            }
+
+            if (array_key_exists($key, $values)) {
+                $before[$key] = $values[$key];
+            }
+        }
+
+        return $before;
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     *
+     * @internal Not covered by semver.
+     */
     public function checkStep(ScanStep $step, string $code, ?ScanInput $source, array $values): ScanResult
     {
         return $step->checkPipeline($this)->run(
@@ -727,25 +810,7 @@ trait HasSequenceSteps
     protected function completeSequence(ScanResult $result, string $step, array $values, array $skipped = []): SequenceScanResult
     {
         if (($failure = $this->findInvalidStep($values)) !== null) {
-            [$invalidStep, $message] = $failure;
-            $restart = $this->getInvalidSequenceBehavior() === InvalidSequenceBehavior::Restart;
-
-            if ($restart) {
-                $values = $this->stickyValues($values);
-                $this->writeSequenceValues($values);
-            }
-
-            $this->rejectStep(ScanResult::reject($result->code, $result->source, $message), $invalidStep, $values);
-
-            return new SequenceScanResult(
-                scan: ScanResult::reject($result->code, $result->source, $message),
-                step: $step,
-                nextStep: $restart ? $this->getFirstEmptyStepKey($values) : $invalidStep,
-                values: $values,
-                skipped: $skipped,
-                invalidStep: $invalidStep,
-                reset: $restart,
-            );
+            return $this->rejectInvalidSet($result, $step, $values, $failure, $skipped);
         }
 
         $this->evaluate($this->onCompletedCallback, ['values' => $values]);
@@ -771,6 +836,37 @@ trait HasSequenceSteps
             completed: true,
             submitted: $submitted,
             reset: $reset,
+        );
+    }
+
+    /**
+     * Report a failed whole-set check: keep the values and go to the invalid step, or restart.
+     *
+     * @param  array<string, mixed>  $values
+     * @param  array{0: string, 1: string}  $failure
+     * @param  list<string>  $skipped
+     */
+    protected function rejectInvalidSet(ScanResult $result, string $step, array $values, array $failure, array $skipped = []): SequenceScanResult
+    {
+        [$invalidStep, $message] = $failure;
+        $restart = $this->getInvalidSequenceBehavior() === InvalidSequenceBehavior::Restart;
+
+        if ($restart) {
+            $values = $this->stickyValues($values);
+            $this->writeSequenceValues($values);
+        }
+
+        $rejected = ScanResult::reject($result->code, $result->source, $message);
+        $this->rejectStep($rejected, $invalidStep, $values);
+
+        return new SequenceScanResult(
+            scan: $rejected,
+            step: $step,
+            nextStep: $restart ? $this->getFirstEmptyStepKey($values) : $invalidStep,
+            values: $values,
+            skipped: $skipped,
+            invalidStep: $invalidStep,
+            reset: $restart,
         );
     }
 
@@ -822,6 +918,8 @@ trait HasSequenceSteps
     /**
      * @param  array<string, mixed>  $values
      * @return array{0: string, 1: string}|null
+     *
+     * @internal Not covered by semver.
      */
     public function findInvalidStep(array $values): ?array
     {
@@ -964,7 +1062,11 @@ trait HasSequenceSteps
         return null;
     }
 
-    /** @param  array<string, mixed>  $values */
+    /**
+     * @param  array<string, mixed>  $values
+     *
+     * @internal Not covered by semver.
+     */
     public function allRequiredFilled(array $values): bool
     {
         foreach ($this->getScanSteps() as $step) {
@@ -1013,6 +1115,8 @@ trait HasSequenceSteps
      *
      * @param  array<string, mixed>  $values
      * @return array<string, mixed>
+     *
+     * @internal Not covered by semver.
      */
     public function withoutInactiveSteps(array $values): array
     {
@@ -1068,6 +1172,7 @@ trait HasSequenceSteps
         $this->getLivewire()->dispatch('qr-sequence-refresh', field: $this->getControlKey());
     }
 
+    /** Repeat count set at runtime with setRepeatCount(), if any. */
     public function getRepeatCountOverride(string $step): ?int
     {
         try {
@@ -1098,7 +1203,7 @@ trait HasSequenceSteps
 
     /**
      * Write values the way the browser always has: the component's own state
-     * path plus the legacy statePathPrefix path per step.
+     * path plus the flat per-step path under the parent schema.
      *
      * @param  array<string, mixed>  $values
      */
@@ -1110,7 +1215,7 @@ trait HasSequenceSteps
             data_set($livewire, $statePath, $values);
         }
 
-        $prefix = trim($this->getStatePathPrefix(), '.');
+        $prefix = $this->getFlatStatePrefix();
 
         foreach ($this->getScanSteps() as $step) {
             $key = $step->getKey();
@@ -1119,7 +1224,7 @@ trait HasSequenceSteps
             try {
                 data_set($livewire, $path, $values[$key] ?? null);
             } catch (Throwable) {
-                // The legacy prefix path may not exist on this Livewire component.
+                // The flat path may not exist on this Livewire component.
             }
         }
     }

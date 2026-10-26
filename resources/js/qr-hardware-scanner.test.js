@@ -109,29 +109,12 @@ describe('createHardwareScannerHandler', () => {
         expect(seen).toEqual([]);
     });
 
-    it('stands down while a Station Listener is mounted', () => {
+    it('stays active with a Station Listener mounted: the router picks one owner', () => {
         globalThis.window ??= {};
         window[GLOBAL_KEY] = 1;
 
         const seen = [];
         const handler = createHardwareScannerHandler({
-            suppressWhenGlobalListenerActive: true,
-            onScan: (v) => seen.push(v),
-        });
-
-        typeBurst(handler, 'PRD-1001');
-
-        expect(handler.handleKeyDown(keyEvent('Enter'))).toBe(false);
-        expect(seen).toEqual([]);
-    });
-
-    it('stays active when forced, even with a Station Listener mounted', () => {
-        globalThis.window ??= {};
-        window[GLOBAL_KEY] = 1;
-
-        const seen = [];
-        const handler = createHardwareScannerHandler({
-            suppressWhenGlobalListenerActive: false,
             onScan: (v) => seen.push(v),
         });
 
@@ -172,9 +155,19 @@ describe('burst hardening (P0.2)', () => {
         expect(seen).toEqual(['ABCDE']);
     });
 
-    it('keeps v0.2 behaviour by default (one fast gap is enough)', () => {
+    it('needs three fast gaps by default', () => {
         const seen = [];
         const handler = createHardwareScannerHandler({ onScan: (value) => seen.push(value) });
+
+        typeBurst(handler, 'AB');
+
+        expect(handler.handleKeyDown(keyEvent('Enter'))).toBe(false);
+        expect(seen).toEqual([]);
+    });
+
+    it('restores the 0.x behaviour with minFastKeys: 1', () => {
+        const seen = [];
+        const handler = createHardwareScannerHandler({ minFastKeys: 1, onScan: (value) => seen.push(value) });
 
         typeBurst(handler, 'AB');
 

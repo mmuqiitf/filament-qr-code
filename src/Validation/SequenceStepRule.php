@@ -11,6 +11,7 @@ use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
 final readonly class SequenceStepRule implements ValidationRule
 {
+    /** Submit-time rule that runs one sequence step's checks. */
     public function __construct(
         private QrScanSequence $component,
         private ScanStep $step,
@@ -24,14 +25,21 @@ final readonly class SequenceStepRule implements ValidationRule
 
         $codes = is_array($value) && $this->step->isRepeating() ? $value : [$value];
 
-        foreach ($codes as $code) {
+        $state = $this->component->getSequenceState();
+
+        foreach (array_values($codes) as $position => $code) {
             if (! is_scalar($code)) {
                 $fail(__('filament-qr-code::ui.scan_rejected'));
 
                 return;
             }
 
-            $result = $this->component->checkStep($this->step, trim((string) $code), null, $this->component->getSequenceState());
+            $result = $this->component->checkStep(
+                $this->step,
+                trim((string) $code),
+                null,
+                $this->component->valuesBeforeStep($this->step, $state, $this->step->isRepeating() ? $position : null),
+            );
 
             if (! $result->passes) {
                 $fail((string) $result->message);

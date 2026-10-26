@@ -7,7 +7,7 @@
             class="fi-select-input w-full rounded-md border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white py-1 px-2"
         >
             <template x-for="dev in devices" :key="dev.id">
-                <option :value="dev.id" x-text="dev.label || ('Camera ' + dev.id)"></option>
+                <option :value="dev.id" x-text="dev.label || @js(__('filament-qr-code::ui.camera_device')).replace(':id', dev.id)"></option>
             </template>
         </select>
         </label>

@@ -215,7 +215,7 @@ it('submit never runs onScanned/onRejected or dispatches scan events', function 
     Event::assertNotDispatched(QrCodeScanned::class);
 });
 
-it('logs accepted live scans through LogQrCodeScan when auditing is enabled', function (): void {
+it('logs accepted live scans through LogQrCodeScanListener when auditing is enabled', function (): void {
     $logged = [];
     Log::listen(function (MessageLogged $message) use (&$logged): void {
         $logged[] = $message->context;

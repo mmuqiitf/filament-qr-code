@@ -2,6 +2,7 @@ import { qrFeedback } from './audio-feedback.js';
 import { sanitizeScannedValue } from './qr-hardware-scanner.js';
 import { inputRouter } from './input-router.js';
 import { findFieldInput, readWireModelPath } from './field-locator.js';
+import { fallbackMessages } from './messages.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -14,6 +15,7 @@ import {
     scannerFormatsConfigFor,
     stopCameraFeed,
     startCameraFeed,
+    watchPageVisibility,
     currentCameraRun,
     storageKeyFor,
 } from './qr-camera-core.js';
@@ -32,7 +34,7 @@ const DEFAULT_OPTIONS = {
     burstThresholdMs: 50,
     terminators: ['Enter', 'Tab'],
     minBarcodeLength: 2,
-    minFastKeys: 1,
+    minFastKeys: 3,
     scanTimeoutMs: 150,
     hardwareScope: 'focus',
     preventSubmit: true,
@@ -40,13 +42,11 @@ const DEFAULT_OPTIONS = {
     qrbox: 250,
     preferRearCamera: true,
     formats: [],
-    fileScanFailedMessage: 'No barcode or QR code found in selected image.',
-    insecureMessage: 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
+    ...fallbackMessages,
     serverCheck: false,
     componentKey: null,
     cooldownMs: 0,
     clearOnReject: true,
-    scanFailedMessage: 'The scan could not be checked. Please try again.',
     successFeedback: null,
     errorFeedback: null,
     mode: 'single',
@@ -110,6 +110,11 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
 
             this.registerWithRouter();
 
+            this.stopWatchingVisibility = watchPageVisibility(this, {
+                stop: () => this.stopScan(),
+                resume: () => this.startScan(),
+            });
+
             this.boundDeliverHandler = (event) => {
                 if (!this.options.serverCheck || !this.options.componentKey) {
                     return;
@@ -139,6 +144,8 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
         },
 
         destroy() {
+            this.stopWatchingVisibility?.();
+            this.stopWatchingVisibility = null;
             if (this.boundDeliverHandler) {
                 this.fieldElement().removeEventListener('qr-scan-deliver', this.boundDeliverHandler);
                 this.boundDeliverHandler = null;
@@ -341,7 +348,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 decoder = await resolveDecoderModule(this.options.formats);
             } catch {
                 this.hasError = true;
-                this.errorMessage = 'Failed to load camera decoder.';
+                this.errorMessage = this.options.decoderFailedMessage;
                 return;
             }
 
@@ -350,8 +357,8 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 preferRearCamera: this.options.preferRearCamera,
                 storageKey,
                 requireDevices: true,
-                emptyMessage: 'No camera devices detected on this system.',
-                deniedMessage: 'Failed to access camera.',
+                emptyMessage: this.options.noCamerasMessage,
+                deniedMessage: this.options.cameraUnavailableMessage,
                 insecureMessage: this.options.insecureMessage,
             });
 
@@ -382,7 +389,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 decoder = await resolveDecoderModule(this.options.formats);
             } catch {
                 this.hasError = true;
-                this.errorMessage = 'Failed to load camera decoder.';
+                this.errorMessage = this.options.decoderFailedMessage;
                 return;
             }
 
@@ -424,8 +431,9 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 refreshCameraControls(this);
                 persistCameraId(storageKey, this.selectedDeviceId);
             } catch (err) {
+                console.debug('Scanner camera start failed:', err);
                 this.hasError = true;
-                this.errorMessage = err.message || 'Error starting camera scanner.';
+                this.errorMessage = this.options.cameraStartFailedMessage;
             }
         },
 
@@ -721,7 +729,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 decoder = await resolveDecoderModule(this.options.formats);
             } catch {
                 this.hasError = true;
-                this.errorMessage = 'Failed to load camera decoder.';
+                this.errorMessage = this.options.decoderFailedMessage;
                 return;
             }
 

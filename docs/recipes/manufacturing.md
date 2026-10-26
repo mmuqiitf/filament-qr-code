@@ -129,6 +129,8 @@ final class ComponentBelongsToBom implements ScanCheckStage
 Stages are resolved from the container, so constructor injection works. To add one to every sequence step or scanner in the app, use `configureUsing()` in a service provider (there is no config list):
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 QrScanner::configureUsing(fn (QrScanner $scanner) => $scanner->pipe(RejectBlockedCodes::class));
 ```
 
@@ -154,13 +156,15 @@ public function missingComponents(array $values): ?string
 }
 ```
 
-A repeat step with a count (`repeat(3)`) is only "filled" once all codes are in, so `validateAllUsing()` can't report a short BOM before that. Use an open-ended `repeat()` with `finishWith()` when "finished early" must be caught.
+`validateAllUsing()` also runs when a counted step (`repeat(3)`) is finished early with `finishWith()`: the operator sees what the BOM is missing ("BOM incomplete: missing …") instead of the generic repeat count message, and `qr-sequence-invalid` fires.
 
 ## Hooks and runtime control
 
 `onStepAccepted()` / `onStepRejected()` receive `$step`, `$result`, `$code`, `$record`, `$source` and `$values`, and can't change the outcome:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Support\ScanResult;
+
 public function logActivity(string $step, ScanResult $result): void
 {
     $text = match (true) {

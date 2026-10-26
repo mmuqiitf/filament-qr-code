@@ -52,6 +52,8 @@ QrScanSequence::make()
 `autoSubmit()` calls the page's `submit()` once the item is complete. `getState()` re-runs every step check and `validateAllUsing()`, so a typed or tampered value can't slip through:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+
 public function submit(): void
 {
     $receipt = $this->form->getState()['receipt'] ?? [];

@@ -14,6 +14,7 @@ use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
  */
 final readonly class SequenceSetRule implements ValidationRule
 {
+    /** Submit-time rule that runs a sequence's validateAllUsing() check. */
     public function __construct(
         private QrScanSequence $component,
     ) {}

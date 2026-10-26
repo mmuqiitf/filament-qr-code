@@ -22,6 +22,7 @@
                     type="button"
                     @click="removeItem(index)"
                     class="text-gray-400 hover:text-danger-600 p-1"
+                    aria-label="{{ __('filament-qr-code::ui.remove_code') }}"
                 >
                     &times;
                 </button>

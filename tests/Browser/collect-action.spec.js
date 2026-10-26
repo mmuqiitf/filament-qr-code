@@ -28,6 +28,9 @@ test('collect action modal starts the camera on open and collects codes (#35)', 
     await expect(modal.locator('.filament-qr-viewfinder video')).toBeVisible({ timeout: 10_000 });
     await expect(modal).toContainText('CAM-SMOKE-42', { timeout: 15_000 });
     await expect.poll(() => page.evaluate(() => window.__collected)).toEqual(['CAM-SMOKE-42']);
+    const announcer = modal.locator('[data-qr-part="announcer"]');
+    await expect(announcer).toHaveAttribute('aria-live', 'polite');
+    await expect(announcer).toHaveText('Added CAM-SMOKE-42 (1 items)');
     await page.waitForLoadState('networkidle');
     expect(errors).toEqual([]);
 });
@@ -43,6 +46,6 @@ test('collect action modal explains a denied camera and offers retry (#35)', asy
     const modal = await openCollectModal(page);
     const status = modal;
 
-    await expect(status).toContainText('Camera access unavailable', { timeout: 10_000 });
+    await expect(status).toContainText('Camera access denied or unavailable.', { timeout: 10_000 });
     await expect(status.getByRole('button', { name: /retry/i })).toBeVisible();
 });

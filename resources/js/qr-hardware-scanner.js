@@ -5,14 +5,6 @@ import { inputRouter } from './input-router.js';
 
 const GLOBAL_LISTENER_KEY = '__filamentQrCodeGlobalHardwareListeners';
 
-function globalListenerCount() {
-    if (typeof window === 'undefined') {
-        return 0;
-    }
-
-    return window[GLOBAL_LISTENER_KEY] || 0;
-}
-
 function trackGlobalListener(delta) {
     if (typeof window === 'undefined') {
         return 0;
@@ -33,14 +25,6 @@ export function sanitizeScannedValue(value) {
 }
 
 /**
- * @deprecated since 0.5: every hardware consumer now registers with the input
- * router, which gives each burst a single owner. Kept for apps that read it.
- */
-export function isGlobalHardwareListenerActive() {
-    return globalListenerCount() > 0;
-}
-
-/**
  * Hardware keyboard scanner interceptor.
  * Detects rapid burst keystrokes typical of USB/Bluetooth barcode guns,
  * suppresses default submit action on terminating Enter/Tab, and coordinates field updates.
@@ -56,12 +40,10 @@ export function isGlobalHardwareListenerActive() {
 export function createHardwareScannerHandler({
     burstThresholdMs = 50,
     minBarcodeLength = 2,
-    minFastKeys = 1,
+    minFastKeys = 3,
     preventFormSubmit = true,
     terminators = ['Enter', 'Tab'],
     scanTimeoutMs = 150,
-    suppressWhenGlobalListenerActive = false,
-    isGlobalListener = false,
     onScan = null,
 } = {}) {
     let buffer = '';
@@ -116,12 +98,6 @@ export function createHardwareScannerHandler({
 
     return {
         handleKeyDown(event) {
-            // Field-scoped handlers stand down while a page-global Station
-            // Listener is mounted, so one burst is never handled twice.
-            if (suppressWhenGlobalListenerActive && !isGlobalListener && isGlobalHardwareListenerActive()) {
-                return false;
-            }
-
             // IME compositions / modifier-held keys are human typing, not scans.
             if (event.isComposing || event.ctrlKey || event.altKey || event.metaKey) {
                 return false;
@@ -216,7 +192,7 @@ export function qrHardwareScannerListenerComponent({
     vibrateDurationMs = 100,
     terminators = ['Enter', 'Tab'],
     minBarcodeLength = 2,
-    minFastKeys = 1,
+    minFastKeys = 3,
     scanTimeoutMs = 150,
     autoFocusNext = true,
     fallbackToAnyInput = true,

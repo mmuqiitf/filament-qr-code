@@ -8,6 +8,7 @@ use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 
 final class ScanAccepted
 {
+    /** Dispatched when a server-checked scan passes its checks. */
     public function __construct(
         public ScanResult $result,
         public string $field,

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 use Mmuqiitf\FilamentQrCode\Console\Commands;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Http\Controllers\QrImageController;
-use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScan;
+use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScanListener;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -94,20 +94,11 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
 
         static::registerAssetsOnce();
 
-        Event::listen(QrCodeScanned::class, LogQrCodeScan::class);
+        Event::listen(QrCodeScanned::class, LogQrCodeScanListener::class);
 
         Route::middleware('web')->group(function (): void {
             Route::get('filament-qr-code/qr-image', QrImageController::class)
                 ->name('filamentQrCode.image')
-                ->middleware('signed');
-
-            // @deprecated Kebab-case alias kept for backward compatibility; will be removed in 1.0.
-            // Use `filamentQrCode.image` instead. Laravel keeps a single route per method + URI, so the
-            // alias uses an optional, never-matching `{legacy?}` segment: `route('filament-qr-code.image')`
-            // generates the exact same URL, while incoming requests are matched by the route above.
-            Route::get('filament-qr-code/qr-image/{legacy?}', QrImageController::class)
-                ->where('legacy', '(?!)')
-                ->name('filament-qr-code.image')
                 ->middleware('signed');
         });
     }

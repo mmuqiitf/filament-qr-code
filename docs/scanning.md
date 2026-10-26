@@ -2,9 +2,9 @@
 
 > Back to [README](../README.md) · [Batch collecting](collecting.md) · [Generating](generating.md) · [Reference](reference.md)
 
-Camera fields, hands-free station mode, sequential multi-field scanning, focus handoff, and the cashier POS tutorial.
+QR Scanner Fields, the Station Listener, the Scan Sequence Container, Sequential Field Scanning with `nextField()`, and the cashier POS tutorial. Vocabulary follows [CONTEXT.md](https://github.com/mmuqiitf/filament-qr-code/blob/main/CONTEXT.md).
 
-### 1. Individual QR Scanner Field
+## QR Scanner Field (`QrScanner`)
 
 Add a QR scanner field to your form schema with camera modal and hardware scanner integration:
 
@@ -37,7 +37,7 @@ QrScanner::make('sku')
 Option reference:
 
 - `formats()` — symbologies the decoder attempts. Omit only when truly unknown. With no filter the effective `fps` auto-degrades 25 → 12 against main-thread lag (explicit `fps()` always wins).
-- `scanFormat()` / `onScan()` — programmatic-only hooks; they do **not** run on live camera or hardware scans. Normalize live values with `normalizeUsing()` — see [Normalize live scans](reference.md#normalize-live-scans).
+- `scanFormat()` / `onScan()` — programmatic-only hooks; they do **not** run on live camera or hardware scans. Normalize live values with `normalizeUsing()` — see [Normalize live scans](customizing.md#normalize-live-scans).
 - `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning. Buffers are sanitized (STX/ETX/CR/LF stripped, mirroring `HasHardwareScanner::sanitizeScannedValue()`), IME compositions never count, and terminator-less guns flush after `scanTimeoutMs` (default 150).
 - `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify.
 - `hardwareInput(scope: HardwareInputScope::Page)` — also catch wedge scans when no scan field has focus (default `Focus`: only while focused; config `hardware_scanner.default_scope`). A focused scan field always wins.
@@ -51,7 +51,7 @@ The modal lists every detected camera (switching restarts the feed and is rememb
 
 > Hardware scanner note: all hardware consumers share one page-wide input router, so a burst is never handled twice, even with a `QrScanner`, a `QrHardwareScannerListener` and a `QrCollector` on the same page. See [Hardware routing](reference.md#hardware-routing).
 
-### 2. Hands-Free Station Mode (`QrHardwareScannerListener`)
+## Station Listener (`QrHardwareScannerListener`)
 
 For manufacturing stations and warehouse counters where operators shoot barcodes without touching the mouse:
 
@@ -77,6 +77,8 @@ Add `QrHardwareScannerListener` anywhere in your schema. It intercepts hardware 
 Step 3 can catch a search or filter box. Turn it off so scans only land in the focused or registered fields:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
+
 QrHardwareScannerListener::make(['sku', 'quantity'])
     ->fallbackToAnyInput(false);
 ```
@@ -91,9 +93,11 @@ Fields are matched by their exact name — `data-field-name`, `name`, `id`, or a
 
 The interceptor buffers keystrokes and treats gaps under `burstThresholdMs` (default 50) as a scanner burst. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), sanitizes, and routes the value — the delivery point (field, sequence, collector, or this listener) then plays the single confirmation beep, so one burst always yields one beep. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
 
-Held-down keys (keyboard auto-repeat) never count toward a burst, so holding a key and pressing Enter is not a scan. For keyboard-heavy forms, require more consecutive fast keystrokes before a terminator counts with `minFastKeys()` (default `1`, config `hardware_scanner.min_fast_keys`; `3` rejects fast human typing):
+Held-down keys (keyboard auto-repeat) never count toward a burst, so holding a key and pressing Enter is not a scan. For keyboard-heavy forms, require more consecutive fast keystrokes before a terminator counts with `minFastKeys()` (default `3`, config `hardware_scanner.min_fast_keys`; `1` accepts a single fast gap like 0.x did):
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 QrScanner::make('sku')
     ->minFastKeys(3);
 
@@ -104,11 +108,12 @@ QrScanner::make('sku')
 
 `hardwareScanner(...)` resets every interceptor option to its signature default, so pass all the options you care about in one call (or use the dedicated setters such as `minFastKeys()` and `scanTimeout()`).
 
-### 3. Sequential Scanning — One Scanner, Many Fields
+## Scan Sequence Container (`QrScanSequence`)
 
 Sequential scanning means **one scanner driving multiple fields**: a single shared camera feed (or one handheld gun) walks through a checklist. That is `QrScanSequence`:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 
 QrScanSequence::make([
@@ -121,20 +126,21 @@ QrScanSequence::make([
     ->qrbox(250)
     ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
     ->preferRearCamera()
-    ->statePathPrefix('data') // Livewire form state prefix scans are written to
     ->sound(true)
     ->vibrate(true);
 ```
 
 One feed, one checklist: steps auto-advance, clicking a step re-targets it, and the camera dropdown matches the single-field scanner. It renders stacked on mobile and split-screen on desktop. When the last step lands, the feed stops by itself so the button never gets stuck on "Stop".
 
-`statePathPrefix()` (default `data`) is what keeps the container bound to your form — set it to whatever `statePath()` your schema uses. Live values are normalized with `normalizeStepUsing()` (applied on read/merge) — see [Normalize live scans](reference.md#normalize-live-scans); `scanFormat()` / `onStepScanned()` are programmatic-only — see [Drive scans programmatically](reference.md#drive-scans-programmatically).
+Each step value is also written to `{schema state path}.{step}` (for example `data.step`), so a form that reads the steps as separate fields keeps working; the prefix always follows your schema's `statePath()`. Live values are normalized with `normalizeStepUsing()` (applied on read/merge) — see [Normalize live scans](customizing.md#normalize-live-scans); `scanFormat()` / `onStepScanned()` are programmatic-only — see [Drive scans programmatically](customizing.md#drive-scans-programmatically).
 
-#### Reading sequence state
+### Reading sequence state
 
 Give the container its own state and read it back through helpers:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+
 QrScanSequence::make(['batch_number', 'serial_number'])
     ->statePath('sequence')
     ->normalizeStepUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
@@ -151,16 +157,17 @@ if (! $sequence->isSequenceComplete($state)) {
 
 The container writes via `$wire.set`, syncing both the component state and the legacy prefix paths — so read with `mergeSequenceState()` and validate with `isSequenceComplete()`, never a hand-rolled `array_merge` over `$this->data`. Without `->statePath()`, `getSequenceState()` falls back to the legacy paths. `getMissingSequenceKeys()` lists what's still empty.
 
-#### Correcting a scan (unedited vs edited values)
+### Correcting a scan (unedited vs edited values)
 
 Every step is a plain input: scans fill it, and operators can type or fix any value by hand — handy for unreadable labels. Every change syncs to the bound Livewire state and dispatches `qr-sequence-edited`. Pass `->editable(false)` to render locked read-only values instead. To flip modes live without a re-render wiping the running feed, dispatch `qr-sequence-editable` with `{ enabled }` on `window`; the component listens for it (its DOM is `wire:ignore`d so scans survive Livewire morphs).
 
-#### Checked steps and auto-submit
+### Checked steps and auto-submit
 
 Describe each step with `ScanStep` to check scans on the server and submit the form once the whole set is in:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Enums\InvalidSequenceBehavior;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
 QrScanSequence::make()
@@ -190,12 +197,14 @@ QrScanSequence::make()
 - **Typed corrections.** In an editable sequence with server work, an edited step is checked like a scan with source `ScanInput::Manual` (`'manual'`). It never skips an optional step or moves the current step, and a rejected edit stays visible with its message.
 - **Keys.** Server checks reach the component by its key. Give the sequence `statePath()` or `key()`; if it has neither, it gets an automatic key from its step keys (`qr-scan-sequence-po-sku`) and logs a warning in the local environment, so two identical sequences on one page need explicit keys.
 
-#### Handheld scanners, sticky and repeat steps
+### Handheld scanners, sticky and repeat steps
 
 A keyboard-wedge scanner fills the sequence without any focus: every burst goes to the current step, then the sequence moves on. If an operator focuses a step's input, the next burst goes to that step instead. While a server check is running, one burst waits and replays; any more are dropped (`qr-scan-dropped`).
 
 ```php
 use Mmuqiitf\FilamentQrCode\Enums\RepeatComplete;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
 QrScanSequence::make()
     ->statePath('picking')
@@ -216,12 +225,14 @@ QrScanSequence::make()
 - **Finishing a step**: scan the finish code (config `sequence.finish_code` for every step, default `null` = none; `finishWith('DONE')` overrides it per step) or press the step's **Done** button. A step needs at least one code (or all `n` in `wait` mode) before it can finish. The finish code is never stored.
 - Sticky and repeat steps go through the server like checked steps (one `handleStepScan` request per scan). Sequences without them are unchanged.
 
-#### Step order: optional skips and `when()`
+### Step order: optional skips and `when()`
 
 - **An optional step gives way.** When a live scan (camera or hardware) fails an optional step's checks but passes the next active step, the optional step is skipped (reported in `skipped`) and the code lands there. The next step can be a repeat step, so `po, sku, lot (optional), serials (repeat)` works: a serial scanned at the lot step goes straight into serials.
 - **`when()` makes a step conditional.** The closure receives `$values` (the sequence so far) and `$step`, and returns a bool:
 
 ```php
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+
 ScanStep::make('batch')
     ->when(fn (array $values): bool => str_starts_with($values['sku'] ?? '', 'BATCH-'))
     ->validateUsing(['regex:/^B-\d+$/']),
@@ -229,11 +240,13 @@ ScanStep::make('batch')
 
   While it returns `false`, the step is skipped and isn't required. Its value is dropped, and it's greyed out in the browser. A scan aimed straight at it is rejected (`step_inactive`) and the sequence moves to the next empty active step. Conditions run in step order, so a step's closure sees the values of the active steps before it. A closure that throws counts as active, and a warning is logged in the local environment.
 
-#### Driving a sequence from page code
+### Driving a sequence from page code
 
 Call these on the component from your page. Each one updates the browser on the next response.
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+
 $sequence = $this->form->getComponent(fn ($component) => $component instanceof QrScanSequence);
 
 $sequence->goToStep('lot');                      // move the cursor
@@ -244,11 +257,13 @@ $sequence->setRepeatCount('serials', 5);         // override repeat() for this p
 
 `setRepeatCount()` is stored in the session, keyed by the Livewire component, so later server checks agree with the counter. Most pages don't need it: a `repeat()` closure that reads page state already updates the `k / n` counter on every re-render (see [Runtime control](#runtime-control)).
 
-### 4. Focus Handoff Between Fields
+## Sequential Field Scanning (`nextField()`)
 
 Move focus to the next field after each scan (a two-field handoff — distinct from sequential scanning above):
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 QrScanner::make('batch_number')
     ->nextField('serial_number'),
 
@@ -317,6 +332,8 @@ Keep the manual input's Enter handler: scanner bursts swallow their terminator (
 ## Server-side checks
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 QrScanner::make('sku')
     ->validateUsing(['required', 'string', 'max:32'])
     ->lookup(Product::class, 'sku', modifyQueryUsing: fn (Builder $query) => $query->where('active', true))
@@ -332,6 +349,9 @@ QrScanner::make('sku')
 ### Reacting to scans
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+use Mmuqiitf\FilamentQrCode\Support\ScanResult;
+
 QrScanner::make('sku')
     ->lookup(Product::class, 'sku')
     ->onScanned(function (ScanResult $result, Set $set): void {
@@ -364,6 +384,7 @@ For POS line entry (scan, scan, scan) put the field in continuous mode. Every ac
 use Mmuqiitf\FilamentQrCode\Enums\ContinuousDisplay;
 use Mmuqiitf\FilamentQrCode\Enums\HardwareInputScope;
 use Mmuqiitf\FilamentQrCode\Enums\ScanMode;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 
 QrScanner::make('scan')
     ->mode(ScanMode::Continuous)
@@ -397,6 +418,8 @@ Fields with server checks give a different cue for each outcome:
 | Duplicate (within cooldown) | none | none | none |
 
 ```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 QrScanner::make('sku')
     ->lookup(Product::class, 'sku')
     ->beep(success: true, error: true)
@@ -436,6 +459,7 @@ To apply changes only when you ask, set config `scan.sync_options` to `'refresh'
 
 ```php
 use Mmuqiitf\FilamentQrCode\Enums\OptionsSync;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 
 QrScanner::make('sku')->syncOptions(OptionsSync::Refresh);
 // later, from PHP or JS:

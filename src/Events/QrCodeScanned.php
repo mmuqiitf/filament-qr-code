@@ -6,6 +6,7 @@ namespace Mmuqiitf\FilamentQrCode\Events;
 
 class QrCodeScanned
 {
+    /** Dispatched for every server-observed scan. */
     public function __construct(
         public string $code,
         public string $source,

@@ -15,6 +15,8 @@ use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
  * options independently: the signed preview silently dropped the logo and
  * caption, and downloads hardcoded black on white. Every surface now builds
  * one spec, so render drift is impossible by construction.
+ *
+ * @internal Not covered by semver; may change in any release.
  */
 final class QrRenderSpec
 {

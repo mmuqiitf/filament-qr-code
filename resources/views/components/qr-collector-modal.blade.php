@@ -8,6 +8,8 @@
     class="fi-qr-collector-modal space-y-4"
     wire:ignore
 >
+    @include('filament-qr-code::components.announcer')
+
     <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
         <label class="flex items-center gap-2 text-gray-500 dark:text-gray-400 shrink-0 w-full">{{ __('filament-qr-code::ui.camera') }}
         <select
@@ -16,7 +18,7 @@
             class="fi-select-input w-full rounded-md border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white py-1 px-2"
         >
             <template x-for="dev in devices" :key="dev.id">
-                <option :value="dev.id" x-text="dev.label || ('Camera ' + dev.id)"></option>
+                <option :value="dev.id" x-text="dev.label || @js(__('filament-qr-code::ui.camera_device')).replace(':id', dev.id)"></option>
             </template>
         </select>
         </label>
@@ -75,7 +77,7 @@
             <template x-for="(item, index) in items" :key="index">
                 <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-xs font-mono">
                     <span class="font-bold text-gray-900 dark:text-white truncate" x-text="item.code"></span>
-                    <button type="button" @click="removeItem(index)" class="text-gray-400 hover:text-danger-600 ml-2">
+                    <button type="button" @click="removeItem(index)" class="text-gray-400 hover:text-danger-600 ml-2" aria-label="{{ __('filament-qr-code::ui.remove_code') }}">
                         &times;
                     </button>
                 </div>

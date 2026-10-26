@@ -59,31 +59,45 @@ class QrCodeService
         QrRenderCache::enablePersistent($enabled);
     }
 
-    public static function cacheTtl(?int $seconds): void
+    /**
+     * Override generator.cache_ttl at runtime: seconds to keep persistent (L2)
+     * entries, false to turn the L2 cache off, null to clear the override and
+     * use the config again.
+     */
+    public static function cacheTtl(int|false|null $seconds): void
     {
         QrRenderCache::setTtl($seconds);
     }
 
+    /** Laravel cache store for the persistent render cache; null uses the default store. */
     public static function cacheStore(?string $store): void
     {
         QrRenderCache::setStore($store);
     }
 
-    public static function effectiveCacheTtl(): ?int
+    /**
+     * The persistent (L2) cache TTL in effect: the cacheTtl() override, else
+     * generator.cache_ttl. An int is seconds, null means no expiry, and false
+     * means the L2 cache is off (the in-process cache still works).
+     */
+    public static function effectiveCacheTtl(): int|false|null
     {
         return QrRenderCache::effectiveTtl();
     }
 
+    /** Create a renderer seeded with the `generator` config defaults. */
     public function __construct()
     {
         $this->errorCorrectionLevel = ErrorCorrectionLevel::M();
     }
 
+    /** Start a fresh render (same as the `FilamentQrCode` facade). */
     public static function make(): self
     {
         return new self;
     }
 
+    /** Image size in pixels. */
     public function size(int $size): self
     {
         $this->size = max(50, $size);
@@ -91,6 +105,7 @@ class QrCodeService
         return $this;
     }
 
+    /** Quiet-zone margin in modules. */
     public function margin(int $margin): self
     {
         $this->margin = max(0, $margin);
@@ -98,6 +113,7 @@ class QrCodeService
         return $this;
     }
 
+    /** Output SVG or PNG. */
     public function format(QrFormat|string $format): self
     {
         if (is_string($format)) {
@@ -109,6 +125,7 @@ class QrCodeService
         return $this;
     }
 
+    /** Foreground colour as hex. */
     public function color(string $hexColor): self
     {
         $this->foregroundColor = $hexColor;
@@ -116,6 +133,7 @@ class QrCodeService
         return $this;
     }
 
+    /** Background colour as hex. */
     public function backgroundColor(string $hexColor): self
     {
         $this->backgroundColor = $hexColor;
@@ -123,6 +141,7 @@ class QrCodeService
         return $this;
     }
 
+    /** Error-correction level: L, M, Q or H. */
     public function errorCorrection(string|ErrorCorrectionLevel $level): self
     {
         if (is_string($level)) {
@@ -139,6 +158,7 @@ class QrCodeService
         return $this;
     }
 
+    /** Text overlay under the QR (forces PNG; falls back to GD bitmap fonts). */
     public function withText(string $text, int $fontSize = 16, string $fontColor = '#000000', ?string $fontPath = null): self
     {
         $this->overlayText = $text;
@@ -152,6 +172,7 @@ class QrCodeService
         return $this;
     }
 
+    /** TrueType font file for withText() overlays. */
     public function font(string $fontPath): self
     {
         $this->fontPath = $fontPath;
@@ -159,6 +180,7 @@ class QrCodeService
         return $this;
     }
 
+    /** Embed a logo image in the centre (forces PNG). */
     public function logo(string $path, int $size = 50): self
     {
         $this->logoPath = $path;
@@ -169,6 +191,7 @@ class QrCodeService
         return $this;
     }
 
+    /** File name used by download() and stream(). */
     public function fileName(string $fileName): self
     {
         $this->fileName = $fileName;
@@ -176,6 +199,7 @@ class QrCodeService
         return $this;
     }
 
+    /** Render the QR and return the raw SVG or PNG bytes. */
     public function generate(string $data): self
     {
         $this->data = $data;
@@ -218,11 +242,13 @@ class QrCodeService
         );
     }
 
+    /** Clear the in-process render cache. */
     public static function flushRenderCache(): void
     {
         QrRenderCache::flushMemory();
     }
 
+    /** Clear the persistent (Laravel cache) render cache. */
     public static function flushPersistentCache(): void
     {
         QrRenderCache::flushPersistent();
@@ -237,6 +263,7 @@ class QrCodeService
         return $this->rawResult;
     }
 
+    /** Render the QR as a `data:` URI for `<img src>`. */
     public function toDataUri(): string
     {
         $raw = $this->getRaw();
@@ -245,6 +272,7 @@ class QrCodeService
         return 'data:'.$mime.';base64,'.base64_encode($raw);
     }
 
+    /** Render the QR as a download response. */
     public function download(?string $fileName = null): StreamedResponse
     {
         $name = $fileName ?? $this->fileName;
@@ -262,6 +290,7 @@ class QrCodeService
         );
     }
 
+    /** Render the QR as an inline image response. */
     public function stream(?string $fileName = null): StreamedResponse
     {
         $name = $fileName ?? $this->fileName;

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Support;
 
+/**
+ * @internal Not covered by semver; may change in any release.
+ */
 final readonly class SequenceScanResult
 {
     /**

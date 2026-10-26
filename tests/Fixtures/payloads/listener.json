@@ -1,0 +1,22 @@
+{
+    "autoFocusNext": false,
+    "beepDurationMs": 80,
+    "beepFrequency": 880,
+    "burstThresholdMs": 50,
+    "fallbackToAnyInput": true,
+    "fields": [
+        "sku"
+    ],
+    "hardwareScanner": true,
+    "minBarcodeLength": 2,
+    "minFastKeys": 3,
+    "preventSubmit": true,
+    "scanTimeoutMs": 150,
+    "sound": false,
+    "terminators": [
+        "Enter",
+        "Tab"
+    ],
+    "vibrate": true,
+    "vibrateDurationMs": 100
+}

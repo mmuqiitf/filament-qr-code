@@ -24,6 +24,23 @@ await document.querySelector('[data-qr-sequence]').qrScanSequence.feed('OP-001',
 
 `source` is `camera`, `hardware`, `upload` or `manual`; it reaches `ScanResult::$source`, the hooks and the events. Typed (`manual`) codes never skip an optional step.
 
+## Run the checks yourself
+
+A field class (or a Livewire action that holds the field) can run the same normalization and checks a scan gets, without going through the browser:
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
+
+$code = $field->normalizeScannedCode($rawTag);           // normalizeWith() presets, then normalizeUsing()
+$result = $field->runScanChecks($code, ScanInput::Hardware); // rules, lookup, closures, piped stages
+
+if (! $result->passes) {
+    // $result->message explains why; $result->record holds the looked-up record otherwise
+}
+```
+
+`runScanChecks()` expects an already normalized code and stops at the first failing check. Both methods are on `QrScanner` (through `InteractsWithScans`); they don't fire the scan hooks or events.
+
 ## Share the keyboard-wedge router
 
 Every wedge burst on the page has one owner. Register your own input so it takes part instead of fighting the scanners for keystrokes:

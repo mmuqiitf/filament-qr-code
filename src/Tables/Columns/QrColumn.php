@@ -44,6 +44,7 @@ class QrColumn extends Column
 
     protected bool|Closure $lazyModal = true;
 
+    /** Error-correction level: L, M, Q or H. */
     public function errorCorrection(string|Closure|null $level): static
     {
         $this->errorCorrectionLevel = $level;
@@ -51,6 +52,7 @@ class QrColumn extends Column
         return $this;
     }
 
+    /** Embed a logo image in the centre (forces PNG). */
     public function logo(string|Closure|null $path, int|Closure $size = 50): static
     {
         $this->logoPath = $path;
@@ -59,6 +61,7 @@ class QrColumn extends Column
         return $this;
     }
 
+    /** Value to encode; a closure receives the record. Defaults to the column state. */
     public function data(string|Closure|null $data): static
     {
         $this->qrData = $data;
@@ -66,6 +69,7 @@ class QrColumn extends Column
         return $this;
     }
 
+    /** Thumbnail size in pixels inside the table cell. */
     public function thumbnailSize(int|Closure $size): static
     {
         $this->thumbnailSize = $size;
@@ -73,11 +77,13 @@ class QrColumn extends Column
         return $this;
     }
 
+    /** Alias of thumbnailSize(). */
     public function size(int|Closure $size): static
     {
         return $this->thumbnailSize($size);
     }
 
+    /** Size in pixels of the click-to-enlarge preview. */
     public function modalSize(int|Closure $size): static
     {
         $this->modalSize = $size;
@@ -85,6 +91,7 @@ class QrColumn extends Column
         return $this;
     }
 
+    /** Quiet-zone margin in modules. */
     public function margin(int|Closure $margin): static
     {
         $this->margin = $margin;
@@ -92,6 +99,7 @@ class QrColumn extends Column
         return $this;
     }
 
+    /** Render as SVG or PNG. */
     public function format(QrFormat|string|Closure $format): static
     {
         $this->format = $format;
@@ -99,6 +107,7 @@ class QrColumn extends Column
         return $this;
     }
 
+    /** Foreground colour as hex. */
     public function color(string|Closure $hexColor): static
     {
         $this->foregroundColor = $hexColor;
@@ -106,6 +115,7 @@ class QrColumn extends Column
         return $this;
     }
 
+    /** Background colour as hex. */
     public function backgroundColor(string|Closure $hexColor): static
     {
         $this->backgroundColor = $hexColor;
@@ -113,6 +123,7 @@ class QrColumn extends Column
         return $this;
     }
 
+    /** Open a larger preview modal on click. */
     public function previewable(bool|Closure $condition = true): static
     {
         $this->canPreview = $condition;
@@ -120,6 +131,7 @@ class QrColumn extends Column
         return $this;
     }
 
+    /** Offer a download from the preview modal. */
     public function downloadable(bool|Closure $condition = true): static
     {
         $this->canDownload = $condition;
@@ -201,11 +213,16 @@ class QrColumn extends Column
         }
     }
 
+    /**
+     * Clear the in-process data-URI cache shared by every QrColumn.
+     * Useful in tests and long-running workers (Octane, queues).
+     */
     public static function flushDataUriCache(): void
     {
         QrCodeService::flushRenderCache();
     }
 
+    /** @internal Returns an internal render spec; use the component setters. */
     public function getRenderSpec(int $size): QrRenderSpec
     {
         $format = $this->evaluate($this->format);

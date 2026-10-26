@@ -11,6 +11,7 @@ enum ScanInput: string
     case Upload = 'upload';
     case Manual = 'manual';
 
+    /** Map a browser source string to a case; unknown values become Camera. */
     public static function fromClient(string $value): self
     {
         return self::tryFrom($value) ?? self::Camera;

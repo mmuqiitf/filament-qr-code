@@ -11,6 +11,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
+use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
 use Mmuqiitf\FilamentQrCode\Validation\DistinctCodes;
 
 class QrCollector extends Field
@@ -27,6 +28,7 @@ class QrCollector extends Field
 
     protected int|Closure $delayBetweenScansMs = 1200;
 
+    /** Accept the same code more than once in the list (browser-side check). */
     public function allowDuplicates(bool|Closure $condition = true): static
     {
         $this->allowDuplicates = $condition;
@@ -34,6 +36,7 @@ class QrCollector extends Field
         return $this;
     }
 
+    /** Pause in milliseconds before the next camera scan is accepted. */
     public function delayBetweenScans(int|Closure $ms): static
     {
         $this->delayBetweenScansMs = $ms;
@@ -71,6 +74,7 @@ class QrCollector extends Field
             'delayBetweenScansMs' => $this->getDelayBetweenScansMs(),
             // $wire proxies every name, so the browser cannot probe for the hook itself.
             'wireScanHandler' => isset($this->livewire) && method_exists($this->livewire, 'handleCollectorScan'),
+            ...ScanMessages::forAnnouncements(),
         ];
     }
 }

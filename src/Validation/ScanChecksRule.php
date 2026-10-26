@@ -10,6 +10,7 @@ use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 
 final readonly class ScanChecksRule implements ValidationRule
 {
+    /** Submit-time rule that runs a field's server scan checks. */
     public function __construct(
         private QrScanner $component,
     ) {}

@@ -26,7 +26,11 @@ final readonly class ScanResult
         return new self(passes: false, code: $code, source: $source, message: $message);
     }
 
-    /** @return array{passes: bool, code: string, source: ?string, message: ?string, record_key: mixed} */
+    /**
+     * @return array{passes: bool, code: string, source: ?string, message: ?string, record_key: mixed}
+     *
+     * @internal Payload for the package JS; not covered by semver.
+     */
     public function toClient(): array
     {
         return [
