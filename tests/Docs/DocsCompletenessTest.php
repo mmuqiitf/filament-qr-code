@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 use Symfony\Component\Finder\Finder;
 
-function qrDocsPath(string $path): string
-{
-    return dirname(__DIR__, 2).'/'.$path;
-}
+require_once __DIR__.'/DocHelpers.php';
 
 it('documents every browser event the package fires', function () {
     $events = [];
