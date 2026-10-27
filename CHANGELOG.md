@@ -8,9 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `QrColumn`: a previewable column is no longer wrapped in the row's `recordUrl()` link, so clicking the thumbnail opens the preview instead of navigating, and the preview's download link is no longer a nested anchor. Other cells still link to the record.
+- `QrScanSequence`: when `validateAllUsing()` rejects the scan that filled a repeat step, that code is dropped so the step can be rescanned (it used to stay and block the step as full).
+- `QrScanSequence`: `normalizeStepUsing()` and `ScanStep::normalizeUsing()` now route scans through the server, so the step list shows the normalized code instead of the raw one.
+- `QrScanSequence`: no step stays highlighted as active once the sequence is complete.
 - `generator.cache_ttl => false` now turns the persistent (Laravel cache) render cache off, as documented; it used to cache forever like `null`. `QrCodeService::cacheTtl(false)` does the same at runtime.
 
 ### Added
+- `QrScanSequence`: a "Scanning paused." banner with a Resume button while the sequence is paused.
 - Public API boundary: internal classes and methods are tagged `@internal` and excluded from semver; `recordsToFiles()`, `QrColumn::flushDataUriCache()`, `normalizeScannedCode()`, `runScanChecks()` and `QrCodeService::effectiveCacheTtl()` are documented as public API.
 - Swappable camera decoder: `FilamentQrCode.qrCameraCore.setDecoder(loader)`; `setDecoder(null)` restores the default.
 - Native `BarcodeDetector` decoding when the browser supports every requested format, with html5-qrcode as the fallback.

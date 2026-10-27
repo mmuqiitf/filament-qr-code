@@ -132,7 +132,7 @@ QrScanSequence::make([
 
 One feed, one checklist: steps auto-advance, clicking a step re-targets it, and the camera dropdown matches the single-field scanner. It renders stacked on mobile and split-screen on desktop. When the last step lands, the feed stops by itself so the button never gets stuck on "Stop".
 
-Each step value is also written to `{schema state path}.{step}` (for example `data.step`), so a form that reads the steps as separate fields keeps working; the prefix always follows your schema's `statePath()`. Live values are normalized with `normalizeStepUsing()` (applied on read/merge) — see [Normalize live scans](customizing.md#normalize-live-scans); `scanFormat()` / `onStepScanned()` are programmatic-only — see [Drive scans programmatically](customizing.md#drive-scans-programmatically).
+Each step value is also written to `{schema state path}.{step}` (for example `data.step`), so a form that reads the steps as separate fields keeps working; the prefix always follows your schema's `statePath()`. Live values are normalized with `normalizeStepUsing()` (applied on read/merge; a sequence with a step normalizer checks each scan on the server, so the step list shows the normalized code) — see [Normalize live scans](customizing.md#normalize-live-scans); `scanFormat()` / `onStepScanned()` are programmatic-only — see [Drive scans programmatically](customizing.md#drive-scans-programmatically).
 
 ### Reading sequence state
 
@@ -187,7 +187,7 @@ QrScanSequence::make()
 
 - **One request per scan.** Each scan calls `handleStepScan` once. The server checks the step (rules, then lookup, then closures, the same pipeline as `QrScanner`), writes the value, and answers with the step to show next. A rejected scan keeps the operator on that step and shows the message.
 - **Optional steps.** An optional step whose check fails gives way when the code fits the next step: the next step takes the code and the optional one stays empty. An optional step without checks accepts everything, so it never gives way.
-- **Whole-set checks.** `validateAllUsing()` runs once every required step has a value. Rules are keyed by step (`['po' => 'different:serial']`); unkeyed rules apply to the last step. A closure returns `null` or `[]` to pass, a message (last step) or `[step => message]`. On failure the default (`jump_to_step`) keeps every value and asks for the failing step again; `Restart` clears the steps.
+- **Whole-set checks.** `validateAllUsing()` runs once every required step has a value. Rules are keyed by step (`['po' => 'different:serial']`); unkeyed rules apply to the last step. A closure returns `null` or `[]` to pass, a message (last step) or `[step => message]`. On failure the default (`jump_to_step`) keeps every value and asks for the failing step again (when the failing step is a repeat step and the last scan filled it, that code is dropped so the operator can scan the right one); `Restart` clears the steps.
 - **Completion.** `onCompleted($values)` runs and `ScanSequenceCompleted` fires, then `autoSubmit()` calls your submit method (`autoSubmit(method: 'save')` for another name). A `ValidationException` from it lands in the error bag and the values stay.
 - **Defaults** live in config `sequence`: `on_invalid` `'jump_to_step'`, `auto_submit` `false`, `submit_method` `'submit'`, `reset_after_submit` `false`, `continuous` `false`.
 - **Plain sequences don't change.** Without checks, `validateAllUsing()`, `onCompleted()`, `autoSubmit()` or `continuous()`, the browser writes state itself as before and makes no request. `fields([...])` is shorthand for steps without checks.
@@ -500,7 +500,7 @@ Send these on `window` (or with `$this->dispatch(...)` from PHP). `field` picks 
 | `qr-sequence-feed` | `{ field, code, source? }` |
 | `qr-sequence-go-to` | `{ field, step }` |
 | `qr-sequence-reset` | `{ field, values? }` |
-| `qr-sequence-pause` / `-resume` / `-refresh` | `{ field }` |
+| `qr-sequence-pause` / `-resume` / `-refresh` | `{ field }` (a paused sequence shows a "Scanning paused." banner with a Resume button) |
 | `qr-sequence-set-options` | `{ field, options }` |
 | `qr-sequence-set-repeat` | `{ field, step, count }` (display only; use `setRepeatCount()` in PHP to change the server check too) |
 
