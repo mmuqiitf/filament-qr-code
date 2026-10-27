@@ -6,6 +6,16 @@ Continuous camera multi-scan for inventory and repeater flows. For cashier/POS g
 
 ## Batch Collector Scanning (`QrCollector`, `QrCollectAction`)
 
+![Shelf audit page with three product labels collected and an unknown code flagged by the server-side lookup](images/shelf-audit-collector.png)
+
+*A warehouse shelf audit: each wedge or camera scan is looked up against seeded products, repeats are ignored, and unknown codes are flagged so they can be removed (×) before submitting.*
+
+![Shelf audit after recording a count, with the list cleared and the count listed under Recent counts](images/shelf-audit-recorded.png)
+
+*After "Record count" the collector clears and the count shows which products were not seen.*
+
+See the full example app: [`app/Filament/Pages/ShelfAudit.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ShelfAudit.php).
+
 ### In Form Repeaters
 
 ```php

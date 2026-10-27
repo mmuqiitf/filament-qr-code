@@ -72,7 +72,7 @@ From the [example app](https://github.com/mmuqiitf/filament-qr-code-example) (se
 | ![QR customizer](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/qr-customizer.png)<br>QR customizer | ![Print sheet](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/qr-labels-print-sheet.png)<br>Print sheet | ![Scanner modal](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/scanner-modal-camera.png)<br>Scanner modal |
 | ![Server check accepted](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/server-checks-accepted.png)<br>Server check accepted | ![Server check rejected](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/server-checks-rejected.png)<br>Server check rejected | ![POS checkout](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/pos-checkout.png)<br>POS checkout |
 | ![Station listener](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/cashier-station-listener.png)<br>Station listener | ![Goods receiving](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/goods-receiving-received.png)<br>Goods receiving | ![Work order sequence](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/work-order-sequence.png)<br>Work order sequence |
-| ![Manufacturing paused](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/manufacturing-paused.png)<br>Manufacturing paused |
+| ![Manufacturing paused](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/manufacturing-paused.png)<br>Manufacturing paused | ![Shelf audit collector](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/shelf-audit-collector.png)<br>Shelf audit collector | ![Shelf audit recorded](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/shelf-audit-recorded.png)<br>Shelf audit recorded |
 
 ## Requirements
 
@@ -940,6 +940,16 @@ Optional hooks: `hold(code)` (return `true` to keep a burst while you're busy), 
 Continuous camera multi-scan for inventory and repeater flows. For cashier/POS gun flows, see the [POS tutorial](scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
 
 ## Batch Collector Scanning (`QrCollector`, `QrCollectAction`)
+
+![Shelf audit page with three product labels collected and an unknown code flagged by the server-side lookup](images/shelf-audit-collector.png)
+
+*A warehouse shelf audit: each wedge or camera scan is looked up against seeded products, repeats are ignored, and unknown codes are flagged so they can be removed (×) before submitting.*
+
+![Shelf audit after recording a count, with the list cleared and the count listed under Recent counts](images/shelf-audit-recorded.png)
+
+*After "Record count" the collector clears and the count shows which products were not seen.*
+
+See the full example app: [`app/Filament/Pages/ShelfAudit.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ShelfAudit.php).
 
 ### In Form Repeaters
 
