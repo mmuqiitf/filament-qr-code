@@ -31,6 +31,8 @@ QrColumn::make('sku')
     ->downloadable();
 ```
 
+A previewable column owns its click: the thumbnail opens the preview instead of following the table's `recordUrl()`, which still applies to the other cells. With `->previewable(false)` the thumbnail links to the record like any other column.
+
 Thumbnails and modal previews share a capped in-process render cache (clear it with `QrColumn::flushDataUriCache()`, for example between tests or in long-running workers) plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s: an int is seconds, `null` keeps entries forever, `false` turns the L2 off while the in-process cache keeps working; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filamentQrCode.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
 
 ### In Infolists

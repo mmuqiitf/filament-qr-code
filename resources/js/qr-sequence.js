@@ -86,6 +86,8 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
         queuedScan: null,
         isChecking: false,
         isPaused: false,
+        // Every step is done: no step is highlighted as the one to scan next.
+        isCompleted: false,
         stepError: null,
         options: { ...DEFAULT_OPTIONS, ...definedOnly(options) },
         pendingOptions: null,
@@ -178,6 +180,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             if (index < 0) return;
 
             this.currentFieldIndex = index;
+            this.isCompleted = false;
             this.stepError = null;
         },
 
@@ -197,6 +200,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             this.results = normalizeValues(seeded);
             this.stepError = null;
             this.isPaused = false;
+            this.isCompleted = false;
             this.queuedScan = null;
             this.applyDeferredFields();
             this.currentFieldIndex = this.firstEmptyActiveIndex();
@@ -366,7 +370,12 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
         setCurrentField(index) {
             if (index >= 0 && index < this.fields.length) {
                 this.currentFieldIndex = index;
+                this.isCompleted = false;
             }
+        },
+
+        isStepCurrent(index) {
+            return !this.isCompleted && this.currentFieldIndex === index;
         },
 
         async loadCameras() {
@@ -528,7 +537,9 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             if (nextIndex >= 0) {
                 this.currentFieldIndex = nextIndex;
+                this.isCompleted = false;
             } else {
+                this.isCompleted = true;
                 this.stopScanner();
                 window.dispatchEvent(new CustomEvent('qr-sequence-completed', {
                     detail: { results: { ...this.results } },
@@ -716,6 +727,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             }
 
             this.stepError = null;
+            this.isCompleted = Boolean(result.completed && !result.reset);
 
             // Remove and Clear only resync state: no feedback, no step events.
             if (quiet) return result;

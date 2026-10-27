@@ -379,3 +379,28 @@ it('keeps plain keyless sequences without a key', function (): void {
 
     expect($sequence->getKey())->toBeNull();
 });
+
+it('drops the rejected code from a full repeat step when the whole set is invalid', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence
+        ->steps([
+            ScanStep::make('po')->validateUsing(['regex:/^PO-\d+$/']),
+            ScanStep::make('serial')->validateUsing(['regex:/^SN\d+$/'])->repeat(2),
+        ])
+        ->validateAllUsing(fn (array $values): array => in_array('SN9', $values['serial'] ?? [], true) ? ['serial' => 'Wrong serial.'] : []);
+    $test = Livewire::test(SequenceScanTestComponent::class);
+
+    sequenceScan($test, 'po', 'PO-1');
+    sequenceScan($test, 'serial', 'SN1');
+    sequenceScan($test, 'serial', 'SN9')
+        ->assertReturned(fn (array $result): bool => ! $result['passes']
+            && $result['invalid_step'] === 'serial'
+            && $result['next_step'] === 'serial'
+            && $result['message'] === 'Wrong serial.')
+        ->assertSet('data.receipt.serial', ['SN1'])
+        ->assertSet('submissions', 0);
+
+    sequenceScan($test, 'serial', 'SN2')
+        ->assertReturned(fn (array $result): bool => $result['completed'] && $result['submitted'])
+        ->assertSet('data.receipt.serial', ['SN1', 'SN2'])
+        ->assertSet('submissions', 1);
+});

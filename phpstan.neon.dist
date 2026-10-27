@@ -5,3 +5,12 @@ parameters:
 
     level: 9
     phpVersion: 80500
+
+    reportUnmatchedIgnoredErrors: false
+
+    ignoreErrors:
+        # Filament 5.11 renamed ExposedLivewireMethod to Exposed. We still support ^5.0,
+        # where only ExposedLivewireMethod exists, and 5.11 still honours it.
+        -
+            identifier: attribute.deprecated
+            message: '#ExposedLivewireMethod is deprecated#'
