@@ -6,6 +6,10 @@ Render QR codes in forms, tables, and infolists, offer downloads and bulk ZIP ex
 
 ## QR Generator components
 
+![Interactive QR customizer](images/qr-customizer.png)
+
+*Live preview of colours, size, margin and error correction.* See the full example app: [`app/Filament/Pages/QrCustomizer.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/QrCustomizer.php).
+
 ### In Form Schemas
 
 ```php
@@ -20,6 +24,14 @@ QrCodeDisplay::make('qr')
 ```
 
 ### In Table Columns
+
+![Products table with a QR column](images/products-table-qr-column.png)
+
+*A QR column in a Filament table.* See the full example app: [`app/Filament/Resources/Products/Tables/ProductsTable.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Resources/Products/Tables/ProductsTable.php).
+
+![QR preview modal opened from the table](images/products-qr-preview-modal.png)
+
+*Clicking a QR opens the preview modal with download.* See the full example app: [`app/Filament/Resources/Products/Tables/ProductsTable.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Resources/Products/Tables/ProductsTable.php).
 
 ```php
 use Mmuqiitf\FilamentQrCode\Tables\Columns\QrColumn;
@@ -64,6 +76,10 @@ $table->actions([
 Both download actions share one render spec and default to black on white. Opt into the full surface to match a styled display — `->qrColor()`, `->qrBackgroundColor()`, `->qrErrorCorrection()`, `->qrLogo($path)`, `->qrCaption()` — and bulk filenames follow forced-PNG output (a logo or caption rasterizes) in their extension.
 
 ### As a Bulk ZIP Export
+
+![Bulk ZIP export of selected products](images/products-bulk-zip-export.png)
+
+*Select rows, then export their QR codes as one ZIP.* See the full example app: [`app/Filament/Resources/Products/Tables/ProductsTable.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Resources/Products/Tables/ProductsTable.php).
 
 ```php
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;

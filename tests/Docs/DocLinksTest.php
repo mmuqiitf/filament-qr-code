@@ -61,3 +61,33 @@ it('resolves every relative markdown link and anchor in the docs', function (): 
 
     expect($broken)->toBe([]);
 });
+it('points every absolute repo image URL at a file that exists on this branch', function (): void {
+    $root = dirname(__DIR__, 2);
+    $missing = [];
+
+    foreach (docLinkFiles() as $file) {
+        preg_match_all('#https://raw\.githubusercontent\.com/mmuqiitf/filament-qr-code/main/([^)\s"\']+)#', (string) file_get_contents($file), $matches);
+
+        foreach ($matches[1] as $path) {
+            if (! is_file($root.'/'.$path)) {
+                $missing[] = basename($file).': '.$path;
+            }
+        }
+    }
+
+    expect($missing)->toBe([]);
+});
+
+it('uses every screenshot in docs/images and gives each one alt text', function (): void {
+    $root = dirname(__DIR__, 2);
+    $markdown = implode("\n", array_map(fn (string $file): string => (string) file_get_contents($file), docLinkFiles()));
+
+    $images = glob($root.'/docs/images/*.png') ?: [];
+    expect($images)->not->toBeEmpty();
+
+    foreach ($images as $image) {
+        $name = basename($image);
+        expect($markdown)->toMatch('#!\[[^\]]+\]\([^)]*images/'.preg_quote($name, '#').'\)#');
+        expect(filesize($image))->toBeLessThan(250 * 1024);
+    }
+});

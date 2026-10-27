@@ -53,6 +53,18 @@ composer dev              # http://localhost:8081/admin
 
 ---
 
+## Screenshots
+
+From the [example app](https://github.com/mmuqiitf/filament-qr-code-example) (seeded demo data).
+
+| | | |
+|---|---|---|
+| ![Products table with QR column](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/products-table-qr-column.png)<br>Products table with QR column | ![QR preview modal](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/products-qr-preview-modal.png)<br>QR preview modal | ![Bulk ZIP export](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/products-bulk-zip-export.png)<br>Bulk ZIP export |
+| ![QR customizer](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/qr-customizer.png)<br>QR customizer | ![Print sheet](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/qr-labels-print-sheet.png)<br>Print sheet | ![Scanner modal](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/scanner-modal-camera.png)<br>Scanner modal |
+| ![Server check accepted](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/server-checks-accepted.png)<br>Server check accepted | ![Server check rejected](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/server-checks-rejected.png)<br>Server check rejected | ![POS checkout](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/pos-checkout.png)<br>POS checkout |
+| ![Station listener](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/cashier-station-listener.png)<br>Station listener | ![Goods receiving](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/goods-receiving-received.png)<br>Goods receiving | ![Work order sequence](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/work-order-sequence.png)<br>Work order sequence |
+| ![Manufacturing paused](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/manufacturing-paused.png)<br>Manufacturing paused |
+
 ## Requirements
 
 - PHP `^8.2`, Laravel 11/12/13, Filament v5.

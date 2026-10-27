@@ -6,6 +6,10 @@ Runs in the example app: `/admin/goods-receiving` (`app/Filament/Pages/GoodsRece
 
 ## The sequence
 
+![Goods receiving sequence completed](../images/goods-receiving-received.png)
+
+*The receiving sequence after every step is captured.* See the full example app: [`app/Filament/Pages/GoodsReceiving.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/GoodsReceiving.php).
+
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
