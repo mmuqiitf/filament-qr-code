@@ -40,7 +40,12 @@ it('renders the same markup as before the view split', function (): void {
     }
 
     // Whitespace inside a tag is insignificant; the split moves some closing '>' onto their own line.
-    $collapse = fn (string $markup): string => (string) preg_replace(['/\s+/', '/\s+>/'], [' ', '>'], $markup);
+    // Filament's own field wrapper changed its x-data in 5.11; it is not part of our markup.
+    $collapse = fn (string $markup): string => (string) preg_replace(
+        ['/\s+/', '/\s+>/', '/x-data="filamentSchemaComponent\([^"]*\)"/'],
+        [' ', '>', 'x-data="filamentSchemaComponent()"'],
+        $markup,
+    );
 
     expect($collapse($html))->toBe($collapse((string) file_get_contents($baseline)));
 });
