@@ -62,6 +62,18 @@ composer dev              # http://localhost:8081/admin
 
 ---
 
+## Screenshots
+
+From the [example app](https://github.com/mmuqiitf/filament-qr-code-example) (seeded demo data).
+
+| | | |
+|---|---|---|
+| ![Products table with QR column](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/products-table-qr-column.png)<br>Products table with QR column | ![QR preview modal](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/products-qr-preview-modal.png)<br>QR preview modal | ![Bulk ZIP export](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/products-bulk-zip-export.png)<br>Bulk ZIP export |
+| ![QR customizer](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/qr-customizer.png)<br>QR customizer | ![Print sheet](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/qr-labels-print-sheet.png)<br>Print sheet | ![Scanner modal](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/scanner-modal-camera.png)<br>Scanner modal |
+| ![Server check accepted](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/server-checks-accepted.png)<br>Server check accepted | ![Server check rejected](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/server-checks-rejected.png)<br>Server check rejected | ![POS checkout](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/pos-checkout.png)<br>POS checkout |
+| ![Station listener](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/cashier-station-listener.png)<br>Station listener | ![Goods receiving](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/goods-receiving-received.png)<br>Goods receiving | ![Work order sequence](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/work-order-sequence.png)<br>Work order sequence |
+| ![Manufacturing paused](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/manufacturing-paused.png)<br>Manufacturing paused | ![Shelf audit collector](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/shelf-audit-collector.png)<br>Shelf audit collector | ![Shelf audit recorded](https://raw.githubusercontent.com/mmuqiitf/filament-qr-code/main/docs/images/shelf-audit-recorded.png)<br>Shelf audit recorded |
+
 ## Requirements
 
 - PHP `^8.2`, Laravel 11/12/13, Filament v5.
@@ -378,6 +390,10 @@ QR Scanner Fields, the Station Listener, the Scan Sequence Container, Sequential
 
 ## QR Scanner Field (`QrScanner`)
 
+![Scanner modal with the camera open](images/scanner-modal-camera.png)
+
+*The scanner modal with a live camera feed (Chromium fake camera shown).* See the full example app: [`app/Filament/Pages/ScannerShowcase.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ScannerShowcase.php).
+
 Add a QR scanner field to your form schema with camera modal and hardware scanner integration:
 
 ```php
@@ -424,6 +440,10 @@ The modal lists every detected camera (switching restarts the feed and is rememb
 > Hardware scanner note: all hardware consumers share one page-wide input router, so a burst is never handled twice, even with a `QrScanner`, a `QrHardwareScannerListener` and a `QrCollector` on the same page. See [Hardware routing](reference.md#hardware-routing).
 
 ## Station Listener (`QrHardwareScannerListener`)
+
+![Cashier page driven by the station listener](images/cashier-station-listener.png)
+
+*A hardware scanner feeds the cart through the station listener.* See the full example app: [`app/Filament/Pages/CashierCheckout.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/CashierCheckout.php).
 
 For manufacturing stations and warehouse counters where operators shoot barcodes without touching the mouse:
 
@@ -703,6 +723,14 @@ Keep the manual input's Enter handler: scanner bursts swallow their terminator (
 
 ## Server-side checks
 
+![Server-side check accepting a scan](images/server-checks-accepted.png)
+
+*A scan accepted by the server-side rules.* See the full example app: [`app/Filament/Pages/ServerSideChecks.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ServerSideChecks.php).
+
+![Server-side check rejecting an out-of-stock scan](images/server-checks-rejected.png)
+
+*An out-of-stock scan rejected with an inline error.* See the full example app: [`app/Filament/Pages/ServerSideChecks.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ServerSideChecks.php).
+
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 
@@ -913,6 +941,16 @@ Continuous camera multi-scan for inventory and repeater flows. For cashier/POS g
 
 ## Batch Collector Scanning (`QrCollector`, `QrCollectAction`)
 
+![Shelf audit page with three product labels collected and an unknown code flagged by the server-side lookup](images/shelf-audit-collector.png)
+
+*A warehouse shelf audit: each wedge or camera scan is looked up against seeded products, repeats are ignored, and unknown codes are flagged so they can be removed (×) before submitting.*
+
+![Shelf audit after recording a count, with the list cleared and the count listed under Recent counts](images/shelf-audit-recorded.png)
+
+*After "Record count" the collector clears and the count shows which products were not seen.*
+
+See the full example app: [`app/Filament/Pages/ShelfAudit.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ShelfAudit.php).
+
 ### In Form Repeaters
 
 ```php
@@ -959,6 +997,10 @@ Render QR codes in forms, tables, and infolists, offer downloads and bulk ZIP ex
 
 ## QR Generator components
 
+![Interactive QR customizer](images/qr-customizer.png)
+
+*Live preview of colours, size, margin and error correction.* See the full example app: [`app/Filament/Pages/QrCustomizer.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/QrCustomizer.php).
+
 ### In Form Schemas
 
 ```php
@@ -973,6 +1015,14 @@ QrCodeDisplay::make('qr')
 ```
 
 ### In Table Columns
+
+![Products table with a QR column](images/products-table-qr-column.png)
+
+*A QR column in a Filament table.* See the full example app: [`app/Filament/Resources/Products/Tables/ProductsTable.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Resources/Products/Tables/ProductsTable.php).
+
+![QR preview modal opened from the table](images/products-qr-preview-modal.png)
+
+*Clicking a QR opens the preview modal with download.* See the full example app: [`app/Filament/Resources/Products/Tables/ProductsTable.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Resources/Products/Tables/ProductsTable.php).
 
 ```php
 use Mmuqiitf\FilamentQrCode\Tables\Columns\QrColumn;
@@ -1017,6 +1067,10 @@ $table->actions([
 Both download actions share one render spec and default to black on white. Opt into the full surface to match a styled display — `->qrColor()`, `->qrBackgroundColor()`, `->qrErrorCorrection()`, `->qrLogo($path)`, `->qrCaption()` — and bulk filenames follow forced-PNG output (a logo or caption rasterizes) in their extension.
 
 ### As a Bulk ZIP Export
+
+![Bulk ZIP export of selected products](images/products-bulk-zip-export.png)
+
+*Select rows, then export their QR codes as one ZIP.* See the full example app: [`app/Filament/Resources/Products/Tables/ProductsTable.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Resources/Products/Tables/ProductsTable.php).
 
 ```php
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
@@ -1985,6 +2039,10 @@ protected function validColor(): string
 
 ## The sheet
 
+![Printable QR label sheet](../images/qr-labels-print-sheet.png)
+
+*The print-only label sheet.* See the full example app: [`app/Filament/Pages/QrLabels.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/QrLabels.php).
+
 ```blade
 <div class="filament-qr-label-sheet">
     @foreach ($this->labels() as $label)
@@ -2019,6 +2077,10 @@ An assembly station: the operator scans their badge, a work order, a rework reas
 Runs in the example app: `/admin/manufacturing` (`app/Filament/Pages/ManufacturingStation.php`).
 
 ## The sequence
+
+![Work order sequence with all steps captured](../images/work-order-sequence.png)
+
+*A sequential work order with every step scanned.* See the full example app: [`app/Filament/Pages/WorkOrderSequence.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/WorkOrderSequence.php).
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
@@ -2174,6 +2236,10 @@ public function missingComponents(array $values): ?string
 
 ## Hooks and runtime control
 
+![Manufacturing station with paused banner](../images/manufacturing-paused.png)
+
+*A station paused at runtime shows the paused banner.* See the full example app: [`app/Filament/Pages/ManufacturingStation.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ManufacturingStation.php).
+
 `onStepAccepted()` / `onStepRejected()` receive `$step`, `$result`, `$code`, `$record`, `$source` and `$values`, and can't change the outcome:
 
 ```php
@@ -2296,6 +2362,10 @@ From PHP, `$this->dispatch('qr-scanner-pause', field: 'data.scan')` does the sam
 
 ## How it behaves
 
+![POS checkout with scanned items](../images/pos-checkout.png)
+
+*Scanned SKUs land as line items with live totals.* See the full example app: [`app/Filament/Pages/PosCheckout.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/PosCheckout.php).
+
 - **Page scope**: with nothing focused, a wedge scan goes to the first listening field on the page, here the scan field. A focused scan field always wins, so another scanner on the page still works when the cashier clicks into it.
 - **Empty after each scan** (`continuousDisplay`, default `Empty`): the field is ready for the next item.
 - **Unknown code**: the lookup rejects it, the error tone plays and the message shows under the field. Scanning continues (`pauseOnReject()` to stop until the cashier confirms).
@@ -2389,6 +2459,10 @@ A receiving desk scans a purchase order once, then for every item a SKU, an opti
 Runs in the example app: `/admin/goods-receiving` (`app/Filament/Pages/GoodsReceiving.php`).
 
 ## The sequence
+
+![Goods receiving sequence completed](../images/goods-receiving-received.png)
+
+*The receiving sequence after every step is captured.* See the full example app: [`app/Filament/Pages/GoodsReceiving.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/GoodsReceiving.php).
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;

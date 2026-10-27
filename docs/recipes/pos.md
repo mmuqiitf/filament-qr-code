@@ -80,6 +80,10 @@ From PHP, `$this->dispatch('qr-scanner-pause', field: 'data.scan')` does the sam
 
 ## How it behaves
 
+![POS checkout with scanned items](../images/pos-checkout.png)
+
+*Scanned SKUs land as line items with live totals.* See the full example app: [`app/Filament/Pages/PosCheckout.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/PosCheckout.php).
+
 - **Page scope**: with nothing focused, a wedge scan goes to the first listening field on the page, here the scan field. A focused scan field always wins, so another scanner on the page still works when the cashier clicks into it.
 - **Empty after each scan** (`continuousDisplay`, default `Empty`): the field is ready for the next item.
 - **Unknown code**: the lookup rejects it, the error tone plays and the message shows under the field. Scanning continues (`pauseOnReject()` to stop until the cashier confirms).

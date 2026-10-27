@@ -6,6 +6,10 @@ QR Scanner Fields, the Station Listener, the Scan Sequence Container, Sequential
 
 ## QR Scanner Field (`QrScanner`)
 
+![Scanner modal with the camera open](images/scanner-modal-camera.png)
+
+*The scanner modal with a live camera feed (Chromium fake camera shown).* See the full example app: [`app/Filament/Pages/ScannerShowcase.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ScannerShowcase.php).
+
 Add a QR scanner field to your form schema with camera modal and hardware scanner integration:
 
 ```php
@@ -52,6 +56,10 @@ The modal lists every detected camera (switching restarts the feed and is rememb
 > Hardware scanner note: all hardware consumers share one page-wide input router, so a burst is never handled twice, even with a `QrScanner`, a `QrHardwareScannerListener` and a `QrCollector` on the same page. See [Hardware routing](reference.md#hardware-routing).
 
 ## Station Listener (`QrHardwareScannerListener`)
+
+![Cashier page driven by the station listener](images/cashier-station-listener.png)
+
+*A hardware scanner feeds the cart through the station listener.* See the full example app: [`app/Filament/Pages/CashierCheckout.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/CashierCheckout.php).
 
 For manufacturing stations and warehouse counters where operators shoot barcodes without touching the mouse:
 
@@ -330,6 +338,14 @@ public function scanProduct(string $code): void
 Keep the manual input's Enter handler: scanner bursts swallow their terminator (`preventFormSubmit`), so Enter only fires for typed input — no double-adds.
 
 ## Server-side checks
+
+![Server-side check accepting a scan](images/server-checks-accepted.png)
+
+*A scan accepted by the server-side rules.* See the full example app: [`app/Filament/Pages/ServerSideChecks.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ServerSideChecks.php).
+
+![Server-side check rejecting an out-of-stock scan](images/server-checks-rejected.png)
+
+*An out-of-stock scan rejected with an inline error.* See the full example app: [`app/Filament/Pages/ServerSideChecks.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ServerSideChecks.php).
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;

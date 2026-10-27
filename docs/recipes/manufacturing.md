@@ -6,6 +6,10 @@ Runs in the example app: `/admin/manufacturing` (`app/Filament/Pages/Manufacturi
 
 ## The sequence
 
+![Work order sequence with all steps captured](../images/work-order-sequence.png)
+
+*A sequential work order with every step scanned.* See the full example app: [`app/Filament/Pages/WorkOrderSequence.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/WorkOrderSequence.php).
+
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
@@ -159,6 +163,10 @@ public function missingComponents(array $values): ?string
 `validateAllUsing()` also runs when a counted step (`repeat(3)`) is finished early with `finishWith()`: the operator sees what the BOM is missing ("BOM incomplete: missing …") instead of the generic repeat count message, and `qr-sequence-invalid` fires.
 
 ## Hooks and runtime control
+
+![Manufacturing station with paused banner](../images/manufacturing-paused.png)
+
+*A station paused at runtime shows the paused banner.* See the full example app: [`app/Filament/Pages/ManufacturingStation.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/ManufacturingStation.php).
 
 `onStepAccepted()` / `onStepRejected()` receive `$step`, `$result`, `$code`, `$record`, `$source` and `$values`, and can't change the outcome:
 

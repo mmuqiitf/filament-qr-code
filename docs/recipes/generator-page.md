@@ -58,6 +58,10 @@ protected function validColor(): string
 
 ## The sheet
 
+![Printable QR label sheet](../images/qr-labels-print-sheet.png)
+
+*The print-only label sheet.* See the full example app: [`app/Filament/Pages/QrLabels.php`](https://github.com/mmuqiitf/filament-qr-code-example/blob/main/app/Filament/Pages/QrLabels.php).
+
 ```blade
 <div class="filament-qr-label-sheet">
     @foreach ($this->labels() as $label)
