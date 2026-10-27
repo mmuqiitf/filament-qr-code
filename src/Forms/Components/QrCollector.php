@@ -73,8 +73,28 @@ class QrCollector extends Field
             'allowDuplicates' => $this->isDuplicatesAllowed(),
             'delayBetweenScansMs' => $this->getDelayBetweenScansMs(),
             // $wire proxies every name, so the browser cannot probe for the hook itself.
-            'wireScanHandler' => isset($this->livewire) && method_exists($this->livewire, 'handleCollectorScan'),
+            'wireScanHandler' => $this->hostDefinesCollectorScanHandler(),
             ...ScanMessages::forAnnouncements(),
         ];
+    }
+
+    /**
+     * Fields reach Livewire through their schema container; a field built
+     * outside a schema (e.g. in a unit test) has no host to call.
+     */
+    protected function hostDefinesCollectorScanHandler(): bool
+    {
+        if (! isset($this->container)) {
+            return false;
+        }
+
+        try {
+            $livewire = $this->getContainer()->getLivewire();
+        } catch (\TypeError) {
+            // A schema made without a Livewire component returns null through a non-nullable getter.
+            return false;
+        }
+
+        return method_exists($livewire, 'handleCollectorScan');
     }
 }

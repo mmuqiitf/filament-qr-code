@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Schemas\Schema;
+use Livewire\Component;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 
@@ -29,4 +33,29 @@ it('filters symbologies and prefers the rear camera by default', function () {
 
 it('does not assume a handleCollectorScan hook without a Livewire host (#35)', function () {
     expect(QrCollector::make('items')->getScanPayload()['wireScanHandler'])->toBeFalse();
+});
+
+it('tells the browser whether the hosting Livewire component defines handleCollectorScan', function () {
+    $withHook = new class extends Component implements HasForms
+    {
+        use InteractsWithForms;
+
+        public function handleCollectorScan(string $code): void {}
+    };
+
+    $withoutHook = new class extends Component implements HasForms
+    {
+        use InteractsWithForms;
+    };
+
+    $payloadFor = fn ($livewire): bool => QrCollector::make('items')
+        ->container(Schema::make($livewire))
+        ->getScanPayload()['wireScanHandler'];
+
+    expect($payloadFor($withHook))->toBeTrue()
+        ->and($payloadFor($withoutHook))->toBeFalse();
+});
+
+it('does not fail when its schema has no Livewire component', function () {
+    expect(QrCollector::make('items')->container(Schema::make())->getScanPayload()['wireScanHandler'])->toBeFalse();
 });
