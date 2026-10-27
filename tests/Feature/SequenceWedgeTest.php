@@ -409,3 +409,11 @@ it('stage sees the same codes live and on submit', function (): void {
         ['B1', ['order' => 'WO-1', 'parts' => ['P1', 'P2']]],
     ])->and($stage->seen['submit'])->toBe($stage->seen['live']);
 });
+
+it('routes scans through the server when a step normalizer is set so the step list shows the normalized code', function (): void {
+    $upper = fn (string $rawValue): string => strtoupper($rawValue);
+
+    expect(QrScanSequence::make()->steps([ScanStep::make('po')])->normalizeStepUsing($upper)->hasServerSequenceWork())->toBeTrue()
+        ->and(QrScanSequence::make()->steps([ScanStep::make('po')->normalizeUsing($upper)])->hasServerSequenceWork())->toBeTrue()
+        ->and(QrScanSequence::make([['key' => 'po', 'label' => 'PO']])->normalizeStepUsing($upper)->hasServerSequenceWork())->toBeTrue();
+});

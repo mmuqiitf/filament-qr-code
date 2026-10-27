@@ -224,6 +224,16 @@ class QrScanSequence extends Component implements HasValidationRules
     }
 
     /**
+     * Whether normalizeStepUsing() is set (scans then go through the server).
+     *
+     * @internal Not covered by semver.
+     */
+    public function hasStepNormalizer(): bool
+    {
+        return $this->stepNormalizer instanceof Closure;
+    }
+
+    /**
      * @internal Not covered by semver.
      */
     public function normalizeStepValue(string $fieldKey, mixed $value): mixed

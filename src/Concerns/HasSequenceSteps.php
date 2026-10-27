@@ -64,6 +64,8 @@ trait HasSequenceSteps
      */
     abstract public function normalizeStepValue(string $fieldKey, mixed $value): mixed;
 
+    abstract public function hasStepNormalizer(): bool;
+
     abstract public function getFlatStatePrefix(): string;
 
     abstract public function getComponentStatePath(): ?string;
@@ -259,12 +261,15 @@ trait HasSequenceSteps
     public function hasServerSequenceWork(): bool
     {
         foreach ($this->getScanSteps() as $step) {
-            if ($step->hasChecks() || $step->isSticky() || $step->isRepeating()) {
+            if ($step->hasChecks() || $step->isSticky() || $step->isRepeating() || $step->getNormalizeUsing() instanceof Closure) {
                 return true;
             }
         }
 
+        // A step normalizer only runs on the server: without the round trip the
+        // step list would show the raw code until the form reads its state.
         return $this->validateAllUsing !== null
+            || $this->hasStepNormalizer()
             || $this->onCompletedCallback instanceof Closure
             || $this->shouldAutoSubmit()
             || $this->isContinuous();
@@ -854,6 +859,16 @@ trait HasSequenceSteps
         if ($restart) {
             $values = $this->stickyValues($values);
             $this->writeSequenceValues($values);
+        } elseif ($invalidStep === $step && $result->code !== '' && $this->isRepeatingStep($step)) {
+            // The scan that filled the repeat step broke the set: drop it so the step can be rescanned.
+            $codes = $this->repeatCodes($values, $step);
+            $position = array_search($result->code, array_reverse($codes, true), true);
+
+            if ($position !== false) {
+                unset($codes[$position]);
+                $values[$step] = array_values($codes);
+                $this->writeSequenceValues($values);
+            }
         }
 
         $rejected = ScanResult::reject($result->code, $result->source, $message);
@@ -899,6 +914,13 @@ trait HasSequenceSteps
         }
 
         return $this->getFirstStepKey();
+    }
+
+    protected function isRepeatingStep(string $step): bool
+    {
+        $index = $this->findStepIndex($step);
+
+        return $index !== null && $this->getScanSteps()[$index]->isRepeating();
     }
 
     protected function getFirstStepKey(): ?string
