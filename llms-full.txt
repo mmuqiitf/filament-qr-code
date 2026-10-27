@@ -3350,6 +3350,10 @@ $uri = $display->getQrSvgOrDataUri();
 $uri = $display->getQrDataUri();
 ```
 
+### 8. `QrCodeService` subclasses
+
+Only if you extend `QrCodeService`: the protected `applyLogo()`, `applyTextOverlay()`, `readPersistentCache()` and `writePersistentCache()` methods and the protected static `$renderCache` property are gone, with no shims. Override `generate()` or wrap the service instead.
+
 ### `@internal` members
 
 Some classes and methods are now tagged `@internal` (see [Public API and `@internal`](docs/reference.md#public-api-and-internal)). They still work, but they are no longer covered by semver. If you call one from app code, move to the documented API.
@@ -3359,6 +3363,8 @@ Some classes and methods are now tagged `@internal` (see [Public API and `@inter
 The package now requires `bacon/bacon-qr-code` `^3.0.4`. If your lock file has an older 3.0.x, `composer update mmuqiitf/filament-qr-code --with-dependencies` updates it.
 
 ### Behaviour changes
+
+- An inline `QrCollector` now calls `handleCollectorScan($code)` on the host Livewire component when it defines that method, as documented. Before 1.0 it always dispatched the `qr-collector-item-added` window event instead. The event is no longer dispatched when the hook exists, so code that forwarded it to the same method is now dead; remove it.
 
 - `generator.cache_ttl => false` now really turns the persistent render cache off. Before 1.0 it cached forever, like `null`. If you set `false` and relied on that, set `null` instead.
 

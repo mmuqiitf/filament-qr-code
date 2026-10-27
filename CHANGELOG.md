@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-27
+
 ### Fixed
 - `QrCollector`: an inline collector now calls `$wire.handleCollectorScan($code)` when the host Livewire component defines it, as documented and as `QrCollectAction` does. It always fell back to the `qr-collector-item-added` window event before. A collector outside a Livewire component still falls back without erroring.
 - `QrColumn`: a previewable column is no longer wrapped in the row's `recordUrl()` link, so clicking the thumbnail opens the preview instead of navigating, and the preview's download link is no longer a nested anchor. Other cells still link to the record.
@@ -379,7 +381,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.6.1...v1.0.0
 [0.6.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.4.0...v0.5.0
