@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `QrCollector`: an inline collector now calls `$wire.handleCollectorScan($code)` when the host Livewire component defines it, as documented and as `QrCollectAction` does. It always fell back to the `qr-collector-item-added` window event before. A collector outside a Livewire component still falls back without erroring.
 - `QrColumn`: a previewable column is no longer wrapped in the row's `recordUrl()` link, so clicking the thumbnail opens the preview instead of navigating, and the preview's download link is no longer a nested anchor. Other cells still link to the record.
 - `QrScanSequence`: when `validateAllUsing()` rejects the scan that filled a repeat step, that code is dropped so the step can be rescanned (it used to stay and block the step as full).
 - `QrScanSequence`: `normalizeStepUsing()` and `ScanStep::normalizeUsing()` now route scans through the server, so the step list shows the normalized code instead of the raw one.
