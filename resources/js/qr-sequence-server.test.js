@@ -190,4 +190,44 @@ describe('sequence server path', () => {
         expect(wire.methodCalls).toEqual([]);
         expect(wire.calls).toEqual([['data.po', ''], ['data.receipt', {}]]);
     });
+
+    it('clears the active-step highlight once the sequence completes without a reset', async () => {
+        const { sequence } = mountSequence(() => result({
+            code: 'SN1', step: 'serial', completed: true, next_step: null, values: { po: 'PO-1', sku: 'SKU-1', serial: 'SN1' },
+        }));
+        sequence.results = { po: 'PO-1', sku: 'SKU-1' };
+        sequence.setCurrentField(2);
+        expect(sequence.isStepCurrent(2)).toBe(true);
+
+        await sequence.processScan('SN1', 'hardware');
+
+        expect(sequence.isCompleted).toBe(true);
+        expect([0, 1, 2].some((index) => sequence.isStepCurrent(index))).toBe(false);
+
+        sequence.setCurrentField(1);
+        expect(sequence.isCompleted).toBe(false);
+        expect(sequence.isStepCurrent(1)).toBe(true);
+    });
+
+    it('highlights the first step again after a completing reset', async () => {
+        const { sequence } = mountSequence(() => result({
+            code: 'SN1', step: 'serial', completed: true, submitted: true, reset: true, next_step: 'po', values: {},
+        }));
+        sequence.setCurrentField(2);
+
+        await sequence.processScan('SN1', 'hardware');
+
+        expect(sequence.isStepCurrent(0)).toBe(true);
+    });
+
+    it('clears the highlight when the browser-only path completes', async () => {
+        const { sequence } = mountSequence(() => null, { serverCheck: false });
+        sequence.setCurrentField(2);
+
+        sequence.processScan('SN1', 'hardware');
+
+        expect(sequence.isStepCurrent(2)).toBe(false);
+        sequence.goToStep('po');
+        expect(sequence.isStepCurrent(0)).toBe(true);
+    });
 });

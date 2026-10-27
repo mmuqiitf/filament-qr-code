@@ -102,3 +102,13 @@ it('gives every camera viewfinder a loading and error overlay with retry', funct
     $sequenceCamera = (string) str($html)->after('data-qr-part="sequence.camera"')->before('data-qr-part="sequence.status"');
     expect($sequenceCamera)->toContain('data-qr-part="camera.status"');
 });
+
+it('shows a paused banner with a resume button on the scan sequence', function (): void {
+    $html = Livewire::test(ViewsRenderComponent::class)->html();
+    $paused = (string) str($html)->after('data-qr-part="sequence.paused"')->before('</div>');
+
+    expect($html)->toContain('data-qr-part="sequence.paused"')
+        ->and($paused)->toContain('Scanning paused.')
+        ->and($paused)->toContain('@click="resume()"')
+        ->and($paused)->toContain('Resume scanning');
+});

@@ -33,7 +33,7 @@
     <template x-if="!editable && !isRepeating(f.key)">
         <div class="flex items-center justify-end gap-1.5">
             <span class="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700" x-text="Array.isArray(results[f.key]) ? results[f.key].join(', ') : (results[f.key] || '')"></span>
-            <span x-show="!results[f.key] && currentFieldIndex === idx" class="text-xs font-semibold text-primary-600 dark:text-primary-400 animate-pulse">
+            <span x-show="!results[f.key] && isStepCurrent(idx)" class="text-xs font-semibold text-primary-600 dark:text-primary-400 animate-pulse">
                 {{ __('filament-qr-code::ui.ready_to_scan') }}
             </span>
         </div>
