@@ -249,6 +249,16 @@ class QrColumn extends Column
         return (bool) $this->evaluate($this->canPreview);
     }
 
+    /**
+     * A previewable column owns its click (open the preview modal), so it must
+     * not be wrapped in the row's record link: nested anchors break the modal
+     * and the download link. The record URL still applies to other cells.
+     */
+    public function isClickDisabled(): bool
+    {
+        return $this->isPreviewable() || parent::isClickDisabled();
+    }
+
     public function isDownloadable(): bool
     {
         return (bool) $this->evaluate($this->canDownload);

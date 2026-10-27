@@ -19,6 +19,7 @@ use Mmuqiitf\FilamentQrCode\FilamentQrCodePlugin;
 use Workbench\App\Filament\Pages\CollectSmoke;
 use Workbench\App\Filament\Pages\ModalSmoke;
 use Workbench\App\Filament\Pages\ScanSmoke;
+use Workbench\App\Filament\Pages\TableSmoke;
 
 /**
  * Guest-only panel for the Playwright smoke tests (`npm run test:browser`).
@@ -39,7 +40,7 @@ class WorkbenchPanelProvider extends PanelProvider
             ->path('workbench')
             ->topbar(false)
             ->plugin(FilamentQrCodePlugin::make())
-            ->pages([ScanSmoke::class, CollectSmoke::class, ModalSmoke::class])
+            ->pages([ScanSmoke::class, CollectSmoke::class, ModalSmoke::class, TableSmoke::class])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
