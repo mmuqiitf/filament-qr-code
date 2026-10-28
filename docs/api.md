@@ -583,5 +583,9 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 | `generator.error_correction` | `'M'` |
 | `generator.cache_ttl` | `86400` |
 | `generator.cache_store` | `null` |
+| `generator.logo_base_paths` | `null` |
+| `image_route.ttl` | `null` |
+| `image_route.throttle` | `null` |
+| `image_route.strict_colors` | `false` |
 | `audit.enabled` | `false` |
 | `audit.channel` | `null` |

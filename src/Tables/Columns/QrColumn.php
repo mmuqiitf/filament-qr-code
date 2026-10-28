@@ -204,10 +204,12 @@ class QrColumn extends Column
         }
 
         try {
-            return URL::signedRoute(
-                'filamentQrCode.image',
-                $this->getRenderSpec((int) $this->evaluate($this->modalSize))->toSignedParams($data),
-            );
+            $params = $this->getRenderSpec((int) $this->evaluate($this->modalSize))->toSignedParams($data);
+            $ttl = config('qr-code.image_route.ttl');
+
+            return is_numeric($ttl) && (int) $ttl > 0
+                ? URL::temporarySignedRoute('filamentQrCode.image', now()->addMinutes((int) $ttl), $params)
+                : URL::signedRoute('filamentQrCode.image', $params);
         } catch (\Throwable) {
             return $this->getModalDataUri();
         }

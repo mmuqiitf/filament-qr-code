@@ -11,6 +11,7 @@ use Mmuqiitf\FilamentQrCode\Rendering\HexColor;
 use Mmuqiitf\FilamentQrCode\Rendering\QrRenderCache;
 use Mmuqiitf\FilamentQrCode\Rendering\QrRenderer;
 use Mmuqiitf\FilamentQrCode\Rendering\QrRenderOptions;
+use Mmuqiitf\FilamentQrCode\Support\LogoPathGuard;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -237,9 +238,28 @@ class QrCodeService
             fontSize: $this->fontSize,
             fontColor: $this->fontColor,
             fontPath: $this->fontPath,
-            logoPath: $this->logoPath,
+            logoPath: $this->guardedLogoPath(),
             logoSize: $this->logoSize,
         );
+    }
+
+    /**
+     * The logo path, or null when `logo_base_paths` rejects it. Inline
+     * renders degrade gracefully: the QR is drawn without the logo.
+     */
+    protected function guardedLogoPath(): ?string
+    {
+        if ($this->logoPath === null || $this->logoPath === '' || LogoPathGuard::allows($this->logoPath)) {
+            return $this->logoPath;
+        }
+
+        if (function_exists('logger')) {
+            logger()->warning('filament-qr-code: logo skipped because it is outside qr-code.generator.logo_base_paths.', [
+                'logo' => $this->logoPath,
+            ]);
+        }
+
+        return null;
     }
 
     /** Clear the in-process render cache. */

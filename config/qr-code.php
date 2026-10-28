@@ -162,6 +162,24 @@ return [
         'error_correction' => 'M', // L, M, Q, H
         'cache_ttl' => 86400, // seconds; null = forever, false = disable persistent L2
         'cache_store' => null, // null = default cache store
+        // Directories logo files must live in (realpath-checked, symlinks
+        // resolved). null = allow any readable path (1.0.0 behaviour).
+        'logo_base_paths' => null, // e.g. [storage_path('app/qr-logos')]
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Image Route Hardening
+    |--------------------------------------------------------------------------
+    |
+    | Opt-in limits for the signed filamentQrCode.image route that serves
+    | lazy modal previews. Everything is off by default.
+    |
+    */
+    'image_route' => [
+        'ttl' => null, // minutes; null = signed URLs never expire
+        'throttle' => null, // e.g. '60,1' = 60 requests per minute per client
+        'strict_colors' => false, // true = colours must be #rrggbb, else 422
     ],
 
     /*

@@ -4,6 +4,8 @@
 
 1.0.1 drops Laravel 11. Upgrade your app to Laravel 12 or 13 first; Laravel 11 apps stay on 1.0.0 (Composer keeps resolving 1.0.0 for them).
 
+Otherwise nothing to change: 1.0.1 only adds opt-in keys (`generator.logo_base_paths`, `image_route.ttl`, `image_route.throttle`, `image_route.strict_colors`). If you published `config/qr-code.php`, copy the new keys from the package config when you want them — see [Image route security](docs/generating.md#image-route-security).
+
 ## From 0.6 to 1.0
 
 1.0 removes everything 0.5 and 0.6 deprecated and changes one default. Search your app for each name below; most apps only need steps 1 and 2.

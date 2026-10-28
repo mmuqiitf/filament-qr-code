@@ -7,6 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
+use Mmuqiitf\FilamentQrCode\Support\LogoPathGuard;
 use Mmuqiitf\FilamentQrCode\Support\QrRenderSpec;
 
 class QrImageController
@@ -26,7 +27,21 @@ class QrImageController
             'caption' => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
 
+        // Opt-in hardening failures are 422 for every client: an <img> tag
+        // cannot follow the validation redirect anyway.
+        if ((bool) config('qr-code.image_route.strict_colors', false)) {
+            foreach (['foreground', 'background'] as $key) {
+                if (isset($validated[$key]) && ! preg_match('/^#[0-9a-fA-F]{6}$/', (string) $validated[$key])) {
+                    abort(422, "The {$key} colour must be #rrggbb.");
+                }
+            }
+        }
+
         $spec = QrRenderSpec::fromSignedParams($validated);
+
+        if ($spec->logoPath !== null && $spec->logoPath !== '' && ! LogoPathGuard::allows($spec->logoPath)) {
+            abort(422, 'The logo is outside the configured logo base paths.');
+        }
 
         // A logo or caption forces PNG rasterization inside the service,
         // matching the inline data-URI renders exactly.
@@ -42,8 +57,15 @@ class QrImageController
             200,
             [
                 'Content-Type' => $format->getMimeType(),
-                'Cache-Control' => 'public, max-age=86400, immutable',
+                'Cache-Control' => 'public, max-age='.self::maxAge().', immutable',
             ]
         );
+    }
+
+    private static function maxAge(): int
+    {
+        $ttl = config('qr-code.image_route.ttl');
+
+        return is_numeric($ttl) && (int) $ttl > 0 ? min(86400, (int) $ttl * 60) : 86400;
     }
 }

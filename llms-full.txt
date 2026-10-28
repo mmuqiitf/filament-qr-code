@@ -220,6 +220,10 @@ php artisan qr-code:doctor
 | `nextField()` / listener misses a field      | Name does not match exactly                                               | Use the exact field name; nested paths like `items.0.sku` are supported, and `sku` never matches `parent_sku`.                                   |
 | Table page is slow with many QRs             | Eager modal data-URIs per row                                             | Keep `->lazyModal()` (default) and the persistent cache enabled; tune `generator.cache_ttl`.                                                      |
 
+## Security notes
+
+Lazy modal previews are served by the signed `filamentQrCode.image` route. Signatures already stop tampering; if QR data or logo paths can come from users, turn on the opt-in hardening (all off by default): `generator.logo_base_paths` limits logos to listed directories, and `image_route.ttl` / `throttle` / `strict_colors` add expiring URLs, a rate limit and `#rrggbb`-only colours. See [Image route security](docs/generating.md#image-route-security).
+
 ## Reporting issues
 
 1. Run `php artisan qr-code:doctor` and include its output.
@@ -1038,6 +1042,27 @@ A previewable column owns its click: the thumbnail opens the preview instead of 
 
 Thumbnails and modal previews share a capped in-process render cache (clear it with `QrColumn::flushDataUriCache()`, for example between tests or in long-running workers) plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s: an int is seconds, `null` keeps entries forever, `false` turns the L2 off while the in-process cache keeps working; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filamentQrCode.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
 
+#### Image route security
+
+The signed `filamentQrCode.image` route is safe by default (signatures stop tampering), and 1.0.1 adds opt-in hardening for apps where QR data or logo paths come from users. Every key is off by default, so upgrading changes nothing until you set one:
+
+```php
+// config/qr-code.php
+'generator' => [
+    // ...
+    'logo_base_paths' => [storage_path('app/qr-logos')],
+],
+'image_route' => [
+    'ttl' => 60,             // preview URLs expire after an hour
+    'throttle' => '60,1',    // 60 images per minute per client, then 429
+    'strict_colors' => true, // #rrggbb only, else 422
+],
+```
+
+- `logo_base_paths` resolves each logo with `realpath()` (so `../` and symlinks that escape are caught) and accepts only PNG, JPEG, GIF or WebP files inside a listed directory. Inline renders (columns, entries, downloads, `QrCodeService`) skip a rejected logo and log a warning; the image route answers 422.
+- `ttl` signs preview URLs with an `expires` parameter (expired links get 403) and caps the browser cache at the TTL.
+- `qr-code:doctor` reports whether logos are restricted and flags base paths that do not exist.
+
 ### In Infolists
 
 ```php
@@ -1633,7 +1658,15 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 
 ### `generator`
 
-`size` (300), `margin` (2), `format` (`svg`), `foreground_color`, `background_color`, `error_correction` (`M`), `cache_ttl` (86400; `null` = forever, `false` = L2 off), `cache_store` (`null` = default store).
+`size` (300), `margin` (2), `format` (`svg`), `foreground_color`, `background_color`, `error_correction` (`M`), `cache_ttl` (86400; `null` = forever, `false` = L2 off), `cache_store` (`null` = default store), `logo_base_paths` (`null` = any readable path; a list of directories logos must live in — see [Image route security](generating.md#image-route-security)).
+
+### `image_route`
+
+| Key             | Default | Meaning |
+| --------------- | ------- | ------- |
+| `ttl`           | `null`  | minutes a lazy-preview URL stays valid (`temporarySignedRoute`); also caps `Cache-Control` `max-age` at the TTL (never above a day). `null` = never expires |
+| `throttle`      | `null`  | rate limit for the image route, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
+| `strict_colors` | `false` | require `#rrggbb` colours on the image route; anything else gets 422 |
 
 ### `audit`
 
@@ -3264,6 +3297,10 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 | `generator.error_correction` | `'M'` |
 | `generator.cache_ttl` | `86400` |
 | `generator.cache_store` | `null` |
+| `generator.logo_base_paths` | `null` |
+| `image_route.ttl` | `null` |
+| `image_route.throttle` | `null` |
+| `image_route.strict_colors` | `false` |
 | `audit.enabled` | `false` |
 | `audit.channel` | `null` |
 
@@ -3277,6 +3314,8 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 ## From 1.0.0 to 1.0.1
 
 1.0.1 drops Laravel 11. Upgrade your app to Laravel 12 or 13 first; Laravel 11 apps stay on 1.0.0 (Composer keeps resolving 1.0.0 for them).
+
+Otherwise nothing to change: 1.0.1 only adds opt-in keys (`generator.logo_base_paths`, `image_route.ttl`, `image_route.throttle`, `image_route.strict_colors`). If you published `config/qr-code.php`, copy the new keys from the package config when you want them — see [Image route security](docs/generating.md#image-route-security).
 
 ## From 0.6 to 1.0
 
