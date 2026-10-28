@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Golden-output tests lock QR SVG bytes and per-backend PNG pixels across error-correction levels, sizes, margins, colours and logos, plus the signed image route's bytes and headers. Regenerate deliberately with `QR_GOLDEN_UPDATE=1`.
+
 ## [1.0.0] - 2026-10-27
 
 ### Fixed
