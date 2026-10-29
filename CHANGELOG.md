@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `generator.logo_base_paths`: logos must resolve (realpath, symlinks followed) to an image inside a listed directory. Inline renders skip a rejected logo and log a warning; the image route returns 422.
 - `qr-code:doctor` reports logo restriction and image route hardening state.
 
+### Fixed
+
+- Image route: invalid query input now returns 422 instead of a 302 redirect (an `<img>` can't follow it), and unparseable colours such as `red` or `#12` return 422 instead of a 500. Colours accept `#rgb`, `#rrggbb` or bare hex; `strict_colors` still narrows that to `#rrggbb`.
+
 ### Removed
 
 - Laravel 11 support (Laravel 11 is end-of-life and every release now carries security advisories). Requires Laravel 12 or 13; Laravel 11 apps stay on 1.0.0.

@@ -1044,7 +1044,7 @@ Thumbnails and modal previews share a capped in-process render cache (clear it w
 
 #### Image route security
 
-The signed `filamentQrCode.image` route is safe by default (signatures stop tampering), and 1.0.1 adds opt-in hardening for apps where QR data or logo paths come from users. Every key is off by default, so upgrading changes nothing until you set one:
+The signed `filamentQrCode.image` route is safe by default (signatures stop tampering), and 1.0.1 adds opt-in hardening for apps where QR data or logo paths come from users. Invalid query input (missing `data`, out-of-range `size`, unknown `format` or `ec`, unparseable colours) always gets a 422, never a redirect or a 500; colours may be `#rgb`, `#rrggbb` or bare hex. Every hardening key is off by default, so upgrading changes nothing until you set one:
 
 ```php
 // config/qr-code.php
@@ -1666,7 +1666,7 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 | --------------- | ------- | ------- |
 | `ttl`           | `null`  | minutes a lazy-preview URL stays valid (`temporarySignedRoute`); also caps `Cache-Control` `max-age` at the TTL (never above a day). `null` = never expires |
 | `throttle`      | `null`  | rate limit for the image route, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
-| `strict_colors` | `false` | require `#rrggbb` colours on the image route; anything else gets 422 |
+| `strict_colors` | `false` | require `#rrggbb` colours on the image route (default accepts `#rgb`, `#rrggbb` or bare hex); anything else gets 422 |
 
 ### `audit`
 
@@ -3316,6 +3316,8 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 1.0.1 drops Laravel 11. Upgrade your app to Laravel 12 or 13 first; Laravel 11 apps stay on 1.0.0 (Composer keeps resolving 1.0.0 for them).
 
 Otherwise nothing to change: 1.0.1 only adds opt-in keys (`generator.logo_base_paths`, `image_route.ttl`, `image_route.throttle`, `image_route.strict_colors`). If you published `config/qr-code.php`, copy the new keys from the package config when you want them — see [Image route security](docs/generating.md#image-route-security).
+
+One behaviour fix: the image route now answers invalid input (missing `data`, out-of-range `size`, unknown `format` or `ec`, unparseable colours like `red`) with 422 instead of a 302 redirect or, for colours, a 500. If you assert on those responses, expect 422.
 
 ## From 0.6 to 1.0
 

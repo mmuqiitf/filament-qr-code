@@ -116,3 +116,22 @@ it('reports hardening state in the doctor', function () {
     $this->artisan('qr-code:doctor')
         ->expectsOutputToContain('[WARN] Logo base path does not exist: /definitely/missing/dir');
 });
+
+it('answers 422 for an unparseable colour by default instead of a 500', function (string $color) {
+    $this->get(URL::signedRoute('filamentQrCode.image', ['data' => 'C', 'foreground' => $color]))->assertStatus(422);
+})->with(['red', '#12', '#gggggg', '#1234']);
+
+it('still accepts short and long hex colours by default', function (string $color) {
+    $this->get(URL::signedRoute('filamentQrCode.image', ['data' => 'C', 'foreground' => $color]))->assertOk();
+})->with(['#fff', '#0f172a', '0f172a']);
+
+it('answers 422 instead of redirecting for any invalid input', function (array $params) {
+    $this->get(URL::signedRoute('filamentQrCode.image', $params))
+        ->assertStatus(422);
+})->with([
+    'missing data' => [['size' => 200]],
+    'size too big' => [['data' => 'X', 'size' => 5000]],
+    'bad format' => [['data' => 'X', 'format' => 'gif']],
+    'bad ec' => [['data' => 'X', 'ec' => 'Z']],
+    'long colour' => [['data' => 'X', 'background' => '#ffffffff']],
+]);

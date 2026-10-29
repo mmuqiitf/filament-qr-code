@@ -6,6 +6,8 @@
 
 Otherwise nothing to change: 1.0.1 only adds opt-in keys (`generator.logo_base_paths`, `image_route.ttl`, `image_route.throttle`, `image_route.strict_colors`). If you published `config/qr-code.php`, copy the new keys from the package config when you want them — see [Image route security](docs/generating.md#image-route-security).
 
+One behaviour fix: the image route now answers invalid input (missing `data`, out-of-range `size`, unknown `format` or `ec`, unparseable colours like `red`) with 422 instead of a 302 redirect or, for colours, a 500. If you assert on those responses, expect 422.
+
 ## From 0.6 to 1.0
 
 1.0 removes everything 0.5 and 0.6 deprecated and changes one default. Search your app for each name below; most apps only need steps 1 and 2.

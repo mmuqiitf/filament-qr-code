@@ -49,7 +49,7 @@ Thumbnails and modal previews share a capped in-process render cache (clear it w
 
 #### Image route security
 
-The signed `filamentQrCode.image` route is safe by default (signatures stop tampering), and 1.0.1 adds opt-in hardening for apps where QR data or logo paths come from users. Every key is off by default, so upgrading changes nothing until you set one:
+The signed `filamentQrCode.image` route is safe by default (signatures stop tampering), and 1.0.1 adds opt-in hardening for apps where QR data or logo paths come from users. Invalid query input (missing `data`, out-of-range `size`, unknown `format` or `ec`, unparseable colours) always gets a 422, never a redirect or a 500; colours may be `#rgb`, `#rrggbb` or bare hex. Every hardening key is off by default, so upgrading changes nothing until you set one:
 
 ```php
 // config/qr-code.php

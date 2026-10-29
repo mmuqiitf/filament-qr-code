@@ -137,7 +137,7 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 | --------------- | ------- | ------- |
 | `ttl`           | `null`  | minutes a lazy-preview URL stays valid (`temporarySignedRoute`); also caps `Cache-Control` `max-age` at the TTL (never above a day). `null` = never expires |
 | `throttle`      | `null`  | rate limit for the image route, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
-| `strict_colors` | `false` | require `#rrggbb` colours on the image route; anything else gets 422 |
+| `strict_colors` | `false` | require `#rrggbb` colours on the image route (default accepts `#rgb`, `#rrggbb` or bare hex); anything else gets 422 |
 
 ### `audit`
 
