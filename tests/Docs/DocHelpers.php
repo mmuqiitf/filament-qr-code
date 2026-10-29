@@ -11,6 +11,20 @@ function qrDocsPath(string $path): string
     return dirname(__DIR__, 2).'/'.$path;
 }
 
+/**
+ * docs/*.md and docs/recipes/*.md, sorted. Two glob() calls instead of
+ * GLOB_BRACE, which musl/Alpine (static) PHP builds do not define.
+ *
+ * @return list<string>
+ */
+function qrDocsMarkdownFiles(string $root): array
+{
+    $files = array_merge(glob($root.'/docs/*.md') ?: [], glob($root.'/docs/recipes/*.md') ?: []);
+    sort($files);
+
+    return $files;
+}
+
 function qrSnippetFiles(): array
 {
     $root = dirname(__DIR__, 2);
