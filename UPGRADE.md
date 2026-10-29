@@ -1,5 +1,9 @@
 # Upgrade guide
 
+## From 1.0.0 to 1.0.1
+
+1.0.1 drops Laravel 11. Upgrade your app to Laravel 12 or 13 first; Laravel 11 apps stay on 1.0.0 (Composer keeps resolving 1.0.0 for them).
+
 ## From 0.6 to 1.0
 
 1.0 removes everything 0.5 and 0.6 deprecated and changes one default. Search your app for each name below; most apps only need steps 1 and 2.

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Filament v5 QR package (`mmuqiitf/filament-qr-code`): camera / hardware scanning + QR generation for Laravel 11–13, PHP `^8.2`.
+Filament v5 QR package (`mmuqiitf/filament-qr-code`): camera / hardware scanning + QR generation for Laravel 12–13, PHP `^8.2`.
 
 ## Commands
 
