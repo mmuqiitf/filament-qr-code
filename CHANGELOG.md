@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Golden-output tests lock QR SVG bytes and per-backend PNG pixels across error-correction levels, sizes, margins, colours and logos, plus the signed image route's bytes and headers. Regenerate deliberately with `QR_GOLDEN_UPDATE=1`.
 
+### Removed
+
+- Laravel 11 support (Laravel 11 is end-of-life and every release now carries security advisories). Requires Laravel 12 or 13; Laravel 11 apps stay on 1.0.0.
+
 ## [1.0.0] - 2026-10-27
 
 ### Fixed

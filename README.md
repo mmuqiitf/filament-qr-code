@@ -7,7 +7,7 @@
 [![PHPStan Level 9](https://img.shields.io/badge/PHPStan-level%209-brightgreen.svg?style=flat-square)](https://phpstan.org/)
 [![Total Downloads](https://img.shields.io/packagist/dt/mmuqiitf/filament-qr-code.svg?style=flat-square)](https://packagist.org/packages/mmuqiitf/filament-qr-code)
 
-A powerful, modern QR code package designed exclusively for **Filament v5** and **Laravel 11 / 12 / 13**.
+A powerful, modern QR code package designed exclusively for **Filament v5** and **Laravel 12 / 13**.
 
 Features:
 
@@ -67,7 +67,7 @@ From the [example app](https://github.com/mmuqiitf/filament-qr-code-example) (se
 
 ## Requirements
 
-- PHP `^8.2`, Laravel 11/12/13, Filament v5.
+- PHP `^8.2`, Laravel 12/13, Filament v5.
 - PNG generation needs `gd` or `imagick` plus system fonts (`fonts-dejavu-core` on Debian).
 - Camera scanning needs a secure context (`https` or `localhost`).
 - The camera bundle (`html5-qrcode`) is compiled into `resources/dist/` — no CDN. After changing anything under `resources/js` or `resources/css`, rebuild with `npm run build` (CI fails when committed `dist/` is stale).

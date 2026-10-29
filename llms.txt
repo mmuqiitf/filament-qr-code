@@ -1,6 +1,6 @@
 # Filament QR Code
 
-> `mmuqiitf/filament-qr-code` is a Filament v5 package (Laravel 11/12/13, PHP 8.2+) that scans QR codes and barcodes with the camera, image upload or a keyboard-wedge Hardware Scanner, and generates QR codes (SVG/PNG) for forms, tables, infolists and downloads.
+> `mmuqiitf/filament-qr-code` is a Filament v5 package (Laravel 12/13, PHP 8.2+) that scans QR codes and barcodes with the camera, image upload or a keyboard-wedge Hardware Scanner, and generates QR codes (SVG/PNG) for forms, tables, infolists and downloads.
 
 Scanned values write straight into the Livewire form state. Lookups and validation run on the server for each scan. Everything under `@internal` is outside semver. Every public class, method and config key is listed in the API map. Vocabulary: QR Scanner Field (`QrScanner`), Station Listener (`QrHardwareScannerListener`), Scan Sequence Container (`QrScanSequence`), Batch Collector Scanning (`QrCollector`, `QrCollectAction`), QR Generator.
 
