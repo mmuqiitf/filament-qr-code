@@ -1,5 +1,5 @@
-//#region \0rolldown/runtime.js
-var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescriptor, r = Object.getOwnPropertyNames, i = Object.getPrototypeOf, a = Object.prototype.hasOwnProperty, o = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t.exports), s = (e, i, o, s) => {
+// \0rolldown/runtime.js
+var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescriptor, r = Object.getOwnPropertyNames, i = Object.getPrototypeOf, a = Object.prototype.hasOwnProperty, o = (e, t) => () => (t || (e((t = { exports: {} }).exports, t, t.exports), e = null), t.exports), s = (e, i, o, s) => {
 	if (i && typeof i == "object" || typeof i == "function") for (var c = r(i), l = 0, u = c.length, d; l < u; l++) d = c[l], !a.call(e, d) && d !== o && t(e, d, {
 		get: ((e) => i[e]).bind(null, d),
 		enumerable: !(s = n(i, d)) || s.enumerable
@@ -100,8 +100,7 @@ function b(e) {
 function x(e, t, n) {
 	return e > n ? n : e < t ? t : e;
 }
-//#endregion
-//#region node_modules/html5-qrcode/esm/strings.js
+// node_modules/html5-qrcode/esm/strings.js
 var S = function() {
 	function e() {}
 	return e.codeParseError = function(e) {
@@ -211,10 +210,10 @@ var S = function() {
 		}
 		return !0;
 	}, e;
-}(), w = /* @__PURE__ */ c((/* @__PURE__ */ o(((e, t) => {
+}(), w = /* @__PURE__ */ c((/* @__PURE__ */ o(((e, t, n) => {
 	(function(n, r) {
 		typeof e == "object" && t !== void 0 ? r(e) : typeof define == "function" && define.amd ? define(["exports"], r) : (n = typeof globalThis < "u" ? globalThis : n || self, r(n.ZXing = {}));
-	})(e, (function(e) {
+	})(n, (function(e) {
 		function t(e) {
 			return e == null;
 		}
@@ -19340,7 +19339,7 @@ var ye = function() {
 		n === 1 ? t.style.display = "none" : t.innerText = `${C.selectCamera()} (${this.cameras.length})  `;
 		for (var r = 1, i = 0, a = this.cameras; i < a.length; i++) {
 			var o = a[i], s = o.id, c = o.label == null ? s : o.label;
-			(!c || c === "") && (c = [C.anonymousCameraPrefix(), r++].join(" "));
+			c && c !== "" || (c = [C.anonymousCameraPrefix(), r++].join(" "));
 			var l = document.createElement("option");
 			l.value = s, l.innerText = c, this.options.push(l), this.selectElement.appendChild(l);
 		}
@@ -19649,5 +19648,4 @@ function Ge(e, t) {
 		return document.getElementById(this.getHeaderMessageContainerId());
 	}, e;
 })();
-//#endregion
 export { Ce as Html5Qrcode, A as Html5QrcodeScannerState, l as Html5QrcodeSupportedFormats };
