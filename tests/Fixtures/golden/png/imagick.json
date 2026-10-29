@@ -1,0 +1,32 @@
+{
+    "png-colours": {
+        "width": 300,
+        "height": 300,
+        "sha256": "233020a489b600ffd470a67b9612c6e2205f5636f4ff6b27153c31de5855687d"
+    },
+    "png-defaults": {
+        "width": 300,
+        "height": 300,
+        "sha256": "4910efc0aebd99d7676325e743576d0749a56f2b8a858a1640837ecfc3706ee4"
+    },
+    "png-ec-h-size-240": {
+        "width": 240,
+        "height": 240,
+        "sha256": "fd35a3ea5b9e2b44dc360ffaf040c35d2dc0a977079f965b5d08089d10c582ac"
+    },
+    "png-logo": {
+        "width": 300,
+        "height": 300,
+        "sha256": "bae90972ae04db542ccded83b5793b0b4c49746047ae4cb50b4767864fca4a65"
+    },
+    "png-logo-small": {
+        "width": 300,
+        "height": 300,
+        "sha256": "74381a44665e4b234af7e61c1cef2bfa2ab59603b2a403121e3f26a4696c7173"
+    },
+    "png-margin-0": {
+        "width": 300,
+        "height": 300,
+        "sha256": "e56827d5761d1a9f7fe7264e0083ff6b7b2d4721ef6979a411c4f6a0a89b40f1"
+    }
+}
