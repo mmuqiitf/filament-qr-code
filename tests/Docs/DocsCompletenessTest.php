@@ -39,7 +39,7 @@ it('documents every Laravel event the package dispatches', function () {
 it('documents the public helpers and keeps internal members tagged', function (): void {
     $root = dirname(__DIR__, 2);
     $docs = file_get_contents($root.'/README.md');
-    foreach (glob($root.'/docs/{,recipes/}*.md', GLOB_BRACE) as $file) {
+    foreach (qrDocsMarkdownFiles($root) as $file) {
         $docs .= file_get_contents($file);
     }
 

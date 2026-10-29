@@ -37,7 +37,7 @@ it('links every doc page from llms.txt', function (): void {
 
     expect($index)->toStartWith('# Filament QR Code');
 
-    foreach (['README.md', 'llms-full.txt', ...array_map(fn (string $file): string => substr($file, strlen(qrDocsPath(''))), glob(qrDocsPath('docs/{,recipes/}*.md'), GLOB_BRACE))] as $file) {
+    foreach (['README.md', 'llms-full.txt', ...array_map(fn (string $file): string => substr($file, strlen(qrDocsPath(''))), qrDocsMarkdownFiles(rtrim(qrDocsPath(''), '/')))] as $file) {
         expect($index)->toContain($file);
     }
 });
