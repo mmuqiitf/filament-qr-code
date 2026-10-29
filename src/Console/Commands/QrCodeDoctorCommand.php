@@ -6,6 +6,7 @@ namespace Mmuqiitf\FilamentQrCode\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use Mmuqiitf\FilamentQrCode\Support\LogoPathGuard;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
@@ -28,6 +29,7 @@ class QrCodeDoctorCommand extends Command
         $failures += $this->checkConfig();
         $failures += $this->checkSecureContext();
         $failures += $this->checkCacheStore();
+        $failures += $this->checkImageRouteHardening();
 
         if ($failures > 0) {
             $this->error("qr-code:doctor found {$failures} problem(s). See the troubleshooting table in README.md.");
@@ -220,5 +222,32 @@ class QrCodeDoctorCommand extends Command
         $value = config('qr-code.generator.cache_store');
 
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    private function checkImageRouteHardening(): int
+    {
+        $basePaths = LogoPathGuard::basePaths();
+
+        if ($basePaths === null) {
+            $this->line('  [INFO] qr-code.generator.logo_base_paths is not set: any readable image path can be embedded as a logo. Set it if logo paths can come from user input.');
+        } else {
+            $missing = array_filter($basePaths, fn (string $path) => ! is_dir($path));
+
+            foreach ($missing as $path) {
+                $this->warn("  [WARN] Logo base path does not exist: {$path}");
+            }
+
+            if ($basePaths === []) {
+                $this->warn('  [WARN] qr-code.generator.logo_base_paths is empty: every logo will be rejected.');
+            } elseif ($missing === []) {
+                $this->line('  [PASS] Logos restricted to qr-code.generator.logo_base_paths.');
+            }
+        }
+
+        if (config('qr-code.image_route.ttl') === null && config('qr-code.image_route.throttle') === null) {
+            $this->line('  [INFO] Image route has no ttl or throttle (opt-in hardening: qr-code.image_route).');
+        }
+
+        return 0;
     }
 }

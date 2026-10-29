@@ -66,4 +66,10 @@ QrColumn::make('sku')->thumbnailSize(48)->previewable();
 
 $dataUri = FilamentQrCode::make()->size(300)->generate('https://example.com')->toDataUri();
 </code-snippet>
+
+<code-snippet name="Hardening the signed image route (opt-in, off by default)" lang="php">
+// config/qr-code.php
+'generator' => ['logo_base_paths' => [storage_path('app/qr-logos')]],
+'image_route' => ['ttl' => 60, 'throttle' => '60,1', 'strict_colors' => true],
+</code-snippet>
 @endverbatim

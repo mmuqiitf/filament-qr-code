@@ -47,6 +47,27 @@ A previewable column owns its click: the thumbnail opens the preview instead of 
 
 Thumbnails and modal previews share a capped in-process render cache (clear it with `QrColumn::flushDataUriCache()`, for example between tests or in long-running workers) plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s: an int is seconds, `null` keeps entries forever, `false` turns the L2 off while the in-process cache keeps working; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filamentQrCode.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
 
+#### Image route security
+
+The signed `filamentQrCode.image` route is safe by default (signatures stop tampering), and 1.0.1 adds opt-in hardening for apps where QR data or logo paths come from users. Invalid query input (missing `data`, out-of-range `size`, unknown `format` or `ec`, unparseable colours) always gets a 422, never a redirect or a 500; colours may be `#rgb`, `#rrggbb` or bare hex. Every hardening key is off by default, so upgrading changes nothing until you set one:
+
+```php
+// config/qr-code.php
+'generator' => [
+    // ...
+    'logo_base_paths' => [storage_path('app/qr-logos')],
+],
+'image_route' => [
+    'ttl' => 60,             // preview URLs expire after an hour
+    'throttle' => '60,1',    // 60 images per minute per client, then 429
+    'strict_colors' => true, // #rrggbb only, else 422
+],
+```
+
+- `logo_base_paths` resolves each logo with `realpath()` (so `../` and symlinks that escape are caught) and accepts only PNG, JPEG, GIF or WebP files inside a listed directory. Inline renders (columns, entries, downloads, `QrCodeService`) skip a rejected logo and log a warning; the image route answers 422.
+- `ttl` signs preview URLs with an `expires` parameter (expired links get 403) and caps the browser cache at the TTL.
+- `qr-code:doctor` reports whether logos are restricted and flags base paths that do not exist.
+
 ### In Infolists
 
 ```php

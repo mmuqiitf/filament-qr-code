@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Golden-output tests lock QR SVG bytes and per-backend PNG pixels across error-correction levels, sizes, margins, colours and logos, plus the signed image route's bytes and headers. Regenerate deliberately with `QR_GOLDEN_UPDATE=1`.
+- Opt-in image route hardening, all off by default: `image_route.ttl` (expiring signed preview URLs; `max-age` capped at the TTL), `image_route.throttle` (e.g. `'60,1'`, 429 when exceeded), `image_route.strict_colors` (`#rrggbb` only, else 422).
+- `generator.logo_base_paths`: logos must resolve (realpath, symlinks followed) to an image inside a listed directory. Inline renders skip a rejected logo and log a warning; the image route returns 422.
+- `qr-code:doctor` reports logo restriction and image route hardening state.
+
+### Fixed
+
+- Image route: invalid query input now returns 422 instead of a 302 redirect (an `<img>` can't follow it), and unparseable colours such as `red` or `#12` return 422 instead of a 500. Colours accept `#rgb`, `#rrggbb` or bare hex; `strict_colors` still narrows that to `#rrggbb`.
 
 ### Removed
 

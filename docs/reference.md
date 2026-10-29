@@ -129,7 +129,15 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 
 ### `generator`
 
-`size` (300), `margin` (2), `format` (`svg`), `foreground_color`, `background_color`, `error_correction` (`M`), `cache_ttl` (86400; `null` = forever, `false` = L2 off), `cache_store` (`null` = default store).
+`size` (300), `margin` (2), `format` (`svg`), `foreground_color`, `background_color`, `error_correction` (`M`), `cache_ttl` (86400; `null` = forever, `false` = L2 off), `cache_store` (`null` = default store), `logo_base_paths` (`null` = any readable path; a list of directories logos must live in — see [Image route security](generating.md#image-route-security)).
+
+### `image_route`
+
+| Key             | Default | Meaning |
+| --------------- | ------- | ------- |
+| `ttl`           | `null`  | minutes a lazy-preview URL stays valid (`temporarySignedRoute`); also caps `Cache-Control` `max-age` at the TTL (never above a day). `null` = never expires |
+| `throttle`      | `null`  | rate limit for the image route, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
+| `strict_colors` | `false` | require `#rrggbb` colours on the image route (default accepts `#rgb`, `#rrggbb` or bare hex); anything else gets 422 |
 
 ### `audit`
 

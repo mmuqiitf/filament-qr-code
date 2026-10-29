@@ -211,6 +211,10 @@ php artisan qr-code:doctor
 | `nextField()` / listener misses a field      | Name does not match exactly                                               | Use the exact field name; nested paths like `items.0.sku` are supported, and `sku` never matches `parent_sku`.                                   |
 | Table page is slow with many QRs             | Eager modal data-URIs per row                                             | Keep `->lazyModal()` (default) and the persistent cache enabled; tune `generator.cache_ttl`.                                                      |
 
+## Security notes
+
+Lazy modal previews are served by the signed `filamentQrCode.image` route. Signatures already stop tampering; if QR data or logo paths can come from users, turn on the opt-in hardening (all off by default): `generator.logo_base_paths` limits logos to listed directories, and `image_route.ttl` / `throttle` / `strict_colors` add expiring URLs, a rate limit and `#rrggbb`-only colours. See [Image route security](docs/generating.md#image-route-security).
+
 ## Reporting issues
 
 1. Run `php artisan qr-code:doctor` and include its output.
