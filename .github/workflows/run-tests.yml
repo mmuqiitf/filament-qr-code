@@ -47,8 +47,8 @@ jobs:
           # composer.json pins platform php 8.2 for local installs; CI resolves for the real PHP.
           composer config --unset platform.php
           # Every Laravel 11 release now carries Packagist security advisories (L11 is EOL),
-          # so Composer refuses to resolve it. Keep testing L11 compatibility on CI only.
-          if [ "${{ matrix.laravel }}" = "11.*" ]; then composer config policy.advisories.block false; fi
+          # so Composer refuses to resolve it. Ignore only those (CI only) to keep testing L11.
+          if [ "${{ matrix.laravel }}" = "11.*" ]; then composer config policy.advisories.ignore --json '["laravel/framework"]'; fi
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --dev --no-interaction --no-update
           if [ "${{ matrix.php }}" = "8.5" ]; then
             composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction --ignore-platform-req=php+
