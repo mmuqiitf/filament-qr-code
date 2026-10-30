@@ -12,12 +12,12 @@ function liveRegionsIn(string $html): array
     return $matches[0];
 }
 
-it('renders one polite, atomic live region per collector and sequence', function (): void {
+it('renders one polite, atomic live region per scanner, collector and sequence', function (): void {
     $html = Livewire::test(ViewsRenderComponent::class)->html();
     $regions = liveRegionsIn($html);
 
-    // The fixture renders one collector and one sequence.
-    expect($regions)->toHaveCount(2);
+    // The fixture renders one scanner, one collector and one sequence.
+    expect($regions)->toHaveCount(3);
 
     foreach ($regions as $region) {
         expect($region)

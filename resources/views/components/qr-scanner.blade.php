@@ -29,6 +29,7 @@
         </div>
 
         @include('filament-qr-code::components.scanner.status')
+        @include('filament-qr-code::components.announcer')
 
         @include('filament-qr-code::components.scanner.modal')
         {{ \Filament\Support\Facades\FilamentView::renderHook(\Mmuqiitf\FilamentQrCode\View\QrCodeRenderHook::SCANNER_END, scopes: $renderHookScopes) }}
