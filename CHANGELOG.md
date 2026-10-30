@@ -10,10 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Playwright accessibility checks: axe (WCAG 2.1 A/AA plus best practices) runs on every workbench page, the open scanner modal, the denied-camera state and the collect action modal.
+- Browser tests for keyboard-only scanning: opening the scanner, the focus trap, Escape, the close button, scanning from an image and typed wedge input.
 
 ### Fixed
 
 - Scanner modal: the close button has an accessible name ("Close scanner"), and the dialog is labelled by its title, now an `h2` (was an `h3`, which skipped a heading level).
+- The scanner modal now moves focus into the dialog when it opens, keeps Tab and Shift+Tab inside it, and returns focus to the camera button when it closes.
+- Escape in a scanner opened inside a Filament action modal now closes only the scanner, not the action modal too.
+- "Scan from image" can now be reached and used with the keyboard, and shows a visible focus outline.
 
 ## [1.0.1] - 2026-10-29
 
