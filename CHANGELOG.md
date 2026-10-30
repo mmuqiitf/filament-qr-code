@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Playwright accessibility checks: axe (WCAG 2.1 A/AA plus best practices) runs on every workbench page, the open scanner modal, the denied-camera state and the collect action modal.
+
+### Fixed
+
+- Scanner modal: the close button has an accessible name ("Close scanner"), and the dialog is labelled by its title, now an `h2` (was an `h3`, which skipped a heading level).
+
 ## [1.0.1] - 2026-10-29
 
 ### Added

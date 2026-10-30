@@ -30,6 +30,7 @@ return [
     'scan_from_image' => 'Pindai dari berkas gambar',
     'scan_placeholder' => 'Pindai atau masukkan kode...',
     'scan_qr_code' => 'Pindai Kode QR',
+    'close_scanner' => 'Tutup pemindai',
     'scan_qr_with_camera' => 'Pindai QR dengan kamera',
     'camera_needs_secure_context' => 'Kamera membutuhkan konteks aman: sajikan halaman ini melalui https atau buka di localhost, lalu izinkan akses kamera.',
     'camera_decoder_failed' => 'Gagal memuat dekoder kamera.',
