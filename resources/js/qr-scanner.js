@@ -2,7 +2,8 @@ import { qrFeedback } from './audio-feedback.js';
 import { sanitizeScannedValue } from './qr-hardware-scanner.js';
 import { inputRouter } from './input-router.js';
 import { findFieldInput, readWireModelPath } from './field-locator.js';
-import { fallbackMessages } from './messages.js';
+import { fallbackMessages, messagesFrom } from './messages.js';
+import { announcerMixin, formatMessage } from './announcer.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -73,6 +74,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
 
     return {
         ...cameraControlsMixin(),
+        ...announcerMixin(),
         // State
         value: state,
         statePath: statePath,
@@ -617,6 +619,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             }
 
             this.emitDefaultFeedback();
+            this.announceAccepted(code);
 
             const { nextField, mode } = this.options;
             window.dispatchEvent(new CustomEvent('qr-scanned', {
@@ -652,6 +655,8 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 this.emitDefaultFeedback();
             }
 
+            this.announceAccepted(code);
+
             window.dispatchEvent(new CustomEvent('qr-scan-accepted', { detail: { value: code, field, source, recordKey, mode } }));
             window.dispatchEvent(new CustomEvent('qr-scanned', {
                 detail: { value: code, field, nextField, source, recordKey, mode },
@@ -661,6 +666,22 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             if (nextField) {
                 this.$nextTick(() => this.advanceFocus(nextField));
             }
+        },
+
+        announceAccepted(code) {
+            const messages = messagesFrom(this.options);
+            const fallback = formatMessage(messages.fieldAddedAnnouncement, { code, field: this.options.fieldLabel ?? '' });
+
+            return this.announceScan(this.options, { code, accepted: true, fallback });
+        },
+
+        announceRejected(code, message) {
+            const messages = messagesFrom(this.options);
+            const reason = message || messages.scanRejectedMessage;
+
+            return this.announceScan(this.options, {
+                code, accepted: false, reason, fallback: formatMessage(messages.rejectedAnnouncement, { reason }),
+            });
         },
 
         // Before the router, a page listener wrote hardware scans into this field and
@@ -694,6 +715,8 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 beepFrequency,
                 beepDurationMs,
             });
+
+            this.announceRejected(code, message);
 
             window.dispatchEvent(new CustomEvent('qr-scan-rejected', { detail: { value: code, field, source, message, mode } }));
         },

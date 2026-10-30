@@ -1,6 +1,7 @@
 {
     "addedAnnouncement": "Added :code (:count items)",
     "allowDuplicates": true,
+    "announcements": true,
     "beepDurationMs": 80,
     "beepFrequency": 880,
     "burstThresholdMs": 50,
@@ -8,6 +9,7 @@
     "cameraStartFailedMessage": "Failed to start the camera.",
     "cameraUnavailableMessage": "Camera access denied or unavailable.",
     "completedAnnouncement": "Sequence complete.",
+    "customAnnouncements": false,
     "decoderFailedMessage": "Failed to load the camera decoder.",
     "delayBetweenScansMs": 900,
     "duplicateMessage": "Duplicate codes are not allowed.",

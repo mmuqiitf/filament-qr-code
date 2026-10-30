@@ -26,6 +26,9 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | Method | Purpose |
 | --- | --- |
 | `allowUpload(Closure\|bool $condition = true): static` | Show the image-upload fallback in the camera modal. |
+| `announceScan(string $code, bool $accepted, ?string $reason = null, ?string $field = null): ?string` | The custom announcement for a scan, or null for the built-in text. Called by the field JS when announceUsing() is set. |
+| `announceUsing(?Closure $callback): static` | Custom announcement text: fn (string $code, bool $accepted, ?string $reason, string $field): ?string. Return null to keep the built-in text. |
+| `announcements(Closure\|bool $enabled = true): static` | Read accepted and rejected scans aloud through the polite live region (on by default). |
 | `beep(Closure\|bool\|null $success = null, Closure\|bool\|null $error = null): static` | Beep on accepted / rejected scans of server-checked fields; null keeps the config default. |
 | `beepDuration(Closure\|int $milliseconds): static` | Beep length in milliseconds (config `feedback.beep_duration_ms`). |
 | `beepFrequency(Closure\|int $hertz): static` | Beep pitch in hertz (config `feedback.beep_frequency`). |
@@ -69,7 +72,7 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getContinuousDisplay()`, `getCooldownMs()`, `getEffectiveFps()`, `getErrorFeedback()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareInputScope()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getMode()`, `getNextField()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getOutcomeFeedbackScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanCheckPipeline()`, `getScanChecksScanPayload()`, `getScanModeScanPayload()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSequentialScanPayload()`, `getSuccessFeedback()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasCameraControls()`, `hasServerScanChecks()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `isUploadAllowed()`, `shouldClearOnReject()`, `shouldKeepCameraOpen()`, `shouldPauseOnReject()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getContinuousDisplay()`, `getCooldownMs()`, `getEffectiveFps()`, `getErrorFeedback()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareInputScope()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getMode()`, `getNextField()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getOutcomeFeedbackScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanCheckPipeline()`, `getScanChecksScanPayload()`, `getScanModeScanPayload()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSequentialScanPayload()`, `getSuccessFeedback()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerScanChecks()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `isUploadAllowed()`, `shouldClearOnReject()`, `shouldKeepCameraOpen()`, `shouldPauseOnReject()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrHardwareScannerListener`
 
@@ -99,6 +102,9 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 
 | Method | Purpose |
 | --- | --- |
+| `announceScan(string $code, bool $accepted, ?string $reason = null, ?string $field = null): ?string` | The custom announcement for a scan, or null for the built-in text. Called by the field JS when announceUsing() is set. |
+| `announceUsing(?Closure $callback): static` | Custom announcement text: fn (string $code, bool $accepted, ?string $reason, string $field): ?string. Return null to keep the built-in text. |
+| `announcements(Closure\|bool $enabled = true): static` | Read accepted and rejected scans aloud through the polite live region (on by default). |
 | `autoSubmit(Closure\|bool\|null $condition = true, Closure\|string\|null $method = null): static` | Call the Livewire submit method once the sequence completes. |
 | `beepDuration(Closure\|int $milliseconds): static` | Beep length in milliseconds (config `feedback.beep_duration_ms`). |
 | `beepFrequency(Closure\|int $hertz): static` | Beep pitch in hertz (config `feedback.beep_frequency`). |
@@ -147,7 +153,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, `getAutomaticKey()`, `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getComponentStatePath()`, `getControlKey()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFlatStatePrefix()`, `getFps()`, `getHardwareScannerScanPayload()`, `getInvalidSequenceBehavior()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanFields()`, `getScanPayload()`, `getScanSteps()`, `getScanTimeoutMs()`, `getSequenceState()`, `getStepsPayload()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasCameraControls()`, `hasServerSequenceWork()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isEditable()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldAutoSubmit()`, `shouldPreventFormSubmit()`, `shouldResetAfterSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, `getAutomaticKey()`, `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getComponentStatePath()`, `getControlKey()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFlatStatePrefix()`, `getFps()`, `getHardwareScannerScanPayload()`, `getInvalidSequenceBehavior()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanFields()`, `getScanPayload()`, `getScanSteps()`, `getScanTimeoutMs()`, `getSequenceState()`, `getStepsPayload()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerSequenceWork()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isEditable()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldAutoSubmit()`, `shouldPreventFormSubmit()`, `shouldResetAfterSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `ScanStep`
 
@@ -181,6 +187,9 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | Method | Purpose |
 | --- | --- |
 | `allowDuplicates(Closure\|bool $condition = true): static` | Accept the same code more than once in the list (browser-side check). |
+| `announceScan(string $code, bool $accepted, ?string $reason = null, ?string $field = null): ?string` | The custom announcement for a scan, or null for the built-in text. Called by the field JS when announceUsing() is set. |
+| `announceUsing(?Closure $callback): static` | Custom announcement text: fn (string $code, bool $accepted, ?string $reason, string $field): ?string. Return null to keep the built-in text. |
+| `announcements(Closure\|bool $enabled = true): static` | Read accepted and rejected scans aloud through the polite live region (on by default). |
 | `beepDuration(Closure\|int $milliseconds): static` | Beep length in milliseconds (config `feedback.beep_duration_ms`). |
 | `beepFrequency(Closure\|int $hertz): static` | Beep pitch in hertz (config `feedback.beep_frequency`). |
 | `cameraControls(Closure\|bool $condition = true): static` | Torch and zoom controls appear when the running camera supports them; pass false to keep the viewfinder free of them. |
@@ -198,7 +207,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasCameraControls()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrCollectAction`
 

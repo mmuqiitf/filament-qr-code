@@ -8,6 +8,7 @@ use Closure;
 use Filament\Forms\Components\Concerns\CanBeReadOnly;
 use Filament\Forms\Components\Concerns\HasPlaceholder;
 use Filament\Forms\Components\Field;
+use Mmuqiitf\FilamentQrCode\Concerns\HasAnnouncements;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
@@ -21,10 +22,12 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
 use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScans;
 use Mmuqiitf\FilamentQrCode\Enums\HardwareInputScope;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
+use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
 
 class QrScanner extends Field
 {
     use CanBeReadOnly;
+    use HasAnnouncements;
     use HasCameraScanning;
     use HasCodeNormalization;
     use HasFeedback;
@@ -83,6 +86,9 @@ class QrScanner extends Field
         return [
             'hardwareScope' => $this->getHardwareInputScope()->value,
             ...$this->getScanModeScanPayload(),
+            ...ScanMessages::forScannerAnnouncements(),
+            'fieldLabel' => $this->getAnnouncementFieldLabel(),
+            ...$this->getAnnouncementsScanPayload(),
         ];
     }
 

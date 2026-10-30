@@ -30,6 +30,12 @@ final class ScanMessages
         'rejectedAnnouncement' => 'filament-qr-code::ui.announce_rejected',
     ];
 
+    private const ScannerAnnouncements = [
+        'fieldAddedAnnouncement' => 'filament-qr-code::ui.announce_field_added',
+        'rejectedAnnouncement' => 'filament-qr-code::ui.announce_rejected',
+        'scanRejectedMessage' => 'filament-qr-code::ui.scan_rejected',
+    ];
+
     private const Checks = [
         'scanFailedMessage' => 'filament-qr-code::ui.scan_failed',
     ];
@@ -46,6 +52,12 @@ final class ScanMessages
         return self::translate(self::Announcements);
     }
 
+    /** @return array<string, string> */
+    public static function forScannerAnnouncements(): array
+    {
+        return self::translate(self::ScannerAnnouncements);
+    }
+
     public static function scanFailed(): string
     {
         return self::translate(self::Checks)['scanFailedMessage'];
@@ -60,7 +72,7 @@ final class ScanMessages
     {
         return array_map(
             fn (string $key): string => substr($key, strlen('filament-qr-code::ui.')),
-            [...self::Camera, ...self::Announcements, ...self::Checks],
+            [...self::Camera, ...self::Announcements, ...self::ScannerAnnouncements, ...self::Checks],
         );
     }
 

@@ -40,6 +40,7 @@ return [
     'camera_device' => 'Kamera :id',
     'announce_added' => 'Ditambahkan :code (:count item)',
     'announce_step_added' => 'Ditambahkan :code ke :step',
+    'announce_field_added' => 'Ditambahkan :code ke :field',
     'announce_completed' => 'Urutan selesai.',
     'announce_rejected' => 'Ditolak: :reason',
     'file_scan_failed' => 'Tidak ada barcode atau kode QR pada gambar yang dipilih.',

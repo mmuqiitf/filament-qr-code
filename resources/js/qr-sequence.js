@@ -597,7 +597,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             if (stepKey && code) parts.push(formatMessage(this.options.stepAddedAnnouncement, { code, step: label }));
             if (completed) parts.push(this.options.completedAnnouncement);
 
-            this.announce(parts.join('. '));
+            this.announceScan(this.options, { code, accepted: true, field: stepKey || null, fallback: parts.join('. ') });
         },
 
         indexOfStep(key) {
@@ -711,7 +711,13 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             if (!result.passes) {
                 this.stepError = result.message || scanFailedMessage;
-                this.announce(formatMessage(this.options.rejectedAnnouncement, { reason: this.stepError }));
+                this.announceScan(this.options, {
+                    code,
+                    accepted: false,
+                    reason: this.stepError,
+                    field: result.step || currentField.key || null,
+                    fallback: formatMessage(this.options.rejectedAnnouncement, { reason: this.stepError }),
+                });
 
                 if (result.invalid_step) {
                     window.dispatchEvent(new CustomEvent('qr-sequence-invalid', {

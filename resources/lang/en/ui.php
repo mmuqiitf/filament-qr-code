@@ -40,6 +40,7 @@ return [
     'camera_device' => 'Camera :id',
     'announce_added' => 'Added :code (:count items)',
     'announce_step_added' => 'Added :code to :step',
+    'announce_field_added' => 'Added :code to :field',
     'announce_completed' => 'Sequence complete.',
     'announce_rejected' => 'Rejected: :reason',
     'file_scan_failed' => 'No barcode or QR code found in the selected image.',

@@ -1,4 +1,5 @@
 {
+    "announcements": true,
     "beepDurationMs": 80,
     "beepFrequency": 880,
     "burstThresholdMs": 50,
@@ -8,6 +9,7 @@
     "clearOnReject": true,
     "continuousDisplay": "empty",
     "cooldownMs": 0,
+    "customAnnouncements": false,
     "decoderFailedMessage": "Failed to load the camera decoder.",
     "errorFeedback": {
         "sound": true,
@@ -18,6 +20,8 @@
         ],
         "flash": true
     },
+    "fieldAddedAnnouncement": "Added :code to :field",
+    "fieldLabel": "Sku",
     "fileScanFailedMessage": "No barcode or QR code found in the selected image.",
     "formats": [
         "QR_CODE"
@@ -36,7 +40,9 @@
     "preferRearCamera": true,
     "preventSubmit": true,
     "qrbox": 250,
+    "rejectedAnnouncement": "Rejected: :reason",
     "scanFailedMessage": "The scan could not be checked. Please try again.",
+    "scanRejectedMessage": "This code was rejected.",
     "scanTimeoutMs": 150,
     "serverCheck": false,
     "sound": true,

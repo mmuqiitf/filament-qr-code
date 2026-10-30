@@ -14,8 +14,10 @@ export const fallbackMessages = Object.freeze({
     duplicateMessage: 'Duplicate codes are not allowed.',
     addedAnnouncement: 'Added :code (:count items)',
     stepAddedAnnouncement: 'Added :code to :step',
+    fieldAddedAnnouncement: 'Added :code to :field',
     completedAnnouncement: 'Sequence complete.',
     rejectedAnnouncement: 'Rejected: :reason',
+    scanRejectedMessage: 'This code was rejected.',
     scanFailedMessage: 'The scan could not be checked. Please try again.',
 });
 
