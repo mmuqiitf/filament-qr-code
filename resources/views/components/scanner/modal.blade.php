@@ -6,7 +6,9 @@
     aria-modal="true"
     aria-labelledby="{{ $id }}-scanner-title"
     class="fi-qr-scanner-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/70 backdrop-blur-sm"
-    @keydown.escape.window="closeScannerModal()"
+    x-trap.noscroll="isModalOpen"
+    @keydown.escape.stop="closeScannerModal()"
+    @keydown.escape.window="isModalOpen && closeScannerModal()"
 >
     <div
         @click.outside="closeScannerModal()"
