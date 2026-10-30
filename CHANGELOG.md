@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Playwright accessibility checks: axe (WCAG 2.1 A/AA plus best practices) runs on every workbench page, the open scanner modal, the denied-camera state and the collect action modal.
 - Browser tests for keyboard-only scanning: opening the scanner, the focus trap, Escape, the close button, scanning from an image and typed wedge input.
+- Browser tests for the full scan lifecycle: a rejected then accepted wedge scan, a camera scan that fills the field, closes the modal and releases the camera, and scanning from an uploaded image.
+- Browser tests that the collector and scan sequence screen-reader announcements fire: added codes, rejected duplicates, rejected and accepted steps, and sequence completion.
 
 ### Fixed
 

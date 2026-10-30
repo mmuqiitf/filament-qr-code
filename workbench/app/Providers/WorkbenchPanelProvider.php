@@ -20,6 +20,7 @@ use Workbench\App\Filament\Pages\CollectorSmoke;
 use Workbench\App\Filament\Pages\CollectSmoke;
 use Workbench\App\Filament\Pages\ModalSmoke;
 use Workbench\App\Filament\Pages\ScanSmoke;
+use Workbench\App\Filament\Pages\SequenceSmoke;
 use Workbench\App\Filament\Pages\TableSmoke;
 
 /**
@@ -41,7 +42,7 @@ class WorkbenchPanelProvider extends PanelProvider
             ->path('workbench')
             ->topbar(false)
             ->plugin(FilamentQrCodePlugin::make())
-            ->pages([ScanSmoke::class, CollectSmoke::class, CollectorSmoke::class, ModalSmoke::class, TableSmoke::class])
+            ->pages([ScanSmoke::class, CollectSmoke::class, CollectorSmoke::class, ModalSmoke::class, SequenceSmoke::class, TableSmoke::class])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
