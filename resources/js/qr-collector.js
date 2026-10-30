@@ -47,9 +47,13 @@ export default function qrCollectorComponent({
     cameraStorageKey = null,
     autoStart = false,
     wireScanHandler = false,
+    announcements = true,
+    customAnnouncements = false,
+    componentKey = null,
     ...messageOptions
 } = {}) {
     const messages = messagesFrom(messageOptions);
+    const announceOptions = { announcements, customAnnouncements, componentKey };
     const initialItems = Array.isArray(state)
         ? state.map(item => typeof item === 'object' && item !== null && item.code ? item : { code: String(item), scanned_at: new Date().toLocaleTimeString() })
         : [];
@@ -241,7 +245,12 @@ export default function qrCollectorComponent({
             if (!allowDuplicates && this.scannedSet.has(trimmed)) {
                 // The code just added is usually still in view: not a new rejection.
                 if (trimmed !== this.lastAddedCode) {
-                    this.announce(formatMessage(messages.rejectedAnnouncement, { reason: messages.duplicateMessage }));
+                    this.announceScan(announceOptions, {
+                        code: trimmed,
+                        accepted: false,
+                        reason: messages.duplicateMessage,
+                        fallback: formatMessage(messages.rejectedAnnouncement, { reason: messages.duplicateMessage }),
+                    });
                 }
 
                 return;
@@ -254,7 +263,11 @@ export default function qrCollectorComponent({
                 scanned_at: new Date().toLocaleTimeString(),
             });
             this.lastAddedCode = trimmed;
-            this.announce(formatMessage(messages.addedAnnouncement, { code: trimmed, count: this.items.length }));
+            this.announceScan(announceOptions, {
+                code: trimmed,
+                accepted: true,
+                fallback: formatMessage(messages.addedAnnouncement, { code: trimmed, count: this.items.length }),
+            });
 
             emitScanFeedback(qrFeedback, {
                 sound,

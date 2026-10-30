@@ -6,6 +6,7 @@ namespace Mmuqiitf\FilamentQrCode\Forms\Components;
 
 use Closure;
 use Filament\Forms\Components\Field;
+use Mmuqiitf\FilamentQrCode\Concerns\HasAnnouncements;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
@@ -16,6 +17,7 @@ use Mmuqiitf\FilamentQrCode\Validation\DistinctCodes;
 
 class QrCollector extends Field
 {
+    use HasAnnouncements;
     use HasCameraScanning;
     use HasFeedback;
     use HasHardwareScanner;
@@ -75,7 +77,29 @@ class QrCollector extends Field
             // $wire proxies every name, so the browser cannot probe for the hook itself.
             'wireScanHandler' => $this->hostDefinesCollectorScanHandler(),
             ...ScanMessages::forAnnouncements(),
+            ...$this->getAnnouncementsScanPayload(),
+            ...$this->getAnnouncementComponentKey(),
         ];
+    }
+
+    /**
+     * Custom announcement text is resolved on the server, which needs the key.
+     *
+     * @return array{componentKey?: string}
+     */
+    protected function getAnnouncementComponentKey(): array
+    {
+        if ($this->announceUsing === null) {
+            return [];
+        }
+
+        try {
+            $key = $this->getKey();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return filled($key) ? ['componentKey' => $key] : [];
     }
 
     /**

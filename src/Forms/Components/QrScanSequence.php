@@ -7,6 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Forms\Components;
 use Closure;
 use Filament\Forms\Components\Contracts\HasValidationRules;
 use Filament\Schemas\Components\Component;
+use Mmuqiitf\FilamentQrCode\Concerns\HasAnnouncements;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
@@ -21,6 +22,7 @@ use ReflectionFunction;
 
 class QrScanSequence extends Component implements HasValidationRules
 {
+    use HasAnnouncements;
     use HasCameraScanning;
     use HasCodeNormalization;
     use HasFeedback;
@@ -403,6 +405,18 @@ class QrScanSequence extends Component implements HasValidationRules
         return $this->getMissingSequenceKeys($mergedState) === [];
     }
 
+    /** A sequence announces the scanned step's label. */
+    protected function getAnnouncementFieldLabel(?string $field = null): string
+    {
+        foreach ($this->getScanSteps() as $step) {
+            if ($step->getKey() === $field) {
+                return self::plainAnnouncementText($step->getLabel());
+            }
+        }
+
+        return (string) $field;
+    }
+
     /** @return array<string, mixed> */
     public function getComponentScanPayload(): array
     {
@@ -417,6 +431,7 @@ class QrScanSequence extends Component implements HasValidationRules
             'serverCheck' => filled($key) && $this->hasServerSequenceWork(),
             'scanFailedMessage' => ScanMessages::scanFailed(),
             ...ScanMessages::forAnnouncements(),
+            ...$this->getAnnouncementsScanPayload(),
             'steps' => $this->getStepsPayload(),
             'values' => $this->withoutInactiveSteps($this->getSequenceState()),
             ...(filled($key) ? ['componentKey' => $key] : []),

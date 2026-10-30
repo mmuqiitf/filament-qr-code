@@ -170,6 +170,25 @@ Camera errors and screen-reader announcements are translated too: the browser co
 
 The `QrScanner` field, the collector, the collect-action modal and the scan sequence each have a visually hidden polite live region (`data-qr-part="announcer"`, `role="status"`). It reads each accepted scan ("Added SKU-1 to SKU" for the field, using its label; "Added ABC-1 (3 items)"; "Added PO-1 to PO") and each rejection ("Rejected: Unknown PO", or "Rejected: This code was rejected." when there is no message) once; the same message is not repeated within 3 seconds. Camera errors stay in a `role="alert"` region.
 
+Rapid scans do not pile up. Each message replaces the region's text rather than adding to it. The first message is written straight away; messages that arrive within 500 ms of it are coalesced, so only the newest one is written when the window ends. A burst of scans therefore reads the first and the latest result, not every one in between.
+
+Announcements are on by default. `QrScanner`, `QrCollector` and `QrScanSequence` can turn them off or change the wording:
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
+QrScanner::make('badge')
+    ->announcements(false); // or a Closure returning bool
+
+QrCollector::make('items')
+    ->announceUsing(fn (string $code, bool $accepted, ?string $reason, ?string $field): ?string => $accepted
+        ? "Checked in {$code}"
+        : null); // null keeps the default text
+```
+
+The `announceUsing()` closure receives `$code`, `$accepted`, `$reason` (the rejection message, or null) and `$field` (the field label, or the step label in a scan sequence). HTML tags in the returned text are stripped. The closure runs on the server, so setting it adds one Livewire request per scan; when several scans are in flight, only the newest reply is announced.
+
 ---
 
 ---

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { announcerMixin, formatMessage } from './announcer.js';
+import { COALESCE_WINDOW_MS, announcerMixin, formatMessage } from './announcer.js';
 import { fallbackMessages } from './messages.js';
 import { inputRouter } from './input-router.js';
 import qrCollectorComponent from './qr-collector.js';
@@ -59,12 +59,43 @@ describe('announcerMixin', () => {
         expect(announcer.announcement).toBe('Rejected: duplicate');
     });
 
-    it('announces a different message straight away', () => {
+    it('announces a different message straight away once the region is quiet', () => {
         const announcer = announcerMixin();
         announcer.announce('Added A-1 (1 items)');
+        vi.advanceTimersByTime(COALESCE_WINDOW_MS);
 
         expect(announcer.announce('Added A-2 (2 items)')).toBe(true);
         expect(announcer.announcement).toBe('Added A-2 (2 items)');
+    });
+
+    it('coalesces a burst so only the latest message is read', () => {
+        const announcer = announcerMixin();
+        const written = [];
+        const write = announcer.writeAnnouncement.bind(announcer);
+        announcer.writeAnnouncement = (message) => {
+            written.push(message);
+            write(message);
+        };
+
+        announcer.announce('Added A-1 (1 items)');
+        announcer.announce('Added A-2 (2 items)');
+        announcer.announce('Added A-3 (3 items)');
+
+        expect(announcer.announcement).toBe('Added A-1 (1 items)');
+
+        vi.advanceTimersByTime(COALESCE_WINDOW_MS);
+
+        expect(announcer.announcement).toBe('Added A-3 (3 items)');
+        expect(written).toEqual(['Added A-1 (1 items)', 'Added A-3 (3 items)']);
+    });
+
+    it('replaces the region text instead of appending to it', () => {
+        const announcer = announcerMixin();
+        announcer.announce('Added A-1 (1 items)');
+        announcer.announce('Rejected: duplicate');
+        vi.advanceTimersByTime(COALESCE_WINDOW_MS);
+
+        expect(announcer.announcement).toBe('Rejected: duplicate');
     });
 });
 
@@ -77,7 +108,7 @@ function mountCollector(options = {}) {
 // delayBetweenScansMs 0 still releases the processing lock on a timer.
 function scan(collector, code) {
     collector.handleDetectedCode(code);
-    vi.advanceTimersByTime(1);
+    vi.advanceTimersByTime(COALESCE_WINDOW_MS);
 }
 
 describe('collector announcements', () => {
@@ -111,6 +142,31 @@ describe('collector announcements', () => {
         expect(collector.announcement).toBe(formatMessage(fallbackMessages.addedAnnouncement, { code: 'A-1', count: 1 }));
     });
 
+    it('stays silent when announcements are off', () => {
+        const collector = mountCollector({ announcements: false });
+
+        scan(collector, 'A-1');
+
+        expect(collector.announcement).toBe('');
+    });
+
+    it('reads custom text from the server, falling back to the default on null', async () => {
+        const wire = createWireSpy({ respond: (key, method, args) => (args.code === 'A-1' ? 'Box A-1 in' : null) });
+        const collector = mountComponent(qrCollectorComponent({
+            sound: false, vibrate: false, hardwareScanner: false, delayBetweenScansMs: 0,
+            customAnnouncements: true, componentKey: 'form.codes',
+        }), { element: document.body, wire });
+
+        scan(collector, 'A-1');
+        await vi.runAllTimersAsync();
+        expect(collector.announcement).toBe('Box A-1 in');
+        expect(wire.methodCalls[0]).toEqual(['form.codes', 'announceScan', { code: 'A-1', accepted: true, reason: null, field: null }]);
+
+        scan(collector, 'A-2');
+        await vi.runAllTimersAsync();
+        expect(collector.announcement).toBe(formatMessage(fallbackMessages.addedAnnouncement, { code: 'A-2', count: 2 }));
+    });
+
     it('uses the translated decoder error from the payload', async () => {
         const collector = mountCollector({ decoderFailedMessage: 'Dekoder kamera gagal dimuat.' });
 
@@ -138,6 +194,7 @@ describe('sequence announcements', () => {
         expect(sequence.announcement).toBe('Added PO-1 to PO');
 
         sequence.processScan('SKU-1', 'hardware');
+        vi.advanceTimersByTime(COALESCE_WINDOW_MS);
         expect(sequence.announcement).toBe(`Added SKU-1 to SKU. ${fallbackMessages.completedAnnouncement}`);
     });
 
@@ -159,6 +216,25 @@ describe('sequence announcements', () => {
         await sequence.processScan('PO-9', 'hardware');
 
         expect(sequence.announcement).toBe('Added PO-9 to PO');
+    });
+
+    it('stays silent when announcements are off', () => {
+        const sequence = mountSequence({ announcements: false });
+
+        sequence.processScan('PO-1', 'hardware');
+
+        expect(sequence.announcement).toBe('');
+    });
+
+    it('reads custom text for a step from the server', async () => {
+        const sequence = mountSequence({ customAnnouncements: true, componentKey: 'form.receipt' }, (key, method, args) => (
+            method === 'announceScan' ? `Step ${args.field}: ${args.code}` : null
+        ));
+
+        sequence.processScan('PO-1', 'hardware');
+        await vi.runAllTimersAsync();
+
+        expect(sequence.announcement).toBe('Step po: PO-1');
     });
 
     it('uses the translated camera errors from the payload', async () => {

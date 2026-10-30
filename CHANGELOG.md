@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Browser tests for the full scan lifecycle: a rejected then accepted wedge scan, a camera scan that fills the field, closes the modal and releases the camera, and scanning from an uploaded image.
 - Browser tests that the collector and scan sequence screen-reader announcements fire: added codes, rejected duplicates, rejected and accepted steps, and sequence completion.
 - The `QrScanner` field now has a polite screen-reader live region. It announces accepted scans ("Added SKU-1 to SKU", using the field label) and rejected ones ("Rejected: " plus the validation message, or a generic one), worded like the collector and sequence. New translation key: `announce_field_added`.
+- `announcements(bool|Closure $enabled = true)` and `announceUsing(?Closure $callback)` on `QrScanner`, `QrCollector` and `QrScanSequence`: turn screen-reader announcements off, or return custom text per scan (null keeps the default). Announcements stay on by default.
+- Rapid scans are coalesced in the live region: the first message is read at once, and within 500 ms only the newest is written, replacing the text instead of queueing it.
 
 ### Fixed
 

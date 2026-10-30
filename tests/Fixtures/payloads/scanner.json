@@ -1,4 +1,5 @@
 {
+    "announcements": true,
     "beepDurationMs": 80,
     "beepFrequency": 880,
     "burstThresholdMs": 50,
@@ -8,6 +9,7 @@
     "clearOnReject": true,
     "continuousDisplay": "empty",
     "cooldownMs": 0,
+    "customAnnouncements": false,
     "decoderFailedMessage": "Failed to load the camera decoder.",
     "errorFeedback": {
         "sound": true,

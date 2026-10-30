@@ -670,14 +670,18 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
 
         announceAccepted(code) {
             const messages = messagesFrom(this.options);
+            const fallback = formatMessage(messages.fieldAddedAnnouncement, { code, field: this.options.fieldLabel ?? '' });
 
-            this.announce(formatMessage(messages.fieldAddedAnnouncement, { code, field: this.options.fieldLabel ?? '' }));
+            return this.announceScan(this.options, { code, accepted: true, fallback });
         },
 
-        announceRejected(message) {
+        announceRejected(code, message) {
             const messages = messagesFrom(this.options);
+            const reason = message || messages.scanRejectedMessage;
 
-            this.announce(formatMessage(messages.rejectedAnnouncement, { reason: message || messages.scanRejectedMessage }));
+            return this.announceScan(this.options, {
+                code, accepted: false, reason, fallback: formatMessage(messages.rejectedAnnouncement, { reason }),
+            });
         },
 
         // Before the router, a page listener wrote hardware scans into this field and
@@ -712,7 +716,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 beepDurationMs,
             });
 
-            this.announceRejected(message);
+            this.announceRejected(code, message);
 
             window.dispatchEvent(new CustomEvent('qr-scan-rejected', { detail: { value: code, field, source, message, mode } }));
         },

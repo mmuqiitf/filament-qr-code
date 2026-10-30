@@ -8,7 +8,7 @@ use Closure;
 use Filament\Forms\Components\Concerns\CanBeReadOnly;
 use Filament\Forms\Components\Concerns\HasPlaceholder;
 use Filament\Forms\Components\Field;
-use Illuminate\Contracts\Support\Htmlable;
+use Mmuqiitf\FilamentQrCode\Concerns\HasAnnouncements;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
@@ -27,6 +27,7 @@ use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
 class QrScanner extends Field
 {
     use CanBeReadOnly;
+    use HasAnnouncements;
     use HasCameraScanning;
     use HasCodeNormalization;
     use HasFeedback;
@@ -86,17 +87,9 @@ class QrScanner extends Field
             'hardwareScope' => $this->getHardwareInputScope()->value,
             ...$this->getScanModeScanPayload(),
             ...ScanMessages::forScannerAnnouncements(),
-            'fieldLabel' => $this->getAnnouncedLabel(),
+            'fieldLabel' => $this->getAnnouncementFieldLabel(),
+            ...$this->getAnnouncementsScanPayload(),
         ];
-    }
-
-    /** The field's label as plain text, read out in its scan announcements. */
-    protected function getAnnouncedLabel(): string
-    {
-        $label = $this->getLabel();
-        $text = $label instanceof Htmlable ? $label->toHtml() : (string) $label;
-
-        return trim(html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5));
     }
 
     /** Show the image-upload fallback in the camera modal. */
