@@ -1,5 +1,11 @@
 # Upgrade guide
 
+## From 1.0.1 to 1.0.2
+
+Nothing to change in your code. Run `php artisan filament:assets` so the updated scanner JavaScript is published.
+
+`QrScanner` fields now announce scans to screen readers through a visually hidden polite live region, as the collector and scan sequence already did. To keep a field silent, call `->announcements(false)`. If you published `lang/vendor/filament-qr-code`, copy the new `announce_field_added` key from the package's `ui.php`.
+
 ## From 1.0.0 to 1.0.1
 
 1.0.1 drops Laravel 11. Upgrade your app to Laravel 12 or 13 first; Laravel 11 apps stay on 1.0.0 (Composer keeps resolving 1.0.0 for them).

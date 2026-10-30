@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-30
+
 ### Added
 
 - Playwright accessibility checks: axe (WCAG 2.1 A/AA plus best practices) runs on every workbench page, the open scanner modal, the denied-camera state and the collect action modal.
@@ -415,7 +417,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.6.1...v1.0.0
 [0.6.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.6.0...v0.6.1
