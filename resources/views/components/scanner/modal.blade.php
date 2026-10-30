@@ -4,7 +4,7 @@
     x-cloak
     role="dialog"
     aria-modal="true"
-    aria-label="{{ __('filament-qr-code::ui.scan_qr_code') }}"
+    aria-labelledby="{{ $id }}-scanner-title"
     class="fi-qr-scanner-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/70 backdrop-blur-sm"
     @keydown.escape.window="closeScannerModal()"
 >
@@ -21,18 +21,19 @@
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-3 w-3 bg-success-500"></span>
                 </span>
-                <h3 class="font-semibold text-gray-900 dark:text-white text-sm">
+                <h2 id="{{ $id }}-scanner-title" class="font-semibold text-gray-900 dark:text-white text-sm">
                     {{ __('filament-qr-code::ui.scan_qr_code') }}
-                </h3>
+                </h2>
             </div>
 
             <div class="flex items-center gap-2">
                 <button
                     type="button"
                     @click="closeScannerModal()"
+                    aria-label="{{ __('filament-qr-code::ui.close_scanner') }}"
                     class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg"
                 >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>

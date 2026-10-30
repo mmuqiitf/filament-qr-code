@@ -30,6 +30,7 @@ return [
     'scan_from_image' => 'Scan from image file',
     'scan_placeholder' => 'Scan or enter code...',
     'scan_qr_code' => 'Scan QR Code',
+    'close_scanner' => 'Close scanner',
     'scan_qr_with_camera' => 'Scan QR with camera',
     'camera_needs_secure_context' => 'Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.',
     'camera_decoder_failed' => 'Failed to load the camera decoder.',
