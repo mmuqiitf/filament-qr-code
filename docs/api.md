@@ -342,7 +342,7 @@ Getters (read the resolved option; used by the views): `getCaption()`, `getDownl
 
 ### `FilamentQrCode`
 
-`Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode`
+`Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode` — Static entry point to QrCodeService. Start every QR with make(): the facade root is cached, so make() is what gives each code its own builder.
 
 
 ### `QrCodeService`

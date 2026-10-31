@@ -9,12 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `qr-code:doctor` now reports which PNG backends are loaded (imagick and GD). It fails when the Filament assets are not published and warns when the published copies are out of date. It also validates `qr-code.image_route` (`ttl`, `throttle`, `strict_colors`) and confirms when every logo base path exists. Unpublished assets now make the doctor exit non-zero.
 - A release workflow: pushing a `v*` tag publishes the GitHub release, using that version's CHANGELOG section as the notes (`.github/scripts/changelog-section.sh`). It fails rather than publish empty notes, and leaves an existing release alone.
 
 ### Changed
 
 - The minimum for every `filament/*` requirement is now `^5.8.3` (was `^5.0`). Releases up to 5.8.2 carry security advisories, so Composer already refused to install them and `^5.0` resolved to 5.8.3 or newer in practice. No installable setup is dropped.
-- `qr-code:doctor` now reports which PNG backends are loaded (imagick and GD). It fails when the Filament assets are not published and warns when the published copies are out of date. It also validates `qr-code.image_route` (`ttl`, `throttle`, `strict_colors`) and confirms when every logo base path exists. Unpublished assets now make the doctor exit non-zero.
+- Documented the `FilamentQrCode` facade: why every code starts with `make()`, the global cache helpers, and testing with `swap()`/`partialMock()`. Every `QrCodeService` method is now declared on the facade for IDE and PHPStan autocomplete.
 
 ## [1.0.2] - 2026-10-30
 
