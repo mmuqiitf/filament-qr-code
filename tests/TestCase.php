@@ -15,6 +15,7 @@ use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
 use Illuminate\Support\ViewErrorBag;
+use Livewire\Features\SupportDisablingBackButtonCache\SupportDisablingBackButtonCache;
 use Livewire\LivewireServiceProvider;
 use Livewire\Mechanisms\DataStore;
 use Mmuqiitf\FilamentQrCode\FilamentQrCodeServiceProvider;
@@ -28,6 +29,11 @@ class TestCase extends Orchestra
         parent::setUp();
 
         view()->share('errors', new ViewErrorBag);
+
+        // Booting a Livewire component sets this static flag, and Livewire's middleware
+        // then sends the next response as no-cache. Reset it so a component test that
+        // ran earlier (random order) cannot change another test's Cache-Control.
+        SupportDisablingBackButtonCache::$disableBackButtonCache = false;
     }
 
     protected function getPackageProviders($app): array
