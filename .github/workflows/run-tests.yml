@@ -55,3 +55,36 @@ jobs:
 
       - name: Execute tests
         run: vendor/bin/pest
+
+  gd-only:
+    # Imagick is optional: PNG rendering, logos and captions fall back to GD.
+    # This job proves the package works (and the GD goldens match) without it.
+    runs-on: ubuntu-latest
+    name: P8.4 - L13.* - prefer-stable - GD only (no Imagick)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install system font dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-dejavu-core
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, :imagick
+          coverage: none
+
+      - name: Assert Imagick is not loaded
+        run: |
+          php -r 'if (extension_loaded("imagick")) { fwrite(STDERR, "imagick is loaded\n"); exit(1); } echo "GD only: ", gd_info()["GD Version"], PHP_EOL;'
+
+      - name: Install dependencies
+        run: |
+          composer config --unset platform.php
+          composer require "laravel/framework:13.*" "orchestra/testbench:11.*" --dev --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction
+
+      - name: Execute tests
+        run: vendor/bin/pest
