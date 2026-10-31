@@ -77,7 +77,8 @@ jobs:
           coverage: none
 
       - name: Assert Imagick is not loaded
-        run: php -r 'if (extension_loaded("imagick")) { fwrite(STDERR, "imagick is loaded\n"); exit(1); } echo "GD only: ", gd_info()["GD Version"], PHP_EOL;'
+        run: |
+          php -r 'if (extension_loaded("imagick")) { fwrite(STDERR, "imagick is loaded\n"); exit(1); } echo "GD only: ", gd_info()["GD Version"], PHP_EOL;'
 
       - name: Install dependencies
         run: |
