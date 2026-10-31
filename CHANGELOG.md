@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The minimum for every `filament/*` requirement is now `^5.8.3` (was `^5.0`). Releases up to 5.8.2 carry security advisories, so Composer already refused to install them and `^5.0` resolved to 5.8.3 or newer in practice. No installable setup is dropped.
+
 ## [1.0.2] - 2026-10-30
 
 ### Added

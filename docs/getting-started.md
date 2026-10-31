@@ -4,7 +4,7 @@
 
 This page takes you from `composer require` to a field that checks scans on the server. Each step lists what you should see before you move on.
 
-Requirements: PHP `^8.2`, Laravel 12 or 13, and Filament v5. Camera scanning needs a secure context (`https` or `localhost`). PNG output needs `gd` or `imagick`.
+Requirements: PHP `^8.2`, Laravel 12 or 13, and Filament 5.8.3 or newer (v5). Camera scanning needs a secure context (`https` or `localhost`). PNG output needs `gd` or `imagick`.
 
 ## 1. Install the package
 
