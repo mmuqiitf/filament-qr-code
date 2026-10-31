@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Filament\Support\Assets\Asset;
 use Filament\Support\Facades\FilamentAsset;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 
 /** @return list<Asset> */
@@ -118,4 +119,9 @@ it('passes when every logo base path exists', function () {
     $this->artisan('qr-code:doctor')
         ->assertSuccessful()
         ->expectsOutputToContain('[PASS] Logos restricted to qr-code.generator.logo_base_paths.');
+});
+
+it('describes itself with the product name', function () {
+    expect(Artisan::all()['qr-code:doctor']->getDescription())
+        ->toBe('Check the Filament QR & Barcode install: image backends, fonts, assets, config, and routes.');
 });

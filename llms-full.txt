@@ -3357,6 +3357,13 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 
 # Upgrade guide
 
+## From 1.0.2 to 1.0.3
+
+Nothing to change in your code. 1.0.3 adds tooling and docs only.
+
+- **Filament `^5.8.3`.** Every `filament/*` requirement is now `^5.8.3` (was `^5.0`). Composer already refused 5.0 to 5.8.2 because of security advisories, so any app that could install 1.0.2 resolves 1.0.3 the same way. If Composer reports a conflict, you had those advisories ignored and should run `composer update "filament/*"`.
+- **`qr-code:doctor` exits non-zero when assets are not published.** It now compares the published `public/` copies with the package build: missing files are a `[FAIL]` and outdated copies are a `[WARN]`. It also fails on an invalid `qr-code.image_route` `ttl`, `throttle` or `strict_colors` value. If you run the doctor in CI or a deploy script, run `php artisan filament:assets` before it.
+
 ## From 1.0.1 to 1.0.2
 
 Nothing to change in your code. Run `php artisan filament:assets` so the updated scanner JavaScript is published.
