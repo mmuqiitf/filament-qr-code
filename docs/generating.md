@@ -152,6 +152,24 @@ Rules that bite:
 - Other builder methods: `font($path)` sets the TTF used by `withText()`, `fileName($name)` sets the default download name (no extension), and `getRaw()` returns the encoded bytes.
 - Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(int|false|null $seconds)` (overrides `generator.cache_ttl`; `null` clears the override) and `effectiveCacheTtl()` (the value in effect), `flushRenderCache()` (in-process) and `flushPersistentCache()` (Laravel cache).
 
+### The `FilamentQrCode` facade
+
+`Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode` is a static entry point to `QrCodeService`. It needs no alias or registration. Laravel auto-discovers the service provider, and the facade resolves the service from the container.
+
+- **Start every code with `make()`.** Laravel caches a facade's resolved instance, so chaining from another method (`FilamentQrCode::size(300)->...`) reuses one shared builder, and its settings leak into the next call. `make()` returns a new builder each time.
+- **Render, then read.** `generate($data)` renders and returns the builder. Read the result with `toDataUri()`, `getRaw()` (bytes), `download($name)` (attachment) or `stream($name)` (inline).
+- **Cache helpers are global.** They change the process-wide render cache, not one builder:
+
+```php
+use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
+
+FilamentQrCode::cacheTtl(3600);        // keep persistent renders for an hour (false = off, null = use config)
+FilamentQrCode::cacheStore('redis');   // Laravel cache store for persistent renders
+FilamentQrCode::flushPersistentCache(); // after changing logos or fonts in place
+```
+
+In tests, the facade can be swapped like any other: `FilamentQrCode::partialMock()` or `FilamentQrCode::swap($fake)`. Every method is typed on the facade, so IDEs and PHPStan autocomplete the chain. The full method list is under [`FilamentQrCode` in the API map](api.md#filamentqrcode).
+
 ### Common payloads without hand-escaping
 
 ```php
