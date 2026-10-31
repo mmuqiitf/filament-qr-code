@@ -67,7 +67,7 @@ From the [example app](https://github.com/mmuqiitf/filament-qr-code-example) (se
 
 ## Requirements
 
-- PHP `^8.2`, Laravel 12/13, Filament v5.
+- PHP `^8.2`, Laravel 12/13, Filament 5.8.3 or newer (v5).
 - PNG generation needs `gd` or `imagick` plus system fonts (`fonts-dejavu-core` on Debian).
 - Camera scanning needs a secure context (`https` or `localhost`).
 - The camera bundle (`html5-qrcode`) is compiled into `resources/dist/` — no CDN. After changing anything under `resources/js` or `resources/css`, rebuild with `npm run build` (CI fails when committed `dist/` is stale).
