@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Console\Commands;
 
+use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Mmuqiitf\FilamentQrCode\Support\LogoPathGuard;
@@ -25,11 +26,13 @@ class QrCodeDoctorCommand extends Command
         $failures += $this->checkImageBackend();
         $failures += $this->checkSystemFonts();
         $failures += $this->checkDistFreshness();
+        $failures += $this->checkPublishedAssets();
         $failures += $this->checkSignedRoute();
         $failures += $this->checkConfig();
         $failures += $this->checkSecureContext();
         $failures += $this->checkCacheStore();
         $failures += $this->checkImageRouteHardening();
+        $failures += $this->checkImageRouteConfig();
 
         if ($failures > 0) {
             $this->error("qr-code:doctor found {$failures} problem(s). See the troubleshooting table in README.md.");
@@ -44,14 +47,20 @@ class QrCodeDoctorCommand extends Command
 
     private function checkImageBackend(): int
     {
+        $loaded = sprintf(
+            'imagick: %s, gd: %s',
+            extension_loaded('imagick') ? 'yes' : 'no',
+            extension_loaded('gd') ? 'yes' : 'no',
+        );
+
         if (extension_loaded('imagick') || extension_loaded('gd')) {
             $backend = extension_loaded('imagick') ? 'imagick' : 'gd';
-            $this->line("  [PASS] PNG backend available ({$backend}).");
+            $this->line("  [PASS] PNG backend available ({$backend}; {$loaded}).");
 
             return 0;
         }
 
-        $this->error('  [FAIL] Neither imagick nor gd is installed: PNG generation needs one of them.');
+        $this->error("  [FAIL] Neither imagick nor gd is installed ({$loaded}): PNG generation needs one of them.");
 
         return 1;
     }
@@ -247,6 +256,82 @@ class QrCodeDoctorCommand extends Command
         if (config('qr-code.image_route.ttl') === null && config('qr-code.image_route.throttle') === null) {
             $this->line('  [INFO] Image route has no ttl or throttle (opt-in hardening: qr-code.image_route).');
         }
+
+        return 0;
+    }
+
+    private function checkPublishedAssets(): int
+    {
+        $missing = [];
+        $stale = [];
+
+        $package = ['mmuqiitf/filament-qr-code'];
+
+        foreach ([...FilamentAsset::getScripts($package, withCore: false), ...FilamentAsset::getStyles($package)] as $asset) {
+            $source = $asset->getPath();
+
+            if ($asset->isRemote() || $source === null || ! is_file($source)) {
+                continue;
+            }
+
+            $published = $asset->getPublicPath();
+
+            if (! is_file($published)) {
+                $missing[] = $asset->getRelativePublicPath();
+            } elseif (md5_file($published) !== md5_file($source)) {
+                $stale[] = $asset->getRelativePublicPath();
+            }
+        }
+
+        if ($missing !== []) {
+            $this->error('  [FAIL] Filament assets are not published ('.implode(', ', $missing).'): run php artisan filament:assets.');
+
+            return 1;
+        }
+
+        if ($stale !== []) {
+            $this->warn('  [WARN] Published assets are out of date ('.implode(', ', $stale).'): run php artisan filament:assets after upgrading.');
+
+            return 0;
+        }
+
+        $this->line('  [PASS] Published Filament assets match the package build.');
+
+        return 0;
+    }
+
+    private function checkImageRouteConfig(): int
+    {
+        $problems = 0;
+
+        $ttl = config('qr-code.image_route.ttl');
+        if ($ttl !== null && (! is_numeric($ttl) || (float) $ttl <= 0)) {
+            $this->error('  [FAIL] qr-code.image_route.ttl must be a positive number of minutes, or null.');
+            $problems++;
+        }
+
+        $throttle = config('qr-code.image_route.throttle');
+        if ($throttle !== null && (! is_string($throttle) || preg_match('/^\s*[1-9]\d*\s*(,\s*\d+(\.\d+)?\s*)?$/', $throttle) !== 1)) {
+            $this->error("  [FAIL] qr-code.image_route.throttle must look like '60,1' (requests,minutes), or null.");
+            $problems++;
+        }
+
+        $strictColors = config('qr-code.image_route.strict_colors', false);
+        if (! is_bool($strictColors)) {
+            $this->error('  [FAIL] qr-code.image_route.strict_colors must be true or false.');
+            $problems++;
+        }
+
+        if ($problems > 0) {
+            return $problems;
+        }
+
+        $this->line(sprintf(
+            '  [PASS] Image route config: %s, %s, strict colours %s.',
+            $ttl === null ? 'URLs never expire' : "URLs expire after {$ttl} minutes",
+            $throttle === null ? 'no throttle' : "throttle {$throttle}",
+            $strictColors ? 'on' : 'off',
+        ));
 
         return 0;
     }
