@@ -17,7 +17,7 @@ class QrCodeDoctorCommand extends Command
 {
     protected $signature = 'qr-code:doctor';
 
-    protected $description = 'Check the Filament QR Code install: image backends, fonts, assets, config, and routes.';
+    protected $description = 'Check the Filament QR & Barcode install: image backends, fonts, assets, config, and routes.';
 
     public function handle(): int
     {

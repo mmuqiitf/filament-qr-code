@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-10-31
+
 ### Added
 
 - `qr-code:doctor` now reports which PNG backends are loaded (imagick and GD). It fails when the Filament assets are not published and warns when the published copies are out of date. It also validates `qr-code.image_route` (`ttl`, `throttle`, `strict_colors`) and confirms when every logo base path exists. Unpublished assets now make the doctor exit non-zero.
@@ -14,10 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The `qr-code:doctor` command description uses the name Filament QR & Barcode.
 - The minimum for every `filament/*` requirement is now `^5.8.3` (was `^5.0`). Releases up to 5.8.2 carry security advisories, so Composer already refused to install them and `^5.0` resolved to 5.8.3 or newer in practice. No installable setup is dropped.
 - Documented the `FilamentQrCode` facade: why every code starts with `make()`, the global cache helpers, and testing with `swap()`/`partialMock()`. Every `QrCodeService` method is now declared on the facade for IDE and PHPStan autocomplete.
 - The docs now use the name **Filament QR & Barcode** (README, `llms-full.txt`, Boost guidelines and skill, composer description and keywords). The Composer package name `mmuqiitf/filament-qr-code`, the namespaces and the routes are unchanged.
 - `SECURITY.md`: 1.x is supported and 0.x is not (no grace period). Reports are acknowledged within 7 days. A new scope section covers the signed image route, logo paths and scanned input.
+- CI: a GD-only test job (no Imagick) checks the GD fallback and its PNG goldens. A test-only flake in the image route cache header assertion is fixed (a Livewire static flag leaked between randomly ordered tests).
 
 ## [1.0.2] - 2026-10-30
 
@@ -429,7 +433,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v0.6.1...v1.0.0
