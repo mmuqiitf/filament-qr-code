@@ -66,7 +66,7 @@ The signed `filamentQrCode.image` route is safe by default (signatures stop tamp
 
 - `logo_base_paths` resolves each logo with `realpath()` (so `../` and symlinks that escape are caught) and accepts only PNG, JPEG, GIF or WebP files inside a listed directory. Inline renders (columns, entries, downloads, `QrCodeService`) skip a rejected logo and log a warning; the image route answers 422.
 - `ttl` signs preview URLs with an `expires` parameter (expired links get 403) and caps the browser cache at the TTL.
-- `qr-code:doctor` reports whether logos are restricted and flags base paths that do not exist.
+- `qr-code:doctor` reports whether logos are restricted, flags base paths that do not exist, and fails on an invalid `ttl`, `throttle` or `strict_colors` value.
 
 ### In Infolists
 

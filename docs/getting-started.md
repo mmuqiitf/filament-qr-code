@@ -109,7 +109,7 @@ php artisan vendor:publish --tag="filament-qr-code-config"
 php artisan qr-code:doctor
 ```
 
-The doctor checks the image backends, fonts, published assets, config and routes. The [Troubleshooting table](../README.md#troubleshooting) and the [FAQ](faq.md) cover the usual symptoms.
+The doctor reports which PNG backends are loaded (imagick and GD) and checks fonts, compiled assets, and that `php artisan filament:assets` has published the current build. It also checks the config, the signed image route and its `qr-code.image_route` values (`ttl`, `throttle`, `strict_colors`), and that every `generator.logo_base_paths` entry exists. It exits non-zero on any `[FAIL]`. The [Troubleshooting table](../README.md#troubleshooting) and the [FAQ](faq.md) cover the usual symptoms.
 
 ## Where next
 

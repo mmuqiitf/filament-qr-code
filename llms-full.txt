@@ -371,7 +371,7 @@ php artisan vendor:publish --tag="filament-qr-code-config"
 php artisan qr-code:doctor
 ```
 
-The doctor checks the image backends, fonts, published assets, config and routes. The [Troubleshooting table](../README.md#troubleshooting) and the [FAQ](faq.md) cover the usual symptoms.
+The doctor reports which PNG backends are loaded (imagick and GD) and checks fonts, compiled assets, and that `php artisan filament:assets` has published the current build. It also checks the config, the signed image route and its `qr-code.image_route` values (`ttl`, `throttle`, `strict_colors`), and that every `generator.logo_base_paths` entry exists. It exits non-zero on any `[FAIL]`. The [Troubleshooting table](../README.md#troubleshooting) and the [FAQ](faq.md) cover the usual symptoms.
 
 ## Where next
 
@@ -1061,7 +1061,7 @@ The signed `filamentQrCode.image` route is safe by default (signatures stop tamp
 
 - `logo_base_paths` resolves each logo with `realpath()` (so `../` and symlinks that escape are caught) and accepts only PNG, JPEG, GIF or WebP files inside a listed directory. Inline renders (columns, entries, downloads, `QrCodeService`) skip a rejected logo and log a warning; the image route answers 422.
 - `ttl` signs preview URLs with an `expires` parameter (expired links get 403) and caps the browser cache at the TTL.
-- `qr-code:doctor` reports whether logos are restricted and flags base paths that do not exist.
+- `qr-code:doctor` reports whether logos are restricted, flags base paths that do not exist, and fails on an invalid `ttl`, `throttle` or `strict_colors` value.
 
 ### In Infolists
 
