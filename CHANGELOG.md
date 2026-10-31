@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The minimum for every `filament/*` requirement is now `^5.8.3` (was `^5.0`). Releases up to 5.8.2 carry security advisories, so Composer already refused to install them and `^5.0` resolved to 5.8.3 or newer in practice. No installable setup is dropped.
 - Documented the `FilamentQrCode` facade: why every code starts with `make()`, the global cache helpers, and testing with `swap()`/`partialMock()`. Every `QrCodeService` method is now declared on the facade for IDE and PHPStan autocomplete.
+- The docs now use the name **Filament QR & Barcode** (README, `llms-full.txt`, Boost guidelines and skill, composer description and keywords). The Composer package name `mmuqiitf/filament-qr-code`, the namespaces and the routes are unchanged.
+- `SECURITY.md`: 1.x is supported and 0.x is not (no grace period). Reports are acknowledged within 7 days. A new scope section covers the signed image route, logo paths and scanned input.
 
 ## [1.0.2] - 2026-10-30
 

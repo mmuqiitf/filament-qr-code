@@ -1,4 +1,4 @@
-# Filament QR Code
+# Filament QR & Barcode
 
 <img src="docs/banner.png" alt="Filament QR &amp; Barcode banner" class="filament-hidden">
 
@@ -7,7 +7,7 @@
 [![PHPStan Level 9](https://img.shields.io/badge/PHPStan-level%209-brightgreen.svg?style=flat-square)](https://phpstan.org/)
 [![Total Downloads](https://img.shields.io/packagist/dt/mmuqiitf/filament-qr-code.svg?style=flat-square)](https://packagist.org/packages/mmuqiitf/filament-qr-code)
 
-A powerful, modern QR code package designed exclusively for **Filament v5** and **Laravel 12 / 13**.
+**Filament QR & Barcode** scans QR codes and barcodes (camera, image upload and handheld scanners) and generates QR codes, built exclusively for **Filament v5** and **Laravel 12 / 13**. Install it as `mmuqiitf/filament-qr-code`.
 
 Features:
 
@@ -20,7 +20,7 @@ Features:
 
 ---
 
-- [Filament QR Code](#filament-qr-code)
+- [Filament QR & Barcode](#filament-qr--barcode)
   - [Try it](#try-it)
   - [Requirements](#requirements)
   - [How it works](#how-it-works)
