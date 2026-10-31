@@ -3,7 +3,7 @@ name: filament-qr-code
 description: Build QR and barcode scanning or QR generation into Filament v5 forms, tables and infolists with mmuqiitf/filament-qr-code. Use for camera scanners, handheld gun stations, scan sequences, batch collectors, QR columns and downloads.
 ---
 
-# Filament QR Code
+# Filament QR & Barcode
 
 ## When to use
 

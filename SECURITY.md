@@ -1,13 +1,25 @@
 # Security Policy
 
+This policy covers **Filament QR & Barcode** (`mmuqiitf/filament-qr-code`).
+
 ## Supported Versions
 
-Only the latest release line receives security fixes.
+Only the 1.x release line receives security fixes. 0.x is no longer supported, with no grace period: upgrade to 1.x (see [UPGRADE.md](UPGRADE.md)).
 
 | Version | Supported |
 | ------- | --------- |
-| 0.2.x   | ✅        |
-| < 0.2   | ❌        |
+| 1.x     | ✅        |
+| 0.x     | ❌        |
+
+## Scope
+
+Reports are especially welcome for:
+
+- **The signed image route** (`filamentQrCode.image`): signature or `ttl` expiry bypasses, rendering unsigned or tampered parameters, `throttle` bypasses, and cache or header issues that leak a render.
+- **Logo paths** (`logo()`, `qrLogo()` and `qr-code.generator.logo_base_paths`): reading files outside the configured base paths, path traversal, or embedding non-image files.
+- **Scanned input handling**: scanned or uploaded code values reaching HTML, JavaScript or the database unescaped or unvalidated (XSS, injection), hardware-scanner input bypassing field validation, or camera and image-upload decoding that can be abused.
+
+Issues in Filament, Laravel or other dependencies should go to those projects. Report them here only if this package makes them exploitable.
 
 ## Reporting a Vulnerability
 
@@ -21,4 +33,4 @@ Include as much of the following as you can:
 - a description of the issue and its impact,
 - steps to reproduce or a minimal proof of concept.
 
-You will receive an acknowledgement as soon as possible. Once the issue is confirmed, a fix is prepared in a private advisory and released, and the advisory is published with credit to the reporter unless you prefer to stay anonymous.
+You will receive an acknowledgement within 7 days. Once the issue is confirmed, a fix is prepared in a private advisory and released, and the advisory is published with credit to the reporter unless you prefer to stay anonymous.

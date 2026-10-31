@@ -1,4 +1,4 @@
-## Filament QR Code
+## Filament QR & Barcode
 
 `mmuqiitf/filament-qr-code` adds QR/barcode scanning (camera, image upload, keyboard-wedge Hardware Scanners) and QR generation to Filament v5. Always import classes with full `use` statements; nothing is global. Full docs: `vendor/mmuqiitf/filament-qr-code/docs/ai.md` and `docs/api.md`.
 

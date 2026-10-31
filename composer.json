@@ -1,6 +1,6 @@
 {
     "name": "mmuqiitf/filament-qr-code",
-    "description": "A powerful, modern QR code package for Filament v5 supporting generation, camera reading, sequential fields, and hardware scanners.",
+    "description": "Filament QR & Barcode: QR and barcode scanning (camera, image upload, hardware scanners, sequential fields) and QR generation for Filament v5.",
     "keywords": [
         "mmuqiitf",
         "laravel",
@@ -8,6 +8,7 @@
         "filament-plugin",
         "filament-v5",
         "qr-code",
+        "barcode",
         "barcode-scanner",
         "hardware-scanner",
         "sequential-scan"

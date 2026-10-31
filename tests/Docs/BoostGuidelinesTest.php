@@ -18,7 +18,7 @@ it('ships a single self-contained Boost guideline', function (): void {
     $guideline = file_get_contents(qrDocsPath('resources/boost/guidelines/core.blade.php'));
 
     expect(glob(qrDocsPath('resources/boost/guidelines/*')))->toHaveCount(1)
-        ->and($guideline)->toContain('## Filament QR Code')
+        ->and($guideline)->toContain('## Filament QR & Barcode')
         ->and($guideline)->not->toContain('@include')
         ->and(substr_count($guideline, '@verbatim'))->toBe(substr_count($guideline, '@endverbatim'));
 });
