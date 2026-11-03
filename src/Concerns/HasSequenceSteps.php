@@ -326,7 +326,7 @@ trait HasSequenceSteps
     }
 
     /**
-     * @param  array<string, array<string, string>>  $messages
+     * @param  array<string, mixed>  $messages
      *
      * @internal Public only because Filament calls this validation hook;
      * not covered by semver.
