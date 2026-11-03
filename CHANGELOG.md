@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - 1D barcode generation: `BarcodeDisplay` (forms), `BarcodeEntry` (infolists) and `BarcodeColumn` (tables), each with `->type(BarcodeType::...)` for Code 128, EAN-13, EAN-8, UPC-A, Code 39 and ITF-14. SVG by default, PNG via `->format('png')` on Imagick or GD, human-readable text on by default (`->showText(false)` hides it). See [Barcodes](docs/barcodes.md).
-- `BarcodeService` for PHP use (`generate()`, `getRaw()`, `toDataUri()`, `download()`, `stream()`, `validate()`), sharing the QR render cache.
+- `BarcodeService` for PHP use (`generate()`, `getRaw()`, `toDataUri()`, `download()`, `stream()`, `validate()`), sharing the QR render cache. `FilamentQrCode::barcode()` starts one from the facade.
 - `InvalidBarcodeException` with the type, value and reason. Components catch it and show a translated inline error (`role="alert"`) instead of a broken image. New translation keys `barcode_invalid` and `barcode_no_data` (en, id).
 - Barcode images carry alt text and an SVG `aria-label`/`<title>` such as `EAN-13 barcode: 4006381333931`. Golden output tests cover every type, and the workbench has a barcode page with browser and axe checks.
 - README credits for BaconQR (BSD-2-Clause) and tc-lib-barcode (LGPL-3.0-or-later), with a note on the LGPL.

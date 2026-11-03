@@ -89,4 +89,14 @@ try {
 }
 ```
 
+The `FilamentQrCode` facade starts a barcode too. `FilamentQrCode::barcode()` returns a fresh `BarcodeService`, the same as `BarcodeService::make()`:
+
+```php
+use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
+
+$uri = FilamentQrCode::barcode()->type('ean8')->generate('9638507')->toDataUri();
+```
+
 Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`), and `BarcodeService::flushRenderCache()` clears it.
+
+Barcodes have no signed image route yet: components embed the image as a data URI. A barcode image route is planned for 1.2.
