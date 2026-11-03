@@ -12,6 +12,8 @@ return [
     'collect_description' => 'Continuously scan QR codes to add items.',
     'done' => 'Done',
     'duplicate_codes' => 'Duplicate codes are not allowed.',
+    'barcode_invalid' => 'Invalid :type value: :reason.',
+    'barcode_no_data' => 'No barcode data available',
     'download' => 'Download',
     'download_image' => 'Download Image',
     'download_qr_bulk' => 'Download QR Codes (ZIP)',
