@@ -98,6 +98,12 @@ class QrCodeService
         return new self;
     }
 
+    /** Start a fresh 1D barcode render (`FilamentQrCode::barcode()`). */
+    public function barcode(): BarcodeService
+    {
+        return BarcodeService::make();
+    }
+
     /** Image size in pixels. */
     public function size(int $size): self
     {

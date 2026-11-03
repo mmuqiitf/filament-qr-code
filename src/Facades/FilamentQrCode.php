@@ -8,9 +8,10 @@ use Illuminate\Support\Facades\Facade;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
 
 /**
- * Static entry point to QrCodeService. Start every QR with make(): the facade root is cached, so make() is what gives each code its own builder.
+ * Static entry point to QrCodeService. Start every QR with make() and every 1D barcode with barcode(): the facade root is cached, so these are what give each code its own builder.
  *
  * @method static QrCodeService make()
+ * @method static \Mmuqiitf\FilamentQrCode\Services\BarcodeService barcode()
  * @method static QrCodeService size(int $size)
  * @method static QrCodeService margin(int $margin)
  * @method static QrCodeService format(\Mmuqiitf\FilamentQrCode\Enums\QrFormat|string $format)

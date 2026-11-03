@@ -3093,7 +3093,7 @@ Getters (read the resolved option; used by the views): `getCaption()`, `getDownl
 
 ### `FilamentQrCode`
 
-`Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode` — Static entry point to QrCodeService. Start every QR with make(): the facade root is cached, so make() is what gives each code its own builder.
+`Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode` — Static entry point to QrCodeService. Start every QR with make() and every 1D barcode with barcode(): the facade root is cached, so these are what give each code its own builder.
 
 
 ### `QrCodeService`
@@ -3104,6 +3104,7 @@ Getters (read the resolved option; used by the views): `getCaption()`, `getDownl
 | --- | --- |
 | `__construct()` | Create a renderer seeded with the `generator` config defaults. |
 | `backgroundColor(string $hexColor): QrCodeService` | Background colour as hex. |
+| `barcode(): BarcodeService` | Start a fresh 1D barcode render (`FilamentQrCode::barcode()`). |
 | `static cacheStore(?string $store): void` | Laravel cache store for the persistent render cache; null uses the default store. |
 | `static cacheTtl(int\|false\|null $seconds): void` | Override generator.cache_ttl at runtime: seconds to keep persistent (L2) entries, false to turn the L2 cache off, null to clear the override and use the config again. |
 | `color(string $hexColor): QrCodeService` | Foreground colour as hex. |
