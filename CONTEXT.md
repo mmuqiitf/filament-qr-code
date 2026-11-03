@@ -10,6 +10,10 @@ A modular Filament v5 package providing QR code generation, interactive camera r
 A backend service and UI component that encodes data into QR code images (SVG/PNG) for display in Filament Forms, Infolists, and Tables.
 _Avoid_: QR maker, barcode creator
 
+**Barcode Generator**:
+`BarcodeService` and the `BarcodeDisplay`, `BarcodeEntry` and `BarcodeColumn` components, which encode data into 1D barcodes (`BarcodeType`: Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14) via tc-lib-barcode. Separate from `BarcodeFormat`, which lists formats the scanner decodes.
+_Avoid_: linear QR, 1D QR
+
 **QR Scanner Field**:
 A Filament form field that captures QR code values through a camera stream, image upload, or manual entry.
 _Avoid_: QR input, barcode box

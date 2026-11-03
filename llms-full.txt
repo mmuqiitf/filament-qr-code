@@ -16,7 +16,7 @@
 [![PHPStan Level 9](https://img.shields.io/badge/PHPStan-level%209-brightgreen.svg?style=flat-square)](https://phpstan.org/)
 [![Total Downloads](https://img.shields.io/packagist/dt/mmuqiitf/filament-qr-code.svg?style=flat-square)](https://packagist.org/packages/mmuqiitf/filament-qr-code)
 
-**Filament QR & Barcode** scans QR codes and barcodes (camera, image upload and handheld scanners) and generates QR codes, built exclusively for **Filament v5** and **Laravel 12 / 13**. Install it as `mmuqiitf/filament-qr-code`.
+**Filament QR & Barcode** scans QR codes and barcodes (camera, image upload and handheld scanners) and generates QR codes and 1D barcodes, built exclusively for **Filament v5** and **Laravel 12 / 13**. Install it as `mmuqiitf/filament-qr-code`.
 
 Features:
 
@@ -169,6 +169,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 - **Scanning**: [QR Scanner Field](docs/scanning.md#qr-scanner-field-qrscanner), [Station Listener](docs/scanning.md#station-listener-qrhardwarescannerlistener) for hands-free guns, [Scan Sequence Container](docs/scanning.md#scan-sequence-container-qrscansequence), [server-side checks](docs/scanning.md#server-side-checks) and the [cashier POS tutorial](docs/scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
+- **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39 and ITF-14](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
 - **Every public method**: the generated [API map](docs/api.md).
 
@@ -180,6 +181,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [Scanning](docs/scanning.md) | QR Scanner Field, Station Listener, Scan Sequence Container, focus handoff, server checks, continuous mode, runtime control, POS tutorial |
 | [Batch collecting](docs/collecting.md) | continuous inventory scanning in repeaters and tables |
 | [Generating](docs/generating.md) | display components, download actions, ZIP export, facade, payloads |
+| [Barcodes](docs/barcodes.md) | 1D barcodes: types, components, invalid values, accessibility, PHP API |
 | [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, auditing, macros, styling, render hooks, views |
 | [Extension points](docs/extending.md) | every seam in one table: PHP closures, contracts, macros, render hooks, CSS variables, JS decoder, router, events |
 | [Events](docs/events.md) | every browser event fired or listened for, and every Laravel event with its properties |
@@ -250,6 +252,13 @@ Please review [our security policy](../../security/policy) on how to report secu
 
 - [Mohamad Muqiit Faturrahman](https://github.com/mmuqiitf)
 - [All Contributors](../../contributors)
+
+This package stands on two open-source encoders:
+
+- [BaconQR](https://github.com/Bacon/BaconQrCode) (`bacon/bacon-qr-code`, BSD-2-Clause) by Ben Scholzen encodes every QR code.
+- [tc-lib-barcode](https://github.com/tecnickcom/tc-lib-barcode) (`tecnickcom/tc-lib-barcode`, LGPL-3.0-or-later) by Nicola Asuni / Tecnick.com encodes the 1D barcodes.
+
+tc-lib-barcode is licensed under the LGPL. It is installed as a separate, unmodified Composer dependency, so you can update or replace it in your own `vendor/` directory; the LGPL does not extend to this package's MIT code or to your application. If you redistribute tc-lib-barcode itself (for example in a bundled build), include its licence and keep it replaceable.
 
 ## License
 
@@ -1176,6 +1185,104 @@ QrPayload::mailto('ops@example.com', 'Stock alert', '...');   // mailto with sub
 QrPayload::sms('+621234567', 'Arrived');                     // SMSTO
 QrPayload::geo(-6.2, 106.8, 'Warehouse 7');                   // geo with query
 ```
+
+
+---
+
+<!-- file: docs/barcodes.md -->
+
+# Generating Barcodes
+
+> Back to [README](../README.md) · [Generating QR codes](generating.md) · [Reference](reference.md)
+
+Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14) in forms, infolists and tables, or generate them in PHP. Encoding comes from [tc-lib-barcode](https://github.com/tecnickcom/tc-lib-barcode); the package draws the bars itself, so the SVG output is stable and accessible. QR codes still use [BaconQR](https://github.com/Bacon/BaconQrCode).
+
+## Supported types
+
+| `BarcodeType` | Accepts | Check digit |
+| --- | --- | --- |
+| `Code128` (default) | any printable ASCII | built in |
+| `Ean13` | 12 or 13 digits | appended when you pass 12, checked when you pass 13 |
+| `Ean8` | 7 or 8 digits | appended or checked |
+| `UpcA` | 11 or 12 digits | appended or checked |
+| `Code39` | `0-9`, `A-Z`, space and `- . $ / + %` (uppercase only) | none |
+| `Itf14` | 13 or 14 digits | appended or checked; drawn with bearer bars and its own quiet zone |
+
+GS1-128 (application identifiers) is not supported yet.
+
+## Components
+
+Every component takes `->type(BarcodeType::...)` and encodes its state, or `->data()` when set (a closure receives the record).
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
+use Mmuqiitf\FilamentQrCode\Forms\Components\BarcodeDisplay;
+use Mmuqiitf\FilamentQrCode\Infolists\Components\BarcodeEntry;
+use Mmuqiitf\FilamentQrCode\Tables\Columns\BarcodeColumn;
+
+// Form schema: read-only preview of the field state.
+BarcodeDisplay::make('ean')
+    ->type(BarcodeType::Ean13);
+
+// Infolist.
+BarcodeEntry::make('sku')
+    ->type(BarcodeType::Code128)
+    ->height(60)
+    ->showText(false);
+
+// Table: a compact strip (bar width 1, 32px, no text, no download link).
+BarcodeColumn::make('gtin')
+    ->type(BarcodeType::Itf14)
+    ->data(fn ($record) => $record->case_gtin);
+```
+
+| Setter | Default (display / entry) | Default (column) |
+| --- | --- | --- |
+| `type(BarcodeType\|string)` | `Code128` | `Code128` |
+| `format(QrFormat\|string)` | SVG | SVG |
+| `barWidth(int $pixels)` | 2 | 1 |
+| `height(int $pixels)` | 80 (bars only) | 32 |
+| `margin(?int $modules)` | 10, 0 for ITF-14 | same |
+| `color()` / `backgroundColor()` | `#000000` / `#ffffff` | same |
+| `showText(bool)` | `true` | `false` |
+| `downloadable(bool)` | `true` | `false` |
+
+PNG output (`->format('png')`) uses Imagick when it is loaded, otherwise GD, exactly like QR codes.
+
+### Invalid values
+
+A value that doesn't fit the type (wrong length, wrong check digit, lowercase in Code 39) never renders a broken image. The component shows a translated inline message with `role="alert"`, for example *Invalid EAN-13 value: wrong check digit, expected 1.* Validate input up front with `BarcodeService::validate()`, which throws the same `InvalidBarcodeException`.
+
+### Accessibility
+
+The image's alt text names the type and the encoded value, including any appended check digit: `EAN-13 barcode: 4006381333931`. The SVG itself carries `role="img"`, an `aria-label` and a `<title>`, so it stays accessible when you embed the raw markup.
+
+## In PHP
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
+use Mmuqiitf\FilamentQrCode\Exceptions\InvalidBarcodeException;
+use Mmuqiitf\FilamentQrCode\Services\BarcodeService;
+
+$barcode = BarcodeService::make()
+    ->type(BarcodeType::Ean13)
+    ->barWidth(3)
+    ->generate('400638133393');
+
+$barcode->getText();       // '4006381333931' (check digit appended)
+$barcode->getRaw();        // SVG markup
+$barcode->toDataUri();     // data:image/svg+xml;base64,...
+
+return BarcodeService::make()->type('code128')->format('png')->generate($sku)->download('label.png');
+
+try {
+    BarcodeService::validate(BarcodeType::UpcA, $input);
+} catch (InvalidBarcodeException $e) {
+    $e->reason; // 'expected 11 or 12 digits, got 10'
+}
+```
+
+Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`), and `BarcodeService::flushRenderCache()` clears it.
 
 
 ---
@@ -3089,6 +3196,63 @@ Getters (read the resolved option; used by the views): `getCaption()`, `getDownl
 | `recordsToFiles(Collection $records): array` | Render each record's QR code with this action's settings. Records with empty data are skipped. |
 | `zipName(Closure\|string $name): static` | Attribute name (or closure receiving the record) resolving each row's encoded value. |
 
+### `BarcodeDisplay`
+
+`Mmuqiitf\FilamentQrCode\Forms\Components\BarcodeDisplay` — Read-only form field that shows a 1D barcode of its state or data().
+
+| Method | Purpose |
+| --- | --- |
+| `backgroundColor(Closure\|string $hexColor): static` | Background colour as hex. |
+| `barWidth(Closure\|int $pixels): static` | Width in pixels of the narrowest bar. |
+| `color(Closure\|string $hexColor): static` | Bar and text colour as hex. |
+| `data(Closure\|string\|null $data): static` | Value to encode; a closure receives the record. Defaults to the state. |
+| `downloadable(Closure\|bool $condition = true): static` | Show a download link for the image. |
+| `format(QrFormat\|Closure\|string $format): static` | Render as SVG (default) or PNG. |
+| `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. |
+| `margin(Closure\|int\|null $modules): static` | Quiet zone on each side in modules; null uses the type's default. |
+| `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the bars. |
+| `type(BarcodeType\|Closure\|string $type): static` | Symbology to encode: a BarcodeType or its value, e.g. 'ean13'. |
+
+Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`
+
+### `BarcodeEntry`
+
+`Mmuqiitf\FilamentQrCode\Infolists\Components\BarcodeEntry` — Infolist entry that shows a 1D barcode of its state or data().
+
+| Method | Purpose |
+| --- | --- |
+| `backgroundColor(Closure\|string $hexColor): static` | Background colour as hex. |
+| `barWidth(Closure\|int $pixels): static` | Width in pixels of the narrowest bar. |
+| `color(Closure\|string $hexColor): static` | Bar and text colour as hex. |
+| `data(Closure\|string\|null $data): static` | Value to encode; a closure receives the record. Defaults to the state. |
+| `downloadable(Closure\|bool $condition = true): static` | Show a download link for the image. |
+| `format(QrFormat\|Closure\|string $format): static` | Render as SVG (default) or PNG. |
+| `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. |
+| `margin(Closure\|int\|null $modules): static` | Quiet zone on each side in modules; null uses the type's default. |
+| `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the bars. |
+| `type(BarcodeType\|Closure\|string $type): static` | Symbology to encode: a BarcodeType or its value, e.g. 'ean13'. |
+
+Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`
+
+### `BarcodeColumn`
+
+`Mmuqiitf\FilamentQrCode\Tables\Columns\BarcodeColumn` — Table column that shows a compact 1D barcode of its state or data(): bar width 1, 32px high and no text line unless configured.
+
+| Method | Purpose |
+| --- | --- |
+| `backgroundColor(Closure\|string $hexColor): static` | Background colour as hex. |
+| `barWidth(Closure\|int $pixels): static` | Width in pixels of the narrowest bar. |
+| `color(Closure\|string $hexColor): static` | Bar and text colour as hex. |
+| `data(Closure\|string\|null $data): static` | Value to encode; a closure receives the record. Defaults to the state. |
+| `downloadable(Closure\|bool $condition = true): static` | Show a download link for the image. |
+| `format(QrFormat\|Closure\|string $format): static` | Render as SVG (default) or PNG. |
+| `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. |
+| `margin(Closure\|int\|null $modules): static` | Quiet zone on each side in modules; null uses the type's default. |
+| `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the bars. |
+| `type(BarcodeType\|Closure\|string $type): static` | Symbology to encode: a BarcodeType or its value, e.g. 'ean13'. |
+
+Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`
+
 ## Services and helpers
 
 ### `FilamentQrCode`
@@ -3127,6 +3291,38 @@ Getters (read the resolved option; used by the views): `getCaption()`, `getDownl
 | `withText(string $text, int $fontSize = 16, string $fontColor = '#000000', ?string $fontPath = null): QrCodeService` | Text overlay under the QR (forces PNG; falls back to GD bitmap fonts). |
 
 Getters (read the resolved option; used by the views): `getRaw()`
+
+### `BarcodeService`
+
+`Mmuqiitf\FilamentQrCode\Services\BarcodeService` — Fluent builder for linear barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14), the barcode counterpart of QrCodeService.
+
+| Method | Purpose |
+| --- | --- |
+| `backgroundColor(string $hexColor): BarcodeService` | Background colour as hex. |
+| `barWidth(int $pixels): BarcodeService` | Width in pixels of the narrowest bar (one module). |
+| `color(string $hexColor): BarcodeService` | Bar and text colour as hex. |
+| `download(?string $fileName = null): StreamedResponse` | Render the barcode as a download response. |
+| `fileName(string $fileName): BarcodeService` | File name used by download() and stream(). |
+| `static flushRenderCache(): void` | Clear the in-process render cache (shared with QR codes). |
+| `font(?string $fontPath): BarcodeService` | TrueType font file for the PNG text line (Imagick only; GD uses a bitmap font). |
+| `fontSize(int $pixels): BarcodeService` | Font size in pixels of the human-readable text. |
+| `format(QrFormat\|string $format): BarcodeService` | Output SVG (default) or PNG. |
+| `generate(string $data): BarcodeService` | Encode and render the value. |
+| `height(int $pixels): BarcodeService` | Bar height in pixels, not counting the text line. |
+| `static make(): BarcodeService` | Start a fresh barcode render. |
+| `margin(?int $modules): BarcodeService` | Quiet zone in modules on each side; null uses the type default (10, or 0 for ITF-14). |
+| `showText(bool $condition = true): BarcodeService` | Print the human-readable value under the bars (on by default). |
+| `stream(?string $fileName = null): StreamedResponse` | Render the barcode as an inline image response. |
+| `toDataUri(): string` | Render the barcode as a `data:` URI for `<img src>`. |
+| `type(BarcodeType\|string $type): BarcodeService` | Symbology to draw; Code 128 by default. |
+| `static validate(BarcodeType $type, string $data): void` | Check a value without rendering it. |
+
+Getters (read the resolved option; used by the views): `getAccessibleName()`, `getFormat()`, `getRaw()`, `getText()`, `getType()`
+
+### `InvalidBarcodeException`
+
+`Mmuqiitf\FilamentQrCode\Exceptions\InvalidBarcodeException` — The value can't be encoded in the requested barcode type, e.g. an EAN-13 with a wrong check digit or a Code 39 value with lowercase letters.
+
 
 ### `QrPayload`
 
@@ -3231,6 +3427,14 @@ Getters (read the resolved option; used by the views): `getRaw()`
 Cases: `QrCode` (`QR_CODE`), `Aztec` (`AZTEC`), `Codabar` (`CODABAR`), `Code39` (`CODE_39`), `Code93` (`CODE_93`), `Code128` (`CODE_128`), `DataMatrix` (`DATA_MATRIX`), `Maxicode` (`MAXICODE`), `Itf` (`ITF`), `Ean13` (`EAN_13`), `Ean8` (`EAN_8`), `UpcA` (`UPC_A`), `UpcE` (`UPC_E`)
 
 Getters (read the resolved option; used by the views): `getLabel()`
+
+### `BarcodeType`
+
+`Mmuqiitf\FilamentQrCode\Enums\BarcodeType` — Linear symbologies the barcode generator can draw.
+
+Cases: `Code128` (`code128`), `Ean13` (`ean13`), `Ean8` (`ean8`), `UpcA` (`upca`), `Code39` (`code39`), `Itf14` (`itf14`)
+
+Getters (read the resolved option; used by the views): `getDefaultMargin()`, `getDigitLengths()`, `getLabel()`
 
 ### `ContinuousDisplay`
 

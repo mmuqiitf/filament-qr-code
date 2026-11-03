@@ -1,6 +1,6 @@
 # Filament QR Code
 
-> `mmuqiitf/filament-qr-code` is a Filament v5 package (Laravel 12/13, PHP 8.2+) that scans QR codes and barcodes with the camera, image upload or a keyboard-wedge Hardware Scanner, and generates QR codes (SVG/PNG) for forms, tables, infolists and downloads.
+> `mmuqiitf/filament-qr-code` is a Filament v5 package (Laravel 12/13, PHP 8.2+) that scans QR codes and barcodes with the camera, image upload or a keyboard-wedge Hardware Scanner, and generates QR codes and 1D barcodes (SVG/PNG) for forms, tables, infolists and downloads.
 
 Scanned values write straight into the Livewire form state. Lookups and validation run on the server for each scan. Everything under `@internal` is outside semver. Every public class, method and config key is listed in the API map. Vocabulary: QR Scanner Field (`QrScanner`), Station Listener (`QrHardwareScannerListener`), Scan Sequence Container (`QrScanSequence`), Batch Collector Scanning (`QrCollector`, `QrCollectAction`), QR Generator.
 
@@ -13,6 +13,7 @@ Scanned values write straight into the Livewire form state. Lookups and validati
 - [Scanning](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/scanning.md): QR Scanner Field, Station Listener, Scan Sequence Container, server checks, continuous mode, runtime control
 - [Batch collecting](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/collecting.md): `QrCollector` and `QrCollectAction`
 - [Generating](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/generating.md): display components, download actions, ZIP export, facade, payload builders
+- [Barcodes](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/barcodes.md): Code 128, EAN-13, EAN-8, UPC-A, Code 39 and ITF-14 in forms, infolists, tables and PHP
 - [Customizing](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/customizing.md): lookups, normalization, check stages, hooks, auditing, macros, styling, views
 - [Extension points](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/extending.md): every seam in one table
 - [Events](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/events.md): browser and Laravel events with their payloads
