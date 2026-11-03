@@ -12,6 +12,8 @@ return [
     'collect_description' => 'Pindai kode QR secara terus-menerus untuk menambah item.',
     'done' => 'Selesai',
     'duplicate_codes' => 'Kode duplikat tidak diizinkan.',
+    'barcode_invalid' => 'Nilai :type tidak valid: :reason.',
+    'barcode_no_data' => 'Data barcode tidak tersedia',
     'download' => 'Unduh',
     'download_image' => 'Unduh Gambar',
     'download_qr_bulk' => 'Unduh QR (ZIP)',

@@ -19,7 +19,7 @@ const violations = (results) => results.violations.map((violation) => ({
     targets: violation.nodes.map((node) => node.target.join(' ')),
 }));
 
-for (const path of ['scan-smoke', 'collector-smoke', 'collect-smoke', 'modal-smoke', 'table-smoke']) {
+for (const path of ['scan-smoke', 'collector-smoke', 'collect-smoke', 'modal-smoke', 'table-smoke', 'barcode-smoke']) {
     test(`/workbench/${path} has no axe violations`, async ({ page }) => {
         await page.addInitScript(installFakeCamera, { svg: blank });
         await page.goto(`/workbench/${path}`);
