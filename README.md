@@ -7,7 +7,7 @@
 [![PHPStan Level 9](https://img.shields.io/badge/PHPStan-level%209-brightgreen.svg?style=flat-square)](https://phpstan.org/)
 [![Total Downloads](https://img.shields.io/packagist/dt/mmuqiitf/filament-qr-code.svg?style=flat-square)](https://packagist.org/packages/mmuqiitf/filament-qr-code)
 
-**Filament QR & Barcode** scans QR codes and barcodes (camera, image upload and handheld scanners) and generates QR codes, built exclusively for **Filament v5** and **Laravel 12 / 13**. Install it as `mmuqiitf/filament-qr-code`.
+**Filament QR & Barcode** scans QR codes and barcodes (camera, image upload and handheld scanners) and generates QR codes and 1D barcodes, built exclusively for **Filament v5** and **Laravel 12 / 13**. Install it as `mmuqiitf/filament-qr-code`.
 
 Features:
 
@@ -160,6 +160,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 - **Scanning**: [QR Scanner Field](docs/scanning.md#qr-scanner-field-qrscanner), [Station Listener](docs/scanning.md#station-listener-qrhardwarescannerlistener) for hands-free guns, [Scan Sequence Container](docs/scanning.md#scan-sequence-container-qrscansequence), [server-side checks](docs/scanning.md#server-side-checks) and the [cashier POS tutorial](docs/scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
+- **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39 and ITF-14](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
 - **Every public method**: the generated [API map](docs/api.md).
 
@@ -171,6 +172,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [Scanning](docs/scanning.md) | QR Scanner Field, Station Listener, Scan Sequence Container, focus handoff, server checks, continuous mode, runtime control, POS tutorial |
 | [Batch collecting](docs/collecting.md) | continuous inventory scanning in repeaters and tables |
 | [Generating](docs/generating.md) | display components, download actions, ZIP export, facade, payloads |
+| [Barcodes](docs/barcodes.md) | 1D barcodes: types, components, invalid values, accessibility, PHP API |
 | [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, auditing, macros, styling, render hooks, views |
 | [Extension points](docs/extending.md) | every seam in one table: PHP closures, contracts, macros, render hooks, CSS variables, JS decoder, router, events |
 | [Events](docs/events.md) | every browser event fired or listened for, and every Laravel event with its properties |
@@ -241,6 +243,13 @@ Please review [our security policy](../../security/policy) on how to report secu
 
 - [Mohamad Muqiit Faturrahman](https://github.com/mmuqiitf)
 - [All Contributors](../../contributors)
+
+This package stands on two open-source encoders:
+
+- [BaconQR](https://github.com/Bacon/BaconQrCode) (`bacon/bacon-qr-code`, BSD-2-Clause) by Ben Scholzen encodes every QR code.
+- [tc-lib-barcode](https://github.com/tecnickcom/tc-lib-barcode) (`tecnickcom/tc-lib-barcode`, LGPL-3.0-or-later) by Nicola Asuni / Tecnick.com encodes the 1D barcodes.
+
+tc-lib-barcode is licensed under the LGPL. It is installed as a separate, unmodified Composer dependency, so you can update or replace it in your own `vendor/` directory; the LGPL does not extend to this package's MIT code or to your application. If you redistribute tc-lib-barcode itself (for example in a bundled build), include its licence and keep it replaceable.
 
 ## License
 

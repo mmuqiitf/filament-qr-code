@@ -47,10 +47,15 @@ function apiSections(): array
             'Infolists\\Components\\QrEntry',
             'Tables\\Actions\\DownloadQrAction',
             'Tables\\Actions\\DownloadQrBulkAction',
+            'Forms\\Components\\BarcodeDisplay',
+            'Infolists\\Components\\BarcodeEntry',
+            'Tables\\Columns\\BarcodeColumn',
         ],
         'Services and helpers' => [
             'Facades\\FilamentQrCode',
             'Services\\QrCodeService',
+            'Services\\BarcodeService',
+            'Exceptions\\InvalidBarcodeException',
             'Support\\QrPayload',
         ],
         'Server checks and validation' => [
@@ -69,6 +74,7 @@ function apiSections(): array
         ],
         'Enums' => [
             'Enums\\BarcodeFormat',
+            'Enums\\BarcodeType',
             'Enums\\ContinuousDisplay',
             'Enums\\HardwareInputScope',
             'Enums\\InvalidSequenceBehavior',
@@ -94,6 +100,7 @@ function llmsFullFiles(): array
         'docs/scanning.md',
         'docs/collecting.md',
         'docs/generating.md',
+        'docs/barcodes.md',
         'docs/customizing.md',
         'docs/extending.md',
         'docs/events.md',
