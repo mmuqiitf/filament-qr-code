@@ -37,6 +37,11 @@ class ScanRulesLivewireComponent extends Component implements HasForms
             ->statePath('data');
     }
 
+    public function keyOf(string $name): string
+    {
+        return $this->form->getComponent(fn ($component): bool => method_exists($component, 'getName') && $component->getName() === $name)->getKey();
+    }
+
     public function submit(): void
     {
         $this->form->getState();
@@ -69,4 +74,22 @@ it('validates scanned values and distinct collector items on submit', function (
         ->set('data.codes', ['X-1', 'X-2'])
         ->call('submit')
         ->assertHasNoErrors();
+});
+
+it('routes rejectWhen scans through the server check so the client never accepts them first', function () {
+    expect(QrScanner::make('sku')->rejectWhen(fn () => false, 'No.')->getScanChecksScanPayload()['serverCheck'])->toBeTrue();
+});
+
+it('rejects a matching live scan in handleScan with the rejectWhen message', function () {
+    $test = Livewire::test(ScanRulesLivewireComponent::class);
+    $key = $test->instance()->keyOf('sku');
+
+    $test->call('callSchemaComponentMethod', $key, 'handleScan', ['code' => 'BAD-9', 'source' => 'hardware'])
+        ->assertReturned(fn (array $result): bool => $result['passes'] === false && $result['message'] === 'Bad code rejected.')
+        ->assertSet('data.sku', null);
+
+    $test->call('callSchemaComponentMethod', $key, 'handleScan', ['code' => 'GOOD-9', 'source' => 'hardware'])
+        ->assertReturned(fn (array $result): bool => $result['passes'] === true)
+        ->assertSet('data.sku', 'GOOD-9')
+        ->assertNotDispatched('qr-scan-rejected');
 });

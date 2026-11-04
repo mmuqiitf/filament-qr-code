@@ -46,3 +46,24 @@ test('a single scanner field announces a camera scan', async ({ page }) => {
 
     await expect(wrapper.locator('[data-qr-part="announcer"]')).toHaveText('Added CAM-SMOKE-42 to Camera', { timeout: 15_000 });
 });
+
+test('a rejectWhen scan is announced as rejected only, never as added first', async ({ page }) => {
+    await page.goto('/workbench/announce-smoke');
+    const wrapper = field(page, 'guarded');
+    const announcer = wrapper.locator('[data-qr-part="announcer"]');
+    await announcer.evaluate((element) => {
+        window.__guardedAnnouncements = [];
+        new MutationObserver(() => window.__guardedAnnouncements.push(element.textContent.trim()))
+            .observe(element, { childList: true, characterData: true, subtree: true });
+    });
+
+    await wrapper.locator('[data-qr-part="scanner.input"]').focus();
+    await wedge(page, 'BAD-9');
+
+    await expect(announcer).toHaveText('Rejected: Reserved prefix');
+    const seen = await page.evaluate(() => window.__guardedAnnouncements.filter(Boolean));
+    expect(seen.some((text) => text.startsWith('Added'))).toBe(false);
+
+    await wedge(page, 'GOOD-9');
+    await expect(announcer).toHaveText('Added GOOD-9 to Guarded');
+});

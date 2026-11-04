@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Camera scanning: fields that allow QR (or Data Matrix / Aztec) together with 1D formats now use a square decode box, so a frame-filling QR code decodes. 1D-only fields keep the wide band.
+- Announcements: a camera or gun scan rejected by `rejectWhen()` was announced as added before the rejection. `rejectWhen()` now also runs as a server scan check, so the field only announces once the outcome is known (the rejection only). Typed values are still checked after the state update.
 
 ## [1.1.0] - 2026-11-04
 

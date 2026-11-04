@@ -245,3 +245,46 @@ describe('sequence announcements', () => {
         expect(sequence.errorMessage).toBe('Dekoder kamera gagal dimuat.');
     });
 });
+
+function recordAnnouncements(component) {
+    const outcomes = [];
+    const original = component.announceScan.bind(component);
+    component.announceScan = (options, payload) => {
+        outcomes.push(payload.accepted);
+
+        return original(options, payload);
+    };
+
+    return outcomes;
+}
+
+describe('rejected scans are never announced as added', () => {
+    it('collector: a duplicate is announced as rejected only', () => {
+        const collector = mountCollector();
+        scan(collector, 'A-1');
+        scan(collector, 'B-2');
+        const outcomes = recordAnnouncements(collector);
+
+        scan(collector, 'A-1');
+
+        expect(outcomes).toEqual([false]);
+        expect(collector.announcement).not.toContain('Added');
+    });
+
+    it('sequence: a server rejection is announced once the result is known, as rejected only', async () => {
+        let resolve;
+        const sequence = mountSequence({ serverCheck: true, componentKey: 'form.receipt' }, () => new Promise((done) => {
+            resolve = done;
+        }));
+        const outcomes = recordAnnouncements(sequence);
+
+        const pending = sequence.processScan('BAD-1', 'hardware');
+        expect(outcomes).toEqual([]);
+
+        resolve({ passes: false, code: 'BAD-1', step: 'po', next_step: 'po', message: 'Unknown PO', values: {} });
+        await pending;
+
+        expect(outcomes).toEqual([false]);
+        expect(sequence.announcement).toBe('Rejected: Unknown PO');
+    });
+});

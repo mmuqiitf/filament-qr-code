@@ -141,10 +141,24 @@ class QrScanner extends Field
     /**
      * Immediately reject a live scan matching $predicate: the state is
      * cleared and a `qr-scan-rejected` browser event (with message) is
-     * dispatched so the app can notify the operator.
+     * dispatched so the app can notify the operator. Camera and gun scans
+     * are checked on the server first, so a rejected scan is never
+     * announced as added; typed values are checked after the state update.
      */
     public function rejectWhen(Closure $predicate, string|Closure $message): static
     {
+        // Camera and gun scans go through handleScan(), so the browser only
+        // announces the outcome once the server has decided.
+        $this->scanCheckClosures[] = function (string $code) use ($predicate, $message): ?string {
+            $named = ['rawValue' => $code, 'state' => $code];
+
+            if (! $this->evaluate($predicate, $named)) {
+                return null;
+            }
+
+            return (string) $this->evaluate($message, $named);
+        };
+
         $this->afterStateUpdated(function ($component, $state, $livewire) use ($predicate, $message): void {
             if (blank($state)) {
                 return;

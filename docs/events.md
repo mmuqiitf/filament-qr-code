@@ -10,7 +10,7 @@ Every event the package fires or listens for. Browser events are dispatched on `
 | --- | --- | --- |
 | `qr-scanned` | `{ value, field, nextField, source, recordKey?, mode }` | any accepted scan; `recordKey` is set when a server check found a record |
 | `qr-scan-accepted` | `{ value, field, source, recordKey, mode }` | a server-checked scan passed |
-| `qr-scan-rejected` | `{ value, field, source, message, mode }` | a server-checked scan failed; also dispatched from PHP with `{ message }` when a `rejectWhen()` predicate matches |
+| `qr-scan-rejected` | `{ value, field, source, message, mode }` | a server-checked scan failed; `rejectWhen()` rejects camera and gun scans this way; a typed value it rejects is dispatched from PHP with `{ message }` |
 | `qr-scan-duplicate` | `{ value, field, source, mode }` | the same code again within the field's cooldown |
 | `qr-scan-dropped` | `{ value, field, source }` | a busy continuous field already held one queued scan |
 | `qr-scan-paused` | `{ field }` | a continuous field with `pauseOnReject()` paused after a rejection, or the field was paused |
