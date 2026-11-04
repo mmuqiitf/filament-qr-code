@@ -3572,6 +3572,12 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 
 # Upgrade guide
 
+## From 1.1.0 to 1.1.1
+
+Nothing to change in your code. Run `php artisan filament:assets` so the updated scanner JavaScript is published (camera fields that allow QR alongside 1D formats now use a square decode box).
+
+- **`rejectWhen()` also runs as a server scan check.** Camera and gun scans it rejects are now rejected before they are accepted, so they are announced as rejected only and the state stays empty. Typed values are still checked after the state update, as before.
+
 ## From 1.0.3 to 1.1.0
 
 Nothing to change in your code. 1.1.0 adds 1D barcodes (`BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn`, `BarcodeService` and `FilamentQrCode::barcode()`); see [Barcodes](docs/barcodes.md).
