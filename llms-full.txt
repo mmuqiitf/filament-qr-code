@@ -3572,6 +3572,13 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 
 # Upgrade guide
 
+## From 1.0.3 to 1.1.0
+
+Nothing to change in your code. 1.1.0 adds 1D barcodes (`BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn`, `BarcodeService` and `FilamentQrCode::barcode()`); see [Barcodes](docs/barcodes.md).
+
+- **New dependency.** `tecnickcom/tc-lib-barcode` `^2.17` (LGPL-3.0-or-later) is installed with the package. Run `composer update mmuqiitf/filament-qr-code -W` if Composer needs to resolve it.
+- **No new assets.** The published JavaScript and CSS are unchanged, so `php artisan filament:assets` is not required.
+
 ## From 1.0.2 to 1.0.3
 
 Nothing to change in your code. 1.0.3 adds tooling and docs only.

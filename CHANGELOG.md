@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-04
+
 ### Added
 
 - 1D barcode generation: `BarcodeDisplay` (forms), `BarcodeEntry` (infolists) and `BarcodeColumn` (tables), each with `->type(BarcodeType::...)` for Code 128, EAN-13, EAN-8, UPC-A, Code 39 and ITF-14. SVG by default, PNG via `->format('png')` on Imagick or GD, human-readable text on by default (`->showText(false)` hides it). See [Barcodes](docs/barcodes.md).
@@ -445,7 +447,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.0...v1.0.1
