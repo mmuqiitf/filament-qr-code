@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-04
+
 ### Fixed
 
 - Camera scanning: fields that allow QR (or Data Matrix / Aztec) together with 1D formats now use a square decode box, so a frame-filling QR code decodes. 1D-only fields keep the wide band.
@@ -452,7 +454,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.1...v1.0.2
