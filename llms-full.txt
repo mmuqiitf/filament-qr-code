@@ -440,7 +440,7 @@ Option reference:
 - `formats()` — symbologies the decoder attempts. Omit only when truly unknown. With no filter the effective `fps` auto-degrades 25 → 12 against main-thread lag (explicit `fps()` always wins).
 - `scanFormat()` / `onScan()` — programmatic-only hooks; they do **not** run on live camera or hardware scans. Normalize live values with `normalizeUsing()` — see [Normalize live scans](customizing.md#normalize-live-scans).
 - `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning. Buffers are sanitized (STX/ETX/CR/LF stripped, mirroring `HasHardwareScanner::sanitizeScannedValue()`), IME compositions never count, and terminator-less guns flush after `scanTimeoutMs` (default 150).
-- `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify.
+- `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify. Camera and gun scans are checked on the server before the field accepts them, so screen readers only hear the rejection.
 - `hardwareInput(scope: HardwareInputScope::Page)` — also catch wedge scans when no scan field has focus (default `Focus`: only while focused; config `hardware_scanner.default_scope`). A focused scan field always wins.
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
 - `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a _maximum_: the actual decode box scales to the viewfinder and the green reticle follows it.
@@ -1590,7 +1590,7 @@ Every event the package fires or listens for. Browser events are dispatched on `
 | --- | --- | --- |
 | `qr-scanned` | `{ value, field, nextField, source, recordKey?, mode }` | any accepted scan; `recordKey` is set when a server check found a record |
 | `qr-scan-accepted` | `{ value, field, source, recordKey, mode }` | a server-checked scan passed |
-| `qr-scan-rejected` | `{ value, field, source, message, mode }` | a server-checked scan failed; also dispatched from PHP with `{ message }` when a `rejectWhen()` predicate matches |
+| `qr-scan-rejected` | `{ value, field, source, message, mode }` | a server-checked scan failed; `rejectWhen()` rejects camera and gun scans this way; a typed value it rejects is dispatched from PHP with `{ message }` |
 | `qr-scan-duplicate` | `{ value, field, source, mode }` | the same code again within the field's cooldown |
 | `qr-scan-dropped` | `{ value, field, source }` | a busy continuous field already held one queued scan |
 | `qr-scan-paused` | `{ field }` | a continuous field with `pauseOnReject()` paused after a rejection, or the field was paused |
@@ -2927,7 +2927,7 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `pipe(ScanCheckStage\|string ...$stages): static` | Add custom checks that run after the rules, lookup and closures. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
-| `rejectWhen(Closure $predicate, Closure\|string $message): static` | Immediately reject a live scan matching $predicate: the state is cleared and a `qr-scan-rejected` browser event (with message) is dispatched so the app can notify the operator. |
+| `rejectWhen(Closure $predicate, Closure\|string $message): static` | Immediately reject a live scan matching $predicate: the state is cleared and a `qr-scan-rejected` browser event (with message) is dispatched so the app can notify the operator. Camera and gun scans are checked on the server first, so a rejected scan is never announced as added; typed values are checked after the state update. |
 | `runScanChecks(string $code, ?ScanInput $source): ScanResult` | Run the field's live-scan checks (rules, lookup, closures, piped stages) on an already normalized code. The first failure stops the run. |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
 | `scanFormat(?Closure $formatter): static` | Programmatic-only formatter. Runs only via formatScannedValue() in custom flows — never on live camera/hardware scans. For live values use normalizeUsing() (or afterStateUpdated() directly). |

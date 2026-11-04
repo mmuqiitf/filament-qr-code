@@ -37,6 +37,11 @@ class AnnounceSmoke extends Page
                     ->validateUsing(['string', 'starts_with:OK-'])
                     ->announceUsing(fn (string $code, bool $accepted, string $field): ?string => $accepted ? "Checked in {$code} at {$field}" : null),
                 QrScanner::make('quiet')->label('Quiet')->announcements(false),
+                QrScanner::make('guarded')
+                    ->label('Guarded')
+                    ->scanRules(['min:3'])
+                    ->live(onBlur: true)
+                    ->rejectWhen(fn ($state): bool => str_starts_with((string) $state, 'BAD'), 'Reserved prefix'),
             ]);
     }
 }

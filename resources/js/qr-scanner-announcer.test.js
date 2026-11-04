@@ -93,3 +93,29 @@ describe('qrScanner announcements', () => {
         vi.useRealTimers();
     });
 });
+
+describe('qrScanner announcement order', () => {
+    it('announces a server-checked scan only once rejected, never as added', async () => {
+        let resolve;
+        const wire = createWireSpy({ respond: () => new Promise((done) => {
+            resolve = done;
+        }) });
+        const scanner = mountScanner({ serverCheck: true, componentKey: 'form.sku' }, wire);
+        const outcomes = [];
+        const original = scanner.announceScan.bind(scanner);
+        scanner.announceScan = (options, payload) => {
+            outcomes.push(payload.accepted);
+
+            return original(options, payload);
+        };
+
+        const pending = scanner.handleScanResult('BAD-9', 'hardware');
+        expect(outcomes).toEqual([]);
+
+        resolve({ passes: false, code: 'BAD-9', source: 'hardware', message: 'Reserved prefix' });
+        await pending;
+
+        expect(outcomes).toEqual([false]);
+        expect(scanner.announcement).toBe('Rejected: Reserved prefix');
+    });
+});
