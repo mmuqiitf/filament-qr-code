@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Camera scanning: fields that allow QR (or Data Matrix / Aztec) together with 1D formats now use a square decode box, so a frame-filling QR code decodes. 1D-only fields keep the wide band.
+
 ## [1.1.0] - 2026-11-04
 
 ### Added

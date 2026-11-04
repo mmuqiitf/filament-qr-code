@@ -1,8 +1,9 @@
 /**
  * Init script: replaces the camera with a canvas stream that paints a QR code.
+ * `size` sets the painted code's edge in pixels (the frame is 640x480).
  * `capabilities` is reported by the track so torch / zoom UI can be exercised.
  */
-export function installFakeCamera({ svg, capabilities = {} }) {
+export function installFakeCamera({ svg, capabilities = {}, size = 180 }) {
     const canvas = document.createElement('canvas');
     canvas.width = 640;
     canvas.height = 480;
@@ -13,7 +14,7 @@ export function installFakeCamera({ svg, capabilities = {} }) {
     const paint = () => {
         context.fillStyle = '#fff';
         context.fillRect(0, 0, canvas.width, canvas.height);
-        if (image.complete) context.drawImage(image, 230, 150, 180, 180);
+        if (image.complete) context.drawImage(image, (canvas.width - size) / 2, (canvas.height - size) / 2, size, size);
         requestAnimationFrame(paint);
     };
     paint();
