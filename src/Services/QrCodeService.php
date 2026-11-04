@@ -274,7 +274,10 @@ class QrCodeService
         QrRenderCache::flushMemory();
     }
 
-    /** Clear the persistent (Laravel cache) render cache. */
+    /**
+     * Forget persistent render-cache entries and clear the in-process cache.
+     * Other keys in the Laravel cache store are left alone.
+     */
     public static function flushPersistentCache(): void
     {
         QrRenderCache::flushPersistent();

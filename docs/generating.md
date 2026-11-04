@@ -66,7 +66,8 @@ The signed `filamentQrCode.image` route is safe by default (signatures stop tamp
 
 - `logo_base_paths` resolves each logo with `realpath()` (so `../` and symlinks that escape are caught) and accepts only PNG, JPEG, GIF or WebP files inside a listed directory. Inline renders (columns, entries, downloads, `QrCodeService`) skip a rejected logo and log a warning; the image route answers 422.
 - `ttl` signs preview URLs with an `expires` parameter (expired links get 403) and caps the browser cache at the TTL.
-- `qr-code:doctor` reports whether logos are restricted, flags base paths that do not exist, and fails on an invalid `ttl`, `throttle` or `strict_colors` value.
+- The route is not on the `web` middleware group. A preview response does not start a session. It sends `Cache-Control: private` and `X-Content-Type-Options: nosniff`.
+- `qr-code:doctor` reports whether logos are restricted, flags base paths that do not exist, warns when `ttl` and `throttle` are both unset, and fails on an invalid `ttl`, `throttle` or `strict_colors` value.
 
 ### In Infolists
 
@@ -150,7 +151,7 @@ Rules that bite:
 - `logo($path, $size)` forces error-correction level H for scannability.
 - Identical payloads share the render cache, so tables with repeated values encode once.
 - Other builder methods: `font($path)` sets the TTF used by `withText()`, `fileName($name)` sets the default download name (no extension), and `getRaw()` returns the encoded bytes.
-- Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(int|false|null $seconds)` (overrides `generator.cache_ttl`; `null` clears the override) and `effectiveCacheTtl()` (the value in effect), `flushRenderCache()` (in-process) and `flushPersistentCache()` (Laravel cache).
+- Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(int|false|null $seconds)` (overrides `generator.cache_ttl`; `null` clears the override) and `effectiveCacheTtl()` (the value in effect), `flushRenderCache()` (in-process) and `flushPersistentCache()` (render entries only, and the in-process map). A logo or font file's mtime and size are part of the cache key.
 
 ### The `FilamentQrCode` facade
 
@@ -165,7 +166,7 @@ use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
 
 FilamentQrCode::cacheTtl(3600);        // keep persistent renders for an hour (false = off, null = use config)
 FilamentQrCode::cacheStore('redis');   // Laravel cache store for persistent renders
-FilamentQrCode::flushPersistentCache(); // after changing logos or fonts in place
+FilamentQrCode::flushPersistentCache(); // render entries only; other cache keys stay
 ```
 
 In tests, the facade can be swapped like any other: `FilamentQrCode::partialMock()` or `FilamentQrCode::swap($fake)`. Every method is typed on the facade, so IDEs and PHPStan autocomplete the chain. The full method list is under [`FilamentQrCode` in the API map](api.md#filamentqrcode).

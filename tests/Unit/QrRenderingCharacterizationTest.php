@@ -110,18 +110,77 @@ it('keeps the data URI and invalid-colour behaviour', function () {
         ->toThrow(InvalidArgumentException::class, (string) $legacyMessage);
 });
 
-it('keeps the persistent cache key format', function () {
+it('stores a render under a delimiter-safe cache key', function () {
     config()->set('cache.default', 'array');
+    QrCodeService::cacheTtl(null);
+    QrCodeService::cacheStore(null);
     QrCodeService::persistentCache(true);
+    QrCodeService::flushRenderCache();
+    QrCodeService::flushPersistentCache();
+
+    Cache::forever('app-setting', 'keep');
 
     $raw = QrCodeService::make()->size(200)->generate('KEYED')->getRaw();
+    $key = 'filament-qr-code:render:'.(new QrRenderOptions(
+        data: 'KEYED',
+        size: 200,
+        margin: 2,
+        format: QrFormat::Svg,
+        foregroundColor: '#000000',
+        backgroundColor: '#ffffff',
+        errorCorrectionLevel: ErrorCorrectionLevel::M(),
+    ))->cacheKey();
 
-    $key = 'filament-qr-code:render:'.md5(implode('|', [
-        'KEYED', 200, 2, 'svg', '#000000', '#ffffff', ErrorCorrectionLevel::M()->getBits(),
-        '', 16, '#000000', '', '', 50,
+    $withPipe = new QrRenderOptions(
+        data: 'AB|10',
+        size: 2,
+        margin: 0,
+        format: QrFormat::Svg,
+        foregroundColor: '#000000',
+        backgroundColor: '#ffffff',
+        errorCorrectionLevel: ErrorCorrectionLevel::M(),
+        overlayText: 'Cap|20',
+        fontSize: 14,
+        fontColor: '#111111',
+    );
+    $shifted = new QrRenderOptions(
+        data: 'AB|10',
+        size: 2,
+        margin: 0,
+        format: QrFormat::Svg,
+        foregroundColor: '#000000',
+        backgroundColor: '#ffffff',
+        errorCorrectionLevel: ErrorCorrectionLevel::M(),
+        overlayText: 'Cap',
+        fontSize: 20,
+        fontColor: '14|#111111',
+    );
+    $legacyKey = fn (QrRenderOptions $options): string => md5(implode('|', [
+        $options->data,
+        $options->size,
+        $options->margin,
+        $options->format->value,
+        $options->foregroundColor,
+        $options->backgroundColor,
+        $options->errorCorrectionLevel->getBits(),
+        $options->overlayText ?? '',
+        $options->fontSize,
+        $options->fontColor,
+        $options->fontPath ?? '',
+        $options->logoPath ?? '',
+        $options->logoSize,
     ]));
 
-    expect(Cache::get($key))->toBe($raw);
+    expect(Cache::get($key))->toBe($raw)
+        ->and($legacyKey($withPipe))->toBe($legacyKey($shifted))
+        ->and($withPipe->cacheKey())->not->toBe($shifted->cacheKey())
+        ->and(Cache::get('app-setting'))->toBe('keep');
+
+    QrCodeService::flushPersistentCache();
+
+    expect(Cache::get($key))->toBeNull()
+        ->and(Cache::get('filament-qr-code:render-index'))->toBeNull()
+        ->and(Cache::get('app-setting'))->toBe('keep');
 });
 
 /**

@@ -23,7 +23,7 @@ it('serves the locked SVG bytes and headers from the signed image route', functi
 
     $response->assertOk()
         ->assertHeader('Content-Type', 'image/svg+xml')
-        ->assertHeader('Cache-Control', 'immutable, max-age=86400, public');
+        ->assertHeader('Cache-Control', 'immutable, max-age=86400, private');
 
     expect($response->getContent())->toBe(file_get_contents($fixture));
 });

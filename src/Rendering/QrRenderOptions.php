@@ -43,20 +43,20 @@ final readonly class QrRenderOptions
 
     public function cacheKey(): string
     {
-        return md5(implode('|', [
-            $this->data,
-            $this->size,
-            $this->margin,
-            $this->format->value,
-            $this->foregroundColor,
-            $this->backgroundColor,
-            $this->errorCorrectionLevel->getBits(),
-            $this->overlayText ?? '',
-            $this->fontSize,
-            $this->fontColor,
-            $this->fontPath ?? '',
-            $this->logoPath ?? '',
-            $this->logoSize,
-        ]));
+        return RenderCacheKey::make('qr', [
+            'data' => $this->data,
+            'size' => $this->size,
+            'margin' => $this->margin,
+            'format' => $this->format->value,
+            'foreground' => $this->foregroundColor,
+            'background' => $this->backgroundColor,
+            'ec' => $this->errorCorrectionLevel->getBits(),
+            'overlay' => $this->overlayText ?? '',
+            'fontSize' => $this->fontSize,
+            'fontColor' => $this->fontColor,
+            'font' => RenderCacheKey::fileToken($this->fontPath),
+            'logo' => RenderCacheKey::fileToken($this->logoPath),
+            'logoSize' => $this->logoSize,
+        ]);
     }
 }

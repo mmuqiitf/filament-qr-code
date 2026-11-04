@@ -17,12 +17,22 @@ function hardenedLogo(string $dir = 'inside'): string
     return (string) realpath(__DIR__.'/../Fixtures/logos/'.$dir.'/logo.png');
 }
 
+it('does not start a session or mark the image publicly cacheable', function () {
+    $response = $this->get(URL::signedRoute('filamentQrCode.image', ['data' => 'COOKIE']));
+
+    $response->assertOk()
+        ->assertHeader('X-Content-Type-Options', 'nosniff')
+        ->assertHeader('Cache-Control', 'immutable, max-age=86400, private');
+
+    expect($response->headers->getCookies())->toBe([]);
+});
+
 it('keeps 1.0.0 behaviour when no hardening is configured', function () {
     $url = QrColumn::make('qr')->data('DEFAULTS')->getModalUrl();
 
     expect($url)->not->toContain('expires=');
 
-    $this->get($url)->assertOk()->assertHeader('Cache-Control', 'immutable, max-age=86400, public');
+    $this->get($url)->assertOk()->assertHeader('Cache-Control', 'immutable, max-age=86400, private');
 
     foreach (range(1, 70) as $_) {
         $this->get($url)->assertOk();
@@ -38,7 +48,7 @@ it('signs expiring URLs and caps max-age when a ttl is set', function () {
     $url = QrColumn::make('qr')->data('TTL')->getModalUrl();
 
     expect($url)->toContain('expires=');
-    $this->get($url)->assertOk()->assertHeader('Cache-Control', 'immutable, max-age=600, public');
+    $this->get($url)->assertOk()->assertHeader('Cache-Control', 'immutable, max-age=600, private');
 
     $this->travel(11)->minutes();
     $this->get($url)->assertForbidden();
@@ -48,7 +58,7 @@ it('never raises max-age above a day for long ttls', function () {
     config()->set('qr-code.image_route.ttl', 60 * 24 * 7);
 
     $this->get(QrColumn::make('qr')->data('TTL')->getModalUrl())
-        ->assertHeader('Cache-Control', 'immutable, max-age=86400, public');
+        ->assertHeader('Cache-Control', 'immutable, max-age=86400, private');
 });
 
 it('throttles the image route when configured', function () {

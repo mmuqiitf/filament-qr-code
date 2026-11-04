@@ -31,18 +31,18 @@ final readonly class BarcodeRenderOptions
 
     public function cacheKey(): string
     {
-        return 'barcode:'.md5(implode('|', [
-            $this->data,
-            $this->type->value,
-            $this->format->value,
-            $this->barWidth,
-            $this->height,
-            $this->margin,
-            $this->foregroundColor,
-            $this->backgroundColor,
-            $this->showText ? '1' : '0',
-            $this->fontSize,
-            $this->fontPath ?? '',
-        ]));
+        return RenderCacheKey::make('barcode', [
+            'data' => $this->data,
+            'type' => $this->type->value,
+            'format' => $this->format->value,
+            'barWidth' => $this->barWidth,
+            'height' => $this->height,
+            'margin' => $this->margin,
+            'foreground' => $this->foregroundColor,
+            'background' => $this->backgroundColor,
+            'showText' => $this->showText,
+            'fontSize' => $this->fontSize,
+            'font' => RenderCacheKey::fileToken($this->fontPath),
+        ]);
     }
 }

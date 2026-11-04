@@ -19,5 +19,5 @@ it('serves cacheable image headers after a component test left the flag set', fu
 
     $this->get(QrColumn::make('qr')->data('ISOLATED')->getModalUrl())
         ->assertOk()
-        ->assertHeader('Cache-Control', 'immutable, max-age=600, public');
+        ->assertHeader('Cache-Control', 'immutable, max-age=600, private');
 })->depends('it leaves the back-button cache flag set, as a Livewire component test does');
