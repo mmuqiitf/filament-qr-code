@@ -97,7 +97,7 @@ QrHardwareScannerListener::make(['sku'])
 | Key                  | Default | Meaning                                                                                  |
 | -------------------- | ------- | ---------------------------------------------------------------------------------------- |
 | `fps`                | `25`    | decode attempts per second; auto-degrades to 12 when unrestricted and not explicitly set |
-| `qrbox`              | `250`   | _maximum_ decode-box edge; the real box scales to the viewfinder (wide band for 1D)      |
+| `qrbox`              | `250`   | _maximum_ decode-box edge; scales to the viewfinder (wide band only for 1D-only fields)  |
 | `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins                                |
 | `controls`           | `true`  | torch / zoom controls, shown only when the running camera reports the capability         |
 

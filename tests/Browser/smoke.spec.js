@@ -32,6 +32,18 @@ test('fake camera stream decodes into the field', async ({ page }) => {
     await expect(page.getByTestId('state')).toContainText('"camera":"CAM-SMOKE-42"');
 });
 
+test('frame-filling QR code decodes on a field that also allows 1D formats', async ({ page }) => {
+    // Phone-sized viewport: the viewfinder is ~350 px wide, so the decode box covers most of the frame.
+    await page.setViewportSize({ width: 400, height: 800 });
+    await page.addInitScript(installFakeCamera, { svg, size: 360 });
+    await page.goto('/workbench/scan-smoke');
+
+    const wrapper = field(page, 'mixedCamera');
+    await wrapper.locator('[data-qr-part="scanner.camera-button"]').click();
+
+    await expect(wrapper.locator('[data-qr-part="scanner.input"]')).toHaveValue('CAM-SMOKE-42', { timeout: 15_000 });
+});
+
 test('torch and zoom controls follow camera capabilities', async ({ page }) => {
     await page.addInitScript(installFakeCamera, {
         svg: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>',

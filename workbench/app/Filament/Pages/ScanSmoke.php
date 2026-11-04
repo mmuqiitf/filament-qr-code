@@ -35,6 +35,7 @@ class ScanSmoke extends Page
             ->components([
                 QrScanner::make('wedge')->label('Wedge')->validateUsing(['string', 'starts_with:WEDGE-']),
                 QrScanner::make('camera')->label('Camera')->formats([BarcodeFormat::QrCode]),
+                QrScanner::make('mixedCamera')->label('Mixed camera')->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128]),
             ]);
     }
 }

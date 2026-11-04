@@ -24,6 +24,8 @@ const ONE_DIMENSIONAL_FORMATS = new Set([
     'ITF',
 ]);
 
+const TWO_DIMENSIONAL_FORMATS = new Set(['QR_CODE', 'DATA_MATRIX', 'AZTEC', 'MAXICODE']);
+
 const REAR_CAMERA_KEYWORDS = ['back', 'rear', 'environment', 'camera 0', 'facing back', 'main'];
 
 /**
@@ -54,19 +56,26 @@ export function hasOneDimensionalCode(formats) {
     return Array.isArray(formats) && formats.some((format) => ONE_DIMENSIONAL_FORMATS.has(format));
 }
 
+export function hasTwoDimensionalCode(formats) {
+    return Array.isArray(formats) && formats.some((format) => TWO_DIMENSIONAL_FORMATS.has(format));
+}
+
 /**
  * Compute a responsive decode box for the given viewfinder element.
  *
  * Returns `{ width, height }` so the crop scales with the container instead
  * of using a fixed pixel square. Linear (1D) barcodes get a wide band,
  * which is what makes Code128 / EAN scans reliable without perfect alignment.
+ * As soon as a square 2D symbology (QR, Data Matrix, Aztec) is allowed the
+ * box stays square: html5-qrcode only decodes inside the crop, so a wide band
+ * would cut off a frame-filling QR code.
  * Both axes are clamped to the measured container so the box (and its
  * reticle) never overflows a 4:3 or otherwise non-square viewfinder.
  */
 export function computeQrboxForElement(element, maxBox = 250, formats = []) {
     const containerWidth = element?.clientWidth || 480;
     const containerHeight = element?.clientHeight || 0;
-    const wide = hasOneDimensionalCode(formats);
+    const wide = hasOneDimensionalCode(formats) && !hasTwoDimensionalCode(formats);
     const target = Math.min(Math.max(maxBox, 120), 600);
     const maxWidth = Math.max(120, Math.min(target, Math.floor(containerWidth * 0.85)));
 
