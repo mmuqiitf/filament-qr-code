@@ -1070,7 +1070,8 @@ The signed `filamentQrCode.image` route is safe by default (signatures stop tamp
 
 - `logo_base_paths` resolves each logo with `realpath()` (so `../` and symlinks that escape are caught) and accepts only PNG, JPEG, GIF or WebP files inside a listed directory. Inline renders (columns, entries, downloads, `QrCodeService`) skip a rejected logo and log a warning; the image route answers 422.
 - `ttl` signs preview URLs with an `expires` parameter (expired links get 403) and caps the browser cache at the TTL.
-- `qr-code:doctor` reports whether logos are restricted, flags base paths that do not exist, and fails on an invalid `ttl`, `throttle` or `strict_colors` value.
+- The route is not on the `web` middleware group. A preview response does not start a session. It sends `Cache-Control: private` and `X-Content-Type-Options: nosniff`.
+- `qr-code:doctor` reports whether logos are restricted, flags base paths that do not exist, warns when `ttl` and `throttle` are both unset, and fails on an invalid `ttl`, `throttle` or `strict_colors` value.
 
 ### In Infolists
 
@@ -1154,7 +1155,7 @@ Rules that bite:
 - `logo($path, $size)` forces error-correction level H for scannability.
 - Identical payloads share the render cache, so tables with repeated values encode once.
 - Other builder methods: `font($path)` sets the TTF used by `withText()`, `fileName($name)` sets the default download name (no extension), and `getRaw()` returns the encoded bytes.
-- Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(int|false|null $seconds)` (overrides `generator.cache_ttl`; `null` clears the override) and `effectiveCacheTtl()` (the value in effect), `flushRenderCache()` (in-process) and `flushPersistentCache()` (Laravel cache).
+- Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(int|false|null $seconds)` (overrides `generator.cache_ttl`; `null` clears the override) and `effectiveCacheTtl()` (the value in effect), `flushRenderCache()` (in-process) and `flushPersistentCache()` (render entries only, and the in-process map). A logo or font file's mtime and size are part of the cache key.
 
 ### The `FilamentQrCode` facade
 
@@ -1169,7 +1170,7 @@ use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
 
 FilamentQrCode::cacheTtl(3600);        // keep persistent renders for an hour (false = off, null = use config)
 FilamentQrCode::cacheStore('redis');   // Laravel cache store for persistent renders
-FilamentQrCode::flushPersistentCache(); // after changing logos or fonts in place
+FilamentQrCode::flushPersistentCache(); // render entries only; other cache keys stay
 ```
 
 In tests, the facade can be swapped like any other: `FilamentQrCode::partialMock()` or `FilamentQrCode::swap($fake)`. Every method is typed on the facade, so IDEs and PHPStan autocomplete the chain. The full method list is under [`FilamentQrCode` in the API map](api.md#filamentqrcode).
@@ -1713,7 +1714,7 @@ QrScanner::make('sku')
 | `burst_threshold_ms`  | `50`               | max gap between keystrokes counted as one burst    |
 | `min_barcode_length`  | `2`                | shorter bursts are treated as typing               |
 | `min_fast_keys`       | `3`                | consecutive fast gaps required before a terminator counts; `3` rejects fast typists, `1` restores the 0.x behaviour |
-| `fallback_to_any_input` | `true`           | page-global listener may fill the first empty form input when no focused or registered field is free; `false` dispatches `qr-scan-unrouted` instead |
+| `fallback_to_any_input` | `true`           | page-global listener may fill the first empty text, search, number or textarea in any form when no focused or registered field is free; `false` dispatches `qr-scan-unrouted` instead. `qr-code:doctor` warns while this stays on |
 | `scan_timeout_ms`     | `150`              | flush window for terminator-less guns (0 disables) |
 | `prevent_form_submit` | `true`             | swallow the terminator key during bursts           |
 | `default_terminators` | `['Enter', 'Tab']` | gun suffix keys ending a scan                      |
@@ -1799,7 +1800,7 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 
 | Key             | Default | Meaning |
 | --------------- | ------- | ------- |
-| `ttl`           | `null`  | minutes a lazy-preview URL stays valid (`temporarySignedRoute`); also caps `Cache-Control` `max-age` at the TTL (never above a day). `null` = never expires |
+| `ttl`           | `null`  | minutes a lazy-preview URL stays valid (`temporarySignedRoute`); also caps `Cache-Control: private` `max-age` at the TTL (never above a day). `null` = never expires |
 | `throttle`      | `null`  | rate limit for the image route, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
 | `strict_colors` | `false` | require `#rrggbb` colours on the image route (default accepts `#rgb`, `#rrggbb` or bare hex); anything else gets 422 |
 
@@ -3286,7 +3287,7 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 | `static effectiveCacheTtl(): int\|false\|null` | The persistent (L2) cache TTL in effect: the cacheTtl() override, else generator.cache_ttl. An int is seconds, null means no expiry, and false means the L2 cache is off (the in-process cache still works). |
 | `errorCorrection(ErrorCorrectionLevel\|string $level): QrCodeService` | Error-correction level: L, M, Q or H. |
 | `fileName(string $fileName): QrCodeService` | File name used by download() and stream(). |
-| `static flushPersistentCache(): void` | Clear the persistent (Laravel cache) render cache. |
+| `static flushPersistentCache(): void` | Forget persistent render-cache entries and clear the in-process cache. Other keys in the Laravel cache store are left alone. |
 | `static flushRenderCache(): void` | Clear the in-process render cache. |
 | `font(string $fontPath): QrCodeService` | TrueType font file for withText() overlays. |
 | `format(QrFormat\|string $format): QrCodeService` | Output SVG or PNG. |
@@ -3571,6 +3572,16 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 <!-- file: UPGRADE.md -->
 
 # Upgrade guide
+
+## From 1.1.1 to 1.1.2
+
+Nothing to change in application code. No asset rebuild.
+
+- **Render cache.** `FilamentQrCode::flushPersistentCache()` deletes render-cache entries and the in-process map. Other keys in that cache store stay. Cache keys changed, so the first render after upgrading misses. Entries written before this release are not in the new index: with the default `cache_ttl` of 86400 seconds they expire on their own. A `cache_ttl` of `null` (keep forever) leaves those old entries until you flush that store yourself.
+- **Replacing a logo or font file** changes the cache key (mtime and size). You no longer need to flush just because the file changed.
+- **Image route.** Preview responses are `Cache-Control: private` and do not set a session cookie. If a shared cache stored older `public` responses, purge those URLs. The route is no longer in the `web` group.
+- **ZIP export.** Entry names are basenames. `labels/sku.svg` is stored as `sku.svg`. A second file that lands on the same name is `sku-2.svg`.
+- **`qr-code:doctor`.** A default install now prints warnings for `fallback_to_any_input` and for an image route with no `ttl` and no `throttle`. Those warnings do not fail the command.
 
 ## From 1.1.0 to 1.1.1
 

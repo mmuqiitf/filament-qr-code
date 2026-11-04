@@ -10,6 +10,7 @@ use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Mmuqiitf\FilamentQrCode\Concerns\HasQrDownload;
+use Mmuqiitf\FilamentQrCode\Rendering\QrZipArchiver;
 use Mmuqiitf\FilamentQrCode\Support\QrZipArchive;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -86,7 +87,8 @@ class DownloadQrBulkAction extends BulkAction
                 ? 'png'
                 : ($spec->formatValue() ?? 'svg');
 
-            $files[$this->resolveFileName($record).'.'.$extension] = $spec->toService()->generate($data)->getRaw();
+            $entry = QrZipArchiver::uniqueEntryName($this->resolveFileName($record).'.'.$extension, $files);
+            $files[$entry] = $spec->toService()->generate($data)->getRaw();
         }
 
         return $files;

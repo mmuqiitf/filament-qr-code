@@ -31,6 +31,7 @@ class QrCodeDoctorCommand extends Command
         $failures += $this->checkConfig();
         $failures += $this->checkSecureContext();
         $failures += $this->checkCacheStore();
+        $failures += $this->checkHardwareFallback();
         $failures += $this->checkImageRouteHardening();
         $failures += $this->checkImageRouteConfig();
 
@@ -202,7 +203,7 @@ class QrCodeDoctorCommand extends Command
     {
         try {
             Cache::store($this->cacheStoreName())->get('filament-qr-code:doctor-probe');
-            $this->line('  [PASS] Persistent QR cache store is reachable.');
+            $this->line('  [PASS] Persistent QR cache store is reachable. flushPersistentCache() removes only filament-qr-code render entries.');
 
             return 0;
         } catch (Throwable) {
@@ -233,6 +234,15 @@ class QrCodeDoctorCommand extends Command
         return is_string($value) && $value !== '' ? $value : null;
     }
 
+    private function checkHardwareFallback(): int
+    {
+        if (config('qr-code.hardware_scanner.fallback_to_any_input') !== false) {
+            $this->warn('  [WARN] hardware_scanner.fallback_to_any_input is on: an unmatched scan can fill the first empty text field of any form. Set it to false, or call fallbackToAnyInput(false) on the station listener.');
+        }
+
+        return 0;
+    }
+
     private function checkImageRouteHardening(): int
     {
         $basePaths = LogoPathGuard::basePaths();
@@ -254,7 +264,7 @@ class QrCodeDoctorCommand extends Command
         }
 
         if (config('qr-code.image_route.ttl') === null && config('qr-code.image_route.throttle') === null) {
-            $this->line('  [INFO] Image route has no ttl or throttle (opt-in hardening: qr-code.image_route).');
+            $this->warn('  [WARN] Image route has no ttl or throttle (opt-in hardening: qr-code.image_route).');
         }
 
         return 0;

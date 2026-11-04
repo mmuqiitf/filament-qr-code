@@ -418,7 +418,7 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 | `static effectiveCacheTtl(): int\|false\|null` | The persistent (L2) cache TTL in effect: the cacheTtl() override, else generator.cache_ttl. An int is seconds, null means no expiry, and false means the L2 cache is off (the in-process cache still works). |
 | `errorCorrection(ErrorCorrectionLevel\|string $level): QrCodeService` | Error-correction level: L, M, Q or H. |
 | `fileName(string $fileName): QrCodeService` | File name used by download() and stream(). |
-| `static flushPersistentCache(): void` | Clear the persistent (Laravel cache) render cache. |
+| `static flushPersistentCache(): void` | Forget persistent render-cache entries and clear the in-process cache. Other keys in the Laravel cache store are left alone. |
 | `static flushRenderCache(): void` | Clear the in-process render cache. |
 | `font(string $fontPath): QrCodeService` | TrueType font file for withText() overlays. |
 | `format(QrFormat\|string $format): QrCodeService` | Output SVG or PNG. |

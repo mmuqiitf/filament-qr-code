@@ -65,7 +65,8 @@ class QrImageController
             200,
             [
                 'Content-Type' => $format->getMimeType(),
-                'Cache-Control' => 'public, max-age='.self::maxAge().', immutable',
+                'Cache-Control' => 'private, max-age='.self::maxAge().', immutable',
+                'X-Content-Type-Options' => 'nosniff',
             ]
         );
     }

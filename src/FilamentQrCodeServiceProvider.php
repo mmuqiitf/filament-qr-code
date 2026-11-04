@@ -97,10 +97,11 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
 
         Event::listen(QrCodeScanned::class, LogQrCodeScanListener::class);
 
-        Route::middleware('web')->group(function (): void {
+        // Not the `web` group: a preview <img> must not start a session or
+        // send a Set-Cookie that a shared cache could store.
+        Route::middleware(['signed', ThrottleQrImage::class])->group(function (): void {
             Route::get('filament-qr-code/qr-image', QrImageController::class)
-                ->name('filamentQrCode.image')
-                ->middleware(['signed', ThrottleQrImage::class]);
+                ->name('filamentQrCode.image');
         });
     }
 }

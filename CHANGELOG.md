@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `flushPersistentCache()` forgets only `filament-qr-code` render entries and clears the in-process map. It no longer flushes the whole Laravel cache store.
+- Render cache keys are a JSON payload, and logo and font files contribute their mtime and size. A `|` inside a caption or a path can no longer make two different renders share an entry, and replacing a logo or font file misses the cache.
+- The signed image route is no longer on the `web` middleware group, so a preview request does not start a session. Responses send `Cache-Control: private` and `X-Content-Type-Options: nosniff`.
+- Bulk ZIP export stores the basename of each entry, suffixes a name that would otherwise overwrite another file, and deletes its temp file when packing fails.
+- The GD logo pass keeps the logo's aspect ratio and frees its image resources.
+
+### Changed
+
+- `qr-code:doctor` warns when `hardware_scanner.fallback_to_any_input` is on, and when the image route has neither `ttl` nor `throttle`. The command still exits successfully for those warnings.
+
 ## [1.1.1] - 2026-11-04
 
 ### Fixed

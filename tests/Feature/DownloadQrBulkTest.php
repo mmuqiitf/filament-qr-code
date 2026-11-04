@@ -48,3 +48,45 @@ it('resolves bulk files per record for ZIP export', function () {
     expect(array_keys($files))->toBe(['BULK-1.svg', 'BULK-2.svg'])
         ->and($action->getName())->toBe('download_qr_bulk');
 });
+
+it('keeps directory names out of the zip and suffixes collisions', function () {
+    $before = glob(sys_get_temp_dir().'/filament-qr-*') ?: [];
+
+    $archive = QrZipArchive::fromFiles([
+        '../../etc/cron.d/evil.svg' => '<svg>a</svg>',
+        'evil.svg' => '<svg>b</svg>',
+        'nested name.svg' => '<svg>c</svg>',
+    ]);
+
+    $after = glob(sys_get_temp_dir().'/filament-qr-*') ?: [];
+    expect(array_values(array_diff($after, $before)))->toBe([]);
+
+    $path = tempnam(sys_get_temp_dir(), 'qr-test-');
+    file_put_contents($path, $archive);
+    $zip = new ZipArchive;
+    expect($zip->open($path))->toBeTrue();
+
+    $names = [];
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $names[] = $zip->getNameIndex($i);
+    }
+
+    expect($names)->toBe(['evil.svg', 'evil-2.svg', 'nested name.svg'])
+        ->and($zip->getFromName('evil-2.svg'))->toBe('<svg>b</svg>');
+
+    $zip->close();
+    unlink($path);
+});
+
+it('suffixes bulk file names that sanitize to the same entry', function () {
+    $action = DownloadQrBulkAction::make()
+        ->qrData(fn ($record) => $record['sku'])
+        ->qrFileName(fn ($record) => '../../labels/'.$record['sku']);
+
+    $files = $action->recordsToFiles(new Collection([
+        ['sku' => 'BULK-1'],
+        ['sku' => 'BULK-1'],
+    ]));
+
+    expect(array_keys($files))->toBe(['BULK-1.svg', 'BULK-1-2.svg']);
+});

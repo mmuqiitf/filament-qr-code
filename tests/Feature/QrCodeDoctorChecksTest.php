@@ -121,6 +121,27 @@ it('passes when every logo base path exists', function () {
         ->expectsOutputToContain('[PASS] Logos restricted to qr-code.generator.logo_base_paths.');
 });
 
+it('warns when the station listener may fill any empty field and the image route is open', function () {
+    publishDoctorAssets();
+
+    $this->artisan('qr-code:doctor')
+        ->assertSuccessful()
+        ->expectsOutputToContain('[WARN] hardware_scanner.fallback_to_any_input is on')
+        ->expectsOutputToContain('[WARN] Image route has no ttl or throttle');
+});
+
+it('stays quiet about the station listener when fallback is off and the image route is limited', function () {
+    publishDoctorAssets();
+    config()->set('qr-code.hardware_scanner.fallback_to_any_input', false);
+    config()->set('qr-code.image_route.ttl', 10);
+    config()->set('qr-code.image_route.throttle', '60,1');
+
+    $this->artisan('qr-code:doctor')
+        ->assertSuccessful()
+        ->doesntExpectOutputToContain('[WARN] hardware_scanner.fallback_to_any_input is on')
+        ->doesntExpectOutputToContain('[WARN] Image route has no ttl or throttle');
+});
+
 it('describes itself with the product name', function () {
     expect(Artisan::all()['qr-code:doctor']->getDescription())
         ->toBe('Check the Filament QR & Barcode install: image backends, fonts, assets, config, and routes.');

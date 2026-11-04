@@ -1,5 +1,15 @@
 # Upgrade guide
 
+## From 1.1.1 to 1.1.2
+
+Nothing to change in application code. No asset rebuild.
+
+- **Render cache.** `FilamentQrCode::flushPersistentCache()` deletes render-cache entries and the in-process map. Other keys in that cache store stay. Cache keys changed, so the first render after upgrading misses. Entries written before this release are not in the new index: with the default `cache_ttl` of 86400 seconds they expire on their own. A `cache_ttl` of `null` (keep forever) leaves those old entries until you flush that store yourself.
+- **Replacing a logo or font file** changes the cache key (mtime and size). You no longer need to flush just because the file changed.
+- **Image route.** Preview responses are `Cache-Control: private` and do not set a session cookie. If a shared cache stored older `public` responses, purge those URLs. The route is no longer in the `web` group.
+- **ZIP export.** Entry names are basenames. `labels/sku.svg` is stored as `sku.svg`. A second file that lands on the same name is `sku-2.svg`.
+- **`qr-code:doctor`.** A default install now prints warnings for `fallback_to_any_input` and for an image route with no `ttl` and no `throttle`. Those warnings do not fail the command.
+
 ## From 1.1.0 to 1.1.1
 
 Nothing to change in your code. Run `php artisan filament:assets` so the updated scanner JavaScript is published (camera fields that allow QR alongside 1D formats now use a square decode box).
