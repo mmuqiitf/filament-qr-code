@@ -15,7 +15,7 @@ Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14) in forms, i
 | `Code39` | `0-9`, `A-Z`, space and `- . $ / + %` (uppercase only) | none |
 | `Itf14` | 13 or 14 digits | appended or checked; drawn with bearer bars and its own quiet zone |
 
-GS1-128 (application identifiers) is not supported yet.
+GS1-128 symbols are not drawn yet. Application identifiers can already be read and written with [`Gs1::parse()` and `Gs1::build()`](gs1.md).
 
 ## Components
 

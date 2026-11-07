@@ -16,6 +16,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | show a QR in a form / table / infolist | `QrCodeDisplay` / `QrColumn` / `QrEntry` | `…\Forms\Components`, `…\Tables\Columns`, `…\Infolists\Components` |
 | download one QR / many as a ZIP | `DownloadQrAction` / `DownloadQrBulkAction` | `Mmuqiitf\FilamentQrCode\Tables\Actions` |
 | generate an SVG/PNG in PHP | `FilamentQrCode` facade or `QrCodeService` | `…\Facades`, `…\Services` |
+| read or write GS1 application identifiers | `Gs1::parse()` / `Gs1::build()` | `Mmuqiitf\FilamentQrCode\Gs1` |
 | a Wi-Fi, vCard, mailto, SMS or geo payload | `QrPayload` | `Mmuqiitf\FilamentQrCode\Support` |
 
 ## Do

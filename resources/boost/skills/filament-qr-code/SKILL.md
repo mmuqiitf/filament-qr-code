@@ -7,7 +7,7 @@ description: Build QR and barcode scanning or QR generation into Filament v5 for
 
 ## When to use
 
-Use this skill when a task scans QR codes or barcodes in a Filament panel, through a camera, image upload or a USB/Bluetooth gun in keyboard mode, or when it shows or downloads QR codes. Read `vendor/mmuqiitf/filament-qr-code/docs/ai.md` for the full picker and rules, and `docs/api.md` for every public method.
+Use this skill when a task scans QR codes or barcodes in a Filament panel, through a camera, image upload or a USB/Bluetooth gun in keyboard mode, when it shows or downloads QR codes, or when it reads or writes GS1 application identifiers. Read `vendor/mmuqiitf/filament-qr-code/docs/ai.md` for the full picker and rules, and `docs/api.md` for every public method.
 
 ## Steps
 
@@ -37,6 +37,12 @@ QrScanSequence::make()
         ScanStep::make('po')->validateUsing(['regex:/^PO-\d+$/']),
         ScanStep::make('sku')->lookup(Product::class, 'sku'),
     ]);
+</code-snippet>
+
+<code-snippet name="GS1 element string" lang="php">
+use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
+
+$gtin = Gs1::parse($scan)->get('01');
 </code-snippet>
 
 ## Avoid

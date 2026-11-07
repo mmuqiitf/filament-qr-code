@@ -9,6 +9,7 @@
 - One camera filling many fields in order: `Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence` with `Mmuqiitf\FilamentQrCode\Support\ScanStep` (Scan Sequence Container).
 - Many scans appended to one list: `Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector` or `Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction` (Batch Collector Scanning).
 - Showing QR codes: `QrCodeDisplay` (forms), `QrColumn` (tables), `QrEntry` (infolists), `DownloadQrAction` / `DownloadQrBulkAction`; in PHP the `Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode` facade and `Mmuqiitf\FilamentQrCode\Support\QrPayload`.
+- GS1 application identifiers: `Mmuqiitf\FilamentQrCode\Gs1\Gs1::parse()` and `Gs1::build()`. This does not draw a GS1-128 symbol.
 
 ### Rules
 
@@ -65,6 +66,13 @@ use Mmuqiitf\FilamentQrCode\Tables\Columns\QrColumn;
 QrColumn::make('sku')->thumbnailSize(48)->previewable();
 
 $dataUri = FilamentQrCode::make()->size(300)->generate('https://example.com')->toDataUri();
+</code-snippet>
+
+<code-snippet name="Parse a GS1 element string" lang="php">
+use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
+
+$gtin = Gs1::parse('(01)09521101530001(10)LOT-1')->get('01');
+$raw = Gs1::build(['01' => '09521101530001', '10' => 'LOT-1'])->raw();
 </code-snippet>
 
 <code-snippet name="Hardening the signed image route (opt-in, off by default)" lang="php">

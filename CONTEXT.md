@@ -14,6 +14,10 @@ _Avoid_: QR maker, barcode creator
 `BarcodeService` and the `BarcodeDisplay`, `BarcodeEntry` and `BarcodeColumn` components, which encode data into 1D barcodes (`BarcodeType`: Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14) via tc-lib-barcode. Separate from `BarcodeFormat`, which lists formats the scanner decodes. Start one with `BarcodeService::make()` or `FilamentQrCode::barcode()`. Barcodes render as data URIs; a signed barcode image route is planned for 1.2.
 _Avoid_: linear QR, 1D QR
 
+**GS1 Element String**:
+The application identifiers inside a GS1 symbol, read and written with `Gs1::parse()` and `Gs1::build()`. Separate from drawing a GS1-128 barcode, which is not supported yet.
+_Avoid_: GS1 payload, AI blob
+
 **QR Scanner Field**:
 A Filament form field that captures QR code values through a camera stream, image upload, or manual entry.
 _Avoid_: QR input, barcode box

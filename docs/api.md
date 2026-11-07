@@ -461,6 +461,37 @@ Getters (read the resolved option; used by the views): `getRaw()`
 
 Getters (read the resolved option; used by the views): `getAccessibleName()`, `getFormat()`, `getRaw()`, `getText()`, `getType()`
 
+### `Gs1`
+
+`Mmuqiitf\FilamentQrCode\Gs1\Gs1` — Parse and build GS1 element strings. `Gs1::SEPARATOR` is the group separator (ASCII 29).
+
+| Method | Purpose |
+| --- | --- |
+| `static build(array $elements): ElementString` | Build an element string from application identifier => value, in order. Write keys as strings (`'01'`, `'10'`). PHP stores `'10'` as an int key; that is cast back. A leading zero (`'01'`, `'00'`) only survives as a string. |
+| `static parse(string $input): ElementString` | Read an element string into application identifiers. |
+
+### `ElementString`
+
+`Mmuqiitf\FilamentQrCode\Gs1\ElementString` — Application identifiers from one GS1 element string, in the order they were parsed or built. `raw()` is the canonical unbracketed form.
+
+| Method | Purpose |
+| --- | --- |
+| `bracketed(): string` | Bracketed element string, such as `(01)09521101530001(10)LOT-1`. |
+| `elements(): array` | Application identifiers in element order. |
+| `get(string $ai): ?string` | The value for an application identifier, or null when it is absent. |
+| `raw(): string` | Unbracketed element string. A group separator (ASCII 29) follows a variable-length AI that is not last. Fixed-length AIs are concatenated. |
+| `toArray(): array` | Application identifier to value, in element order. |
+
+### `Element`
+
+`Mmuqiitf\FilamentQrCode\Gs1\Element` — One application identifier and its value from a GS1 element string.
+
+
+### `InvalidGs1Exception`
+
+`Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception` — A GS1 element string could not be parsed or built: unknown application identifier, wrong length, a character outside the AI's set, or a duplicate.
+
+
 ### `InvalidBarcodeException`
 
 `Mmuqiitf\FilamentQrCode\Exceptions\InvalidBarcodeException` — The value can't be encoded in the requested barcode type, e.g. an EAN-13 with a wrong check digit or a Code 39 value with lowercase letters.

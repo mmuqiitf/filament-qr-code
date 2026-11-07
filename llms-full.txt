@@ -170,6 +170,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
 - **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39 and ITF-14](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
+- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers. Drawing a GS1-128 symbol is not included.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
 - **Every public method**: the generated [API map](docs/api.md).
 
@@ -182,6 +183,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [Batch collecting](docs/collecting.md) | continuous inventory scanning in repeaters and tables |
 | [Generating](docs/generating.md) | display components, download actions, ZIP export, facade, payloads |
 | [Barcodes](docs/barcodes.md) | 1D barcodes: types, components, invalid values, accessibility, PHP API |
+| [GS1 element strings](docs/gs1.md) | `Gs1::parse()` and `Gs1::build()` for application identifiers |
 | [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, auditing, macros, styling, render hooks, views |
 | [Extension points](docs/extending.md) | every seam in one table: PHP closures, contracts, macros, render hooks, CSS variables, JS decoder, router, events |
 | [Events](docs/events.md) | every browser event fired or listened for, and every Laravel event with its properties |
@@ -1209,7 +1211,7 @@ Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14) in forms, i
 | `Code39` | `0-9`, `A-Z`, space and `- . $ / + %` (uppercase only) | none |
 | `Itf14` | 13 or 14 digits | appended or checked; drawn with bearer bars and its own quiet zone |
 
-GS1-128 (application identifiers) is not supported yet.
+GS1-128 symbols are not drawn yet. Application identifiers can already be read and written with [`Gs1::parse()` and `Gs1::build()`](gs1.md).
 
 ## Components
 
@@ -1294,6 +1296,74 @@ $uri = FilamentQrCode::barcode()->type('ean8')->generate('9638507')->toDataUri()
 Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`), and `BarcodeService::flushRenderCache()` clears it.
 
 Barcodes have no signed image route yet: components embed the image as a data URI. A barcode image route is planned for 1.2.
+
+
+---
+
+<!-- file: docs/gs1.md -->
+
+# GS1 element strings
+
+> Back to [README](../README.md) · [Barcodes](barcodes.md) · [Reference](reference.md)
+
+`Gs1::parse()` and `Gs1::build()` read and write a GS1 element string: the application identifiers (AIs) inside a GS1-128, GS1 DataMatrix or GS1 QR symbol. This does not draw a barcode. GS1-128 rendering is still unsupported.
+
+Length and character set follow the [GS1 Barcode Syntax Dictionary](https://ref.gs1.org/tools/gs1-barcode-syntax-resource/syntax-dictionary/) release 2026-01-27, vendored at `resources/gs1/` under the Apache License 2.0. Check digits, dates, country codes and "this AI requires that AI" rules are not applied yet.
+
+## Parse
+
+```php
+use Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception;
+use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
+
+$gs1 = Gs1::parse('(01)09521101530001(17)251231(10)LOT-1');
+
+$gs1->get('01');       // '09521101530001'
+$gs1->get('10');       // 'LOT-1'
+$gs1->toArray();       // ['01' => '...', '17' => '251231', '10' => 'LOT-1']
+$gs1->bracketed();     // '(01)09521101530001(17)251231(10)LOT-1'
+$gs1->raw();           // unbracketed, with a group separator where one is required
+$gs1->elements()[0]->title; // 'GTIN'
+```
+
+The same value comes back from three inputs:
+
+- Bracketed, the form printed under a symbol: `(01)09521101530001(10)LOT-1`.
+- Unbracketed scan data. Fixed-length AIs are concatenated. A variable-length AI that is not last is followed by `Gs1::SEPARATOR` (ASCII 29, the character scanners return for FNC1). A separator after a fixed-length AI, or a trailing one, is ignored.
+- The same scan data with an AIM symbology identifier in front: `]C1` (GS1-128), `]e0` (GS1 DataBar), `]d2` (GS1 DataMatrix) or `]Q3` (GS1 QR). Any `]` + one letter + one digit is stripped.
+
+`(` inside a bracketed value starts the next AI. A value that itself contains `(` has to be parsed from the unbracketed form.
+
+## Build
+
+```php
+use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
+
+$gs1 = Gs1::build([
+    '01' => '09521101530001',
+    '10' => 'LOT-1',
+    '17' => '251231',
+]);
+
+$gs1->raw(); // "010952110153000110LOT-1\x1D17251231"
+```
+
+Order is the order of the array. Write every key as a string. `'01'` and `'00'` keep their leading zero only as strings. PHP turns `'10'` and `'8003'` into integer keys on its own; `build()` casts those back.
+
+## Invalid values
+
+`parse()` and `build()` throw `InvalidGs1Exception`. The message names the AI and the reason, for example a GTIN that is not 14 digits, a batch with a character outside GS1 character set 82, an unknown AI, or the same AI twice. `reason` is the part after the colon.
+
+```php
+use Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception;
+use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
+
+try {
+    Gs1::parse($scan);
+} catch (InvalidGs1Exception $e) {
+    $e->reason;
+}
+```
 
 
 ---
@@ -1929,6 +1999,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | show a QR in a form / table / infolist | `QrCodeDisplay` / `QrColumn` / `QrEntry` | `…\Forms\Components`, `…\Tables\Columns`, `…\Infolists\Components` |
 | download one QR / many as a ZIP | `DownloadQrAction` / `DownloadQrBulkAction` | `Mmuqiitf\FilamentQrCode\Tables\Actions` |
 | generate an SVG/PNG in PHP | `FilamentQrCode` facade or `QrCodeService` | `…\Facades`, `…\Services` |
+| read or write GS1 application identifiers | `Gs1::parse()` / `Gs1::build()` | `Mmuqiitf\FilamentQrCode\Gs1` |
 | a Wi-Fi, vCard, mailto, SMS or geo payload | `QrPayload` | `Mmuqiitf\FilamentQrCode\Support` |
 
 ## Do
@@ -3329,6 +3400,37 @@ Getters (read the resolved option; used by the views): `getRaw()`
 | `static validate(BarcodeType $type, string $data): void` | Check a value without rendering it. |
 
 Getters (read the resolved option; used by the views): `getAccessibleName()`, `getFormat()`, `getRaw()`, `getText()`, `getType()`
+
+### `Gs1`
+
+`Mmuqiitf\FilamentQrCode\Gs1\Gs1` — Parse and build GS1 element strings. `Gs1::SEPARATOR` is the group separator (ASCII 29).
+
+| Method | Purpose |
+| --- | --- |
+| `static build(array $elements): ElementString` | Build an element string from application identifier => value, in order. Write keys as strings (`'01'`, `'10'`). PHP stores `'10'` as an int key; that is cast back. A leading zero (`'01'`, `'00'`) only survives as a string. |
+| `static parse(string $input): ElementString` | Read an element string into application identifiers. |
+
+### `ElementString`
+
+`Mmuqiitf\FilamentQrCode\Gs1\ElementString` — Application identifiers from one GS1 element string, in the order they were parsed or built. `raw()` is the canonical unbracketed form.
+
+| Method | Purpose |
+| --- | --- |
+| `bracketed(): string` | Bracketed element string, such as `(01)09521101530001(10)LOT-1`. |
+| `elements(): array` | Application identifiers in element order. |
+| `get(string $ai): ?string` | The value for an application identifier, or null when it is absent. |
+| `raw(): string` | Unbracketed element string. A group separator (ASCII 29) follows a variable-length AI that is not last. Fixed-length AIs are concatenated. |
+| `toArray(): array` | Application identifier to value, in element order. |
+
+### `Element`
+
+`Mmuqiitf\FilamentQrCode\Gs1\Element` — One application identifier and its value from a GS1 element string.
+
+
+### `InvalidGs1Exception`
+
+`Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception` — A GS1 element string could not be parsed or built: unknown application identifier, wrong length, a character outside the AI's set, or a duplicate.
+
 
 ### `InvalidBarcodeException`
 
