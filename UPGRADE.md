@@ -1,5 +1,11 @@
 # Upgrade guide
 
+## Unreleased
+
+Nothing to change in application code. No asset rebuild.
+
+- **Render cache.** Keys now include a generation (`filament-qr-code:render:vN:`). The first render after upgrading misses. `flushPersistentCache()` bumps the generation and clears the in-process map. It no longer deletes entries, and the 1.1.2 `filament-qr-code:render-index` is unused. Retired entries expire with `generator.cache_ttl` (86400 seconds by default). A `cache_ttl` of `null` leaves them until you flush that store yourself. Octane clears the in-process map at the start of each request, task, and tick.
+
 ## From 1.1.1 to 1.1.2
 
 Nothing to change in application code. No asset rebuild.

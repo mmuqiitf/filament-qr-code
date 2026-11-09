@@ -267,7 +267,7 @@ Getters (read the resolved option; used by the views): `getCaption()`, `getDownl
 | `data(Closure\|string\|null $data): static` | Value to encode; a closure receives the record. Defaults to the column state. |
 | `downloadable(Closure\|bool $condition = true): static` | Offer a download from the preview modal. |
 | `errorCorrection(Closure\|string\|null $level): static` | Error-correction level: L, M, Q or H. |
-| `static flushDataUriCache(): void` | Clear the in-process data-URI cache shared by every QrColumn. Useful in tests and long-running workers (Octane, queues). |
+| `static flushDataUriCache(): void` | Clear the in-process data-URI cache shared by every QrColumn. Octane already does this between requests, tasks, and ticks. Call it in tests and in other long-running workers. |
 | `format(QrFormat\|Closure\|string $format): static` | Render as SVG or PNG. |
 | `lazyModal(Closure\|bool $condition = true): static` | Load the large preview on demand via a signed image URL instead of inlining a second base64 data-URI per row. Disable with ->lazyModal(false) to restore the eager (BC) behavior. |
 | `logo(Closure\|string\|null $path, Closure\|int $size = 50): static` | Embed a logo image in the centre (forces PNG). |
@@ -418,7 +418,7 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 | `static effectiveCacheTtl(): int\|false\|null` | The persistent (L2) cache TTL in effect: the cacheTtl() override, else generator.cache_ttl. An int is seconds, null means no expiry, and false means the L2 cache is off (the in-process cache still works). |
 | `errorCorrection(ErrorCorrectionLevel\|string $level): QrCodeService` | Error-correction level: L, M, Q or H. |
 | `fileName(string $fileName): QrCodeService` | File name used by download() and stream(). |
-| `static flushPersistentCache(): void` | Forget persistent render-cache entries and clear the in-process cache. Other keys in the Laravel cache store are left alone. |
+| `static flushPersistentCache(): void` | Retire the persistent render-cache generation and clear the in-process cache. Other keys in the Laravel cache store are left alone. Retired entries expire with generator.cache_ttl; a null TTL leaves them until that store is flushed. |
 | `static flushRenderCache(): void` | Clear the in-process render cache. |
 | `font(string $fontPath): QrCodeService` | TrueType font file for withText() overlays. |
 | `format(QrFormat\|string $format): QrCodeService` | Output SVG or PNG. |

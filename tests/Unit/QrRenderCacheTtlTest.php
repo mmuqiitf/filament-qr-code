@@ -21,7 +21,7 @@ afterEach(function (): void {
 
 function renderCacheKey(string $key): string
 {
-    return 'filament-qr-code:render:'.$key;
+    return 'filament-qr-code:render:v1:'.$key;
 }
 
 it('turns the persistent cache off when generator.cache_ttl is false', function (): void {

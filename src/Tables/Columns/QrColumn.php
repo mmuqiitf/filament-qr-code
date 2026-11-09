@@ -217,7 +217,8 @@ class QrColumn extends Column
 
     /**
      * Clear the in-process data-URI cache shared by every QrColumn.
-     * Useful in tests and long-running workers (Octane, queues).
+     * Octane already does this between requests, tasks, and ticks. Call it
+     * in tests and in other long-running workers.
      */
     public static function flushDataUriCache(): void
     {

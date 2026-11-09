@@ -212,7 +212,7 @@ class QrCodeDoctorCommand extends Command
     {
         try {
             Cache::store($this->cacheStoreName())->get('filament-qr-code:doctor-probe');
-            $this->line('  [PASS] Persistent QR cache store is reachable. flushPersistentCache() removes only filament-qr-code render entries.');
+            $this->line('  [PASS] Persistent QR cache store is reachable. flushPersistentCache() retires the render-cache generation and leaves other keys.');
 
             return 0;
         } catch (Throwable) {

@@ -15,6 +15,7 @@ use Mmuqiitf\FilamentQrCode\Http\Controllers\BarcodeImageController;
 use Mmuqiitf\FilamentQrCode\Http\Controllers\QrImageController;
 use Mmuqiitf\FilamentQrCode\Http\Middleware\ThrottleQrImage;
 use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScanListener;
+use Mmuqiitf\FilamentQrCode\Rendering\QrRenderCache;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -97,6 +98,19 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
         static::registerAssetsOnce();
 
         Event::listen(QrCodeScanned::class, LogQrCodeScanListener::class);
+
+        // Octane keeps the worker process, and L1 is static. Clear it at the
+        // start of each operation so a flush in another worker is visible and
+        // the map does not outlive the request. The classes need not be loaded.
+        foreach ([
+            'Laravel\\Octane\\Events\\RequestReceived',
+            'Laravel\\Octane\\Events\\TaskReceived',
+            'Laravel\\Octane\\Events\\TickReceived',
+        ] as $event) {
+            Event::listen($event, static function (): void {
+                QrRenderCache::flushMemory();
+            });
+        }
 
         // Not the `web` group: a preview <img> must not start a session or
         // send a Set-Cookie that a shared cache could store.

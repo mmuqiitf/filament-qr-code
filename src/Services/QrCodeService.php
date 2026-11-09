@@ -275,8 +275,9 @@ class QrCodeService
     }
 
     /**
-     * Forget persistent render-cache entries and clear the in-process cache.
-     * Other keys in the Laravel cache store are left alone.
+     * Retire the persistent render-cache generation and clear the in-process cache.
+     * Other keys in the Laravel cache store are left alone. Retired entries
+     * expire with generator.cache_ttl; a null TTL leaves them until that store is flushed.
      */
     public static function flushPersistentCache(): void
     {

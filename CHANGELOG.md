@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Render cache keys are `filament-qr-code:render:vN:` instead of an index of entries. `flushPersistentCache()` bumps that generation and clears the in-process map. Other keys in the store stay. Retired renders are not deleted: they expire with `generator.cache_ttl`, and a null TTL leaves them until that store is flushed. Octane clears the in-process map when a request, task, or tick starts.
+
 ### Added
 
 - `Gs1::parse()` and `Gs1::build()` read and write GS1 element strings (bracketed, raw scan data with group separators, or an AIM symbology prefix). Length and character set follow the GS1 Barcode Syntax Dictionary (2026-01-27). Dates and GS1-128 drawing are not part of this. See [GS1 element strings](docs/gs1.md).

@@ -98,7 +98,7 @@ use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
 $uri = FilamentQrCode::barcode()->type('ean8')->generate('9638507')->toDataUri();
 ```
 
-Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`), and `BarcodeService::flushRenderCache()` clears it.
+Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`). `BarcodeService::flushRenderCache()` clears the in-process map. `QrCodeService::flushPersistentCache()` retires the shared generation. Octane clears the in-process map when a request, task, or tick starts.
 
 ## Signed column images
 

@@ -1051,7 +1051,7 @@ QrColumn::make('sku')
 
 A previewable column owns its click: the thumbnail opens the preview instead of following the table's `recordUrl()`, which still applies to the other cells. With `->previewable(false)` the thumbnail links to the record like any other column.
 
-Thumbnails and modal previews share a capped in-process render cache (clear it with `QrColumn::flushDataUriCache()`, for example between tests or in long-running workers) plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s: an int is seconds, `null` keeps entries forever, `false` turns the L2 off while the in-process cache keeps working; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filamentQrCode.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
+Thumbnails and modal previews share a capped in-process render cache (Octane clears it when a request, task, or tick starts; `QrColumn::flushDataUriCache()` clears it in tests and other long-running workers) plus a persistent Laravel-cache L2 (`generator.cache_ttl`, default 86400s: an int is seconds, `null` keeps entries forever, `false` turns the L2 off while the in-process cache keeps working; `QrCodeService::persistentCache(false)` / `::cacheStore('redis')` to tune). The modal image loads lazily through a signed `filamentQrCode.image` route, so a 25-row table encodes 25 thumbnails instead of 50 mixed-size images — `->lazyModal(false)` restores eager data-URIs. The signed URL carries the full render spec (colors, error correction, logo, caption), so lazy previews match the inline renders exactly.
 
 #### Image route security
 
@@ -1157,7 +1157,7 @@ Rules that bite:
 - `logo($path, $size)` forces error-correction level H for scannability.
 - Identical payloads share the render cache, so tables with repeated values encode once.
 - Other builder methods: `font($path)` sets the TTF used by `withText()`, `fileName($name)` sets the default download name (no extension), and `getRaw()` returns the encoded bytes.
-- Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(int|false|null $seconds)` (overrides `generator.cache_ttl`; `null` clears the override) and `effectiveCacheTtl()` (the value in effect), `flushRenderCache()` (in-process) and `flushPersistentCache()` (render entries only, and the in-process map). A logo or font file's mtime and size are part of the cache key.
+- Static cache helpers on `QrCodeService`: `persistentCache(bool)`, `cacheStore(?string)`, `cacheTtl(int|false|null $seconds)` (overrides `generator.cache_ttl`; `null` clears the override) and `effectiveCacheTtl()` (the value in effect), `flushRenderCache()` (in-process) and `flushPersistentCache()` (bumps the render-cache generation and clears the in-process map; other keys in the store stay). Retired renders are not deleted. They expire with `cache_ttl`, and a `null` TTL leaves them until that store is flushed. A logo or font file's mtime and size are part of the cache key.
 
 ### The `FilamentQrCode` facade
 
@@ -1172,7 +1172,7 @@ use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
 
 FilamentQrCode::cacheTtl(3600);        // keep persistent renders for an hour (false = off, null = use config)
 FilamentQrCode::cacheStore('redis');   // Laravel cache store for persistent renders
-FilamentQrCode::flushPersistentCache(); // render entries only; other cache keys stay
+FilamentQrCode::flushPersistentCache(); // retire the render generation; other cache keys stay
 ```
 
 In tests, the facade can be swapped like any other: `FilamentQrCode::partialMock()` or `FilamentQrCode::swap($fake)`. Every method is typed on the facade, so IDEs and PHPStan autocomplete the chain. The full method list is under [`FilamentQrCode` in the API map](api.md#filamentqrcode).
@@ -1294,7 +1294,7 @@ use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
 $uri = FilamentQrCode::barcode()->type('ean8')->generate('9638507')->toDataUri();
 ```
 
-Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`), and `BarcodeService::flushRenderCache()` clears it.
+Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`). `BarcodeService::flushRenderCache()` clears the in-process map. `QrCodeService::flushPersistentCache()` retires the shared generation. Octane clears the in-process map when a request, task, or tick starts.
 
 ## Signed column images
 
@@ -3259,7 +3259,7 @@ Getters (read the resolved option; used by the views): `getCaption()`, `getDownl
 | `data(Closure\|string\|null $data): static` | Value to encode; a closure receives the record. Defaults to the column state. |
 | `downloadable(Closure\|bool $condition = true): static` | Offer a download from the preview modal. |
 | `errorCorrection(Closure\|string\|null $level): static` | Error-correction level: L, M, Q or H. |
-| `static flushDataUriCache(): void` | Clear the in-process data-URI cache shared by every QrColumn. Useful in tests and long-running workers (Octane, queues). |
+| `static flushDataUriCache(): void` | Clear the in-process data-URI cache shared by every QrColumn. Octane already does this between requests, tasks, and ticks. Call it in tests and in other long-running workers. |
 | `format(QrFormat\|Closure\|string $format): static` | Render as SVG or PNG. |
 | `lazyModal(Closure\|bool $condition = true): static` | Load the large preview on demand via a signed image URL instead of inlining a second base64 data-URI per row. Disable with ->lazyModal(false) to restore the eager (BC) behavior. |
 | `logo(Closure\|string\|null $path, Closure\|int $size = 50): static` | Embed a logo image in the centre (forces PNG). |
@@ -3410,7 +3410,7 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 | `static effectiveCacheTtl(): int\|false\|null` | The persistent (L2) cache TTL in effect: the cacheTtl() override, else generator.cache_ttl. An int is seconds, null means no expiry, and false means the L2 cache is off (the in-process cache still works). |
 | `errorCorrection(ErrorCorrectionLevel\|string $level): QrCodeService` | Error-correction level: L, M, Q or H. |
 | `fileName(string $fileName): QrCodeService` | File name used by download() and stream(). |
-| `static flushPersistentCache(): void` | Forget persistent render-cache entries and clear the in-process cache. Other keys in the Laravel cache store are left alone. |
+| `static flushPersistentCache(): void` | Retire the persistent render-cache generation and clear the in-process cache. Other keys in the Laravel cache store are left alone. Retired entries expire with generator.cache_ttl; a null TTL leaves them until that store is flushed. |
 | `static flushRenderCache(): void` | Clear the in-process render cache. |
 | `font(string $fontPath): QrCodeService` | TrueType font file for withText() overlays. |
 | `format(QrFormat\|string $format): QrCodeService` | Output SVG or PNG. |
@@ -3740,6 +3740,12 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 <!-- file: UPGRADE.md -->
 
 # Upgrade guide
+
+## Unreleased
+
+Nothing to change in application code. No asset rebuild.
+
+- **Render cache.** Keys now include a generation (`filament-qr-code:render:vN:`). The first render after upgrading misses. `flushPersistentCache()` bumps the generation and clears the in-process map. It no longer deletes entries, and the 1.1.2 `filament-qr-code:render-index` is unused. Retired entries expire with `generator.cache_ttl` (86400 seconds by default). A `cache_ttl` of `null` leaves them until you flush that store yourself. Octane clears the in-process map at the start of each request, task, and tick.
 
 ## From 1.1.1 to 1.1.2
 

@@ -121,7 +121,7 @@ it('stores a render under a delimiter-safe cache key', function () {
     Cache::forever('app-setting', 'keep');
 
     $raw = QrCodeService::make()->size(200)->generate('KEYED')->getRaw();
-    $key = 'filament-qr-code:render:'.(new QrRenderOptions(
+    $logical = (new QrRenderOptions(
         data: 'KEYED',
         size: 200,
         margin: 2,
@@ -130,6 +130,7 @@ it('stores a render under a delimiter-safe cache key', function () {
         backgroundColor: '#ffffff',
         errorCorrectionLevel: ErrorCorrectionLevel::M(),
     ))->cacheKey();
+    $key = 'filament-qr-code:render:v2:'.$logical;
 
     $withPipe = new QrRenderOptions(
         data: 'AB|10',
@@ -178,9 +179,14 @@ it('stores a render under a delimiter-safe cache key', function () {
 
     QrCodeService::flushPersistentCache();
 
-    expect(Cache::get($key))->toBeNull()
+    expect(Cache::get($key))->toBe($raw)
+        ->and(Cache::get('filament-qr-code:render:v3:'.$logical))->toBeNull()
+        ->and(Cache::get('filament-qr-code:render-version'))->toBe(3)
         ->and(Cache::get('filament-qr-code:render-index'))->toBeNull()
         ->and(Cache::get('app-setting'))->toBe('keep');
+
+    expect(QrCodeService::make()->size(200)->generate('KEYED')->getRaw())->toBe($raw)
+        ->and(Cache::get('filament-qr-code:render:v3:'.$logical))->toBe($raw);
 });
 
 /**

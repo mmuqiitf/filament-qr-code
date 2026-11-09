@@ -11,11 +11,13 @@ use Throwable;
 /**
  * Two-level render cache: L1 in-process (process-wide, 200-entry FIFO) and an
  * optional best-effort L2 on the Laravel cache. State is static so every
- * QrCodeService instance in a process shares it. Long-running workers keep
- * L1 until flushRenderCache() or flushPersistentCache().
+ * QrCodeService instance in a process shares it. Octane clears L1 when a
+ * request, task, or tick starts. Other long-running workers keep L1 until
+ * flushRenderCache() or flushPersistentCache().
  *
- * L2 entries are tracked in an index. flushPersistent() deletes that index
- * and those entries. It does not flush the rest of the cache store.
+ * L2 keys carry a generation, filament-qr-code:render:vN:. flushPersistent()
+ * bumps N and clears L1. It does not list or delete entries, and it does not
+ * touch other keys in the store. Retired entries expire with the cache TTL.
  *
  * @internal Not an extension point; may change without notice. Use QrCodeService.
  */
@@ -25,7 +27,7 @@ final class QrRenderCache
 
     private const KEY_PREFIX = 'filament-qr-code:render:';
 
-    private const INDEX_KEY = 'filament-qr-code:render-index';
+    private const VERSION_KEY = 'filament-qr-code:render-version';
 
     /** @var array<string, string> */
     private static array $memory = [];
@@ -45,7 +47,7 @@ final class QrRenderCache
             return self::$memory[$key];
         }
 
-        $persistentKey = self::KEY_PREFIX.$key;
+        $persistentKey = self::persistentKey($key);
         $hit = self::readPersistent($persistentKey);
         if ($hit !== null) {
             self::$memory[$key] = $hit;
@@ -111,20 +113,50 @@ final class QrRenderCache
         self::flushMemory();
 
         try {
-            $store = self::store();
-            $index = $store->get(self::INDEX_KEY, []);
-
-            if (is_array($index)) {
-                foreach ($index as $key => $expiresAt) {
-                    if (is_string($key)) {
-                        $store->forget($key);
-                    }
-                }
-            }
-
-            $store->forget(self::INDEX_KEY);
+            self::bumpVersion(self::store());
         } catch (Throwable) {
             // Cache backend unavailable — L1 is already clear.
+        }
+    }
+
+    private static function persistentKey(string $key): string
+    {
+        return self::KEY_PREFIX.'v'.self::version().':'.$key;
+    }
+
+    private static function version(): int
+    {
+        if (! self::persistentActive()) {
+            return 1;
+        }
+
+        try {
+            $version = self::store()->get(self::VERSION_KEY);
+        } catch (Throwable) {
+            return 1;
+        }
+
+        return is_numeric($version) && (int) $version > 0 ? (int) $version : 1;
+    }
+
+    /**
+     * A missing version is generation 1. File and array stores treat
+     * increment of a missing key as 1, which would not retire that generation.
+     */
+    private static function bumpVersion(Repository $store): void
+    {
+        $current = $store->get(self::VERSION_KEY);
+
+        if (! is_numeric($current) || (int) $current < 1) {
+            $store->forever(self::VERSION_KEY, 2);
+
+            return;
+        }
+
+        $next = $store->increment(self::VERSION_KEY);
+
+        if ($next === false) {
+            $store->forever(self::VERSION_KEY, ((int) $current) + 1);
         }
     }
 
@@ -160,10 +192,8 @@ final class QrRenderCache
 
             if ($ttl === null) {
                 $store->forever($key, $value);
-                self::rememberIndex($store, $key, null);
             } elseif ($ttl > 0) {
                 $store->put($key, $value, $ttl);
-                self::rememberIndex($store, $key, $ttl);
             }
         } catch (Throwable) {
             // Persistent caching is best-effort; rendering already succeeded.
@@ -173,34 +203,5 @@ final class QrRenderCache
     private static function store(): Repository
     {
         return Cache::store(self::$store);
-    }
-
-    private static function rememberIndex(Repository $store, string $key, ?int $ttl): void
-    {
-        $write = function () use ($store, $key, $ttl): void {
-            $now = time();
-            $index = $store->get(self::INDEX_KEY, []);
-
-            if (! is_array($index)) {
-                $index = [];
-            }
-
-            foreach ($index as $indexedKey => $expiresAt) {
-                if (! is_string($indexedKey) || (is_int($expiresAt) && $expiresAt <= $now)) {
-                    unset($index[$indexedKey]);
-                }
-            }
-
-            $index[$key] = $ttl === null ? null : $now + $ttl;
-            $store->forever(self::INDEX_KEY, $index);
-        };
-
-        try {
-            $write();
-        } catch (Throwable) {
-            // The render is stored. A missed index entry only means a later
-            // flush will not find this one key. Two workers updating the
-            // index at once can drop a key the same way.
-        }
     }
 }
