@@ -2,7 +2,7 @@
 
 > Back to [README](../README.md) · [Barcodes](barcodes.md) · [Reference](reference.md)
 
-`Gs1::parse()` and `Gs1::build()` read and write a GS1 element string: the application identifiers (AIs) inside a GS1-128, GS1 DataMatrix or GS1 QR symbol. This does not draw a barcode. GS1-128 rendering is still unsupported.
+`Gs1::parse()` and `Gs1::build()` read and write a GS1 element string: the application identifiers (AIs) inside a GS1-128, GS1 DataMatrix or GS1 QR symbol. Parsing does not draw a barcode: see [Drawing GS1-128](#drawing-gs1-128). To scan GS1 labels into a form, see [Scanning GS1 labels](#scanning-gs1-labels).
 
 Length and character set follow the [GS1 Barcode Syntax Dictionary](https://ref.gs1.org/tools/gs1-barcode-syntax-resource/syntax-dictionary/) release 2026-01-27, vendored at `resources/gs1/` under the Apache License 2.0. So do [check digits](#check-digit) and [dates](#dates): both are always enforced. Unknown AIs are rejected. Country and currency codes, times and "this AI requires that AI" rules are not applied yet.
 
@@ -127,6 +127,91 @@ use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
 try {
     Gs1::parse($scan);
 } catch (InvalidGs1Exception $e) {
-    $e->reason;
+    $e->reason; // English, for logs
+    $e->kind;   // InvalidGs1Exception::CHECK_DIGIT, ::DATE, ::LENGTH, ::CHARACTER_SET, ::FORMAT, ::UNKNOWN_AI, ::DUPLICATE_AI, ::EMPTY or ::SYNTAX
+    $e->ai;     // '01', or null when no AI could be read
 }
 ```
+
+Use `kind` and `ai` to word your own message. The scanner's `->gs1()` turns them into the translated messages below.
+
+## Scanning GS1 labels
+
+`QrScanner::gs1()` reads every camera, gun, upload or typed scan as a GS1 element string, and `QrHardwareScannerListener::gs1()` does the same for gun bursts anywhere on the page.
+
+```php
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
+public function form(Schema $schema): Schema
+{
+    return $schema->components([
+        QrScanner::make('label')
+            ->label('Pallet label')
+            ->gs1(
+                fill: ['01' => 'gtin', '17' => 'expires_at', '10' => 'batch', '3103' => 'net_weight_kg'],
+                require: ['01', '17', '10'],
+            ),
+        TextInput::make('gtin')->readOnly(),
+        DatePicker::make('expires_at'),
+        TextInput::make('batch'),
+        TextInput::make('net_weight_kg')->numeric(),
+    ])->statePath('data');
+}
+```
+
+Scanning `]C1` `0109506000134352` `17261231` `10ABC` GS `3103001250` gives:
+
+| Field | State |
+| --- | --- |
+| `label` | `(01)09506000134352(17)261231(10)ABC(3103)001250` |
+| `gtin` | `09506000134352` |
+| `expires_at` | `2026-12-31` |
+| `batch` | `ABC` |
+| `net_weight_kg` | `1.250` |
+
+- **What the field stores.** The normalized bracketed string, whatever arrived: raw scan data with group separators (ASCII 29), a leading FNC1, an AIM prefix (`]C1`, `]d2`, `]Q3`, `]e0`) or the bracketed form. `Gs1::parse($state)` reads it back unchanged.
+- **`fill`** maps AIs to fields by path relative to the scanner, like `$set`, so it works inside a `Group`, `Section` or repeater item. Date AIs are written as `Y-m-d` (day `00` is the last day of the month, times are dropped), implied-decimal AIs (310n to 369n, 390n to 395n) as exact decimal strings, others as the raw value. AIs you do not map are ignored. A mapped AI missing from the scan leaves its field as it was.
+- **`require`** lists AIs every scan must carry. Without it, any valid GS1 string is accepted.
+- An unknown AI in `fill` or `require` throws `InvalidArgumentException` when the form is built.
+
+**Rejections.** A scan is rejected before any state is written, and nothing is filled, when:
+
+| Scan | Message |
+| --- | --- |
+| A plain EAN-13, EAN-8, UPC-A or ITF-14 number, or an `]E`/`]I` AIM prefix | Plain product barcode, not a GS1 label |
+| Wrong check digit | Invalid check digit in AI (01) |
+| Date not on the calendar | Invalid date in AI (17) |
+| Wrong length, characters or format | Invalid length in AI (01), Invalid characters in AI (10), Invalid format in AI (8003) |
+| Unknown or repeated AI | Unknown AI (23), AI (10) appears twice |
+| Unreadable (no AI found, missing `)`) | Not a GS1 label |
+| A required AI is absent | Missing AI (17) USE BY or EXPIRY (the title comes from the Syntax Dictionary) |
+
+The messages are translated (`filament-qr-code::ui.gs1_*`). A rejection works like `rejectWhen()`: the reason shows under the field, screen readers hear "Rejected: …", the `qr-scan-rejected` window event and the `ScanRejected` event fire, `onRejected()` runs, and the field is cleared or kept per `clearOnReject()`. It is never announced as accepted.
+
+A bare 8, 12, 13 or 14-digit number with a valid check digit is treated as a plain product barcode, because it would otherwise parse as AI 400, 10 or 95 by accident. Scan the GS1 label, or turn on AIM symbology identifiers on the scanner.
+
+**Order of checks.** `->gs1()` runs first: the GS1 check, then `validateUsing()` rules, `lookup()` / `lookupUsing()`, `rejectWhen()` and `validateUsing()` closures, then `pipe()` stages. Every later check, and `onScanned()`, sees the bracketed string, so look records up by an AI with `lookupUsing(fn (string $code) => Product::firstWhere('gtin', Gs1::parse($code)->get('01')))`. A typed value goes through the same GS1 check in `afterStateUpdated()` before your own hooks.
+
+**On submit.** The same GS1 and `require` rules run again as a validation rule, so a value posted around the scanner is refused.
+
+### Hardware scanners
+
+Keyboard-wedge guns send FNC1 as the group separator. The router keeps it inside a burst whether it arrives as the ASCII 29 character or as `Ctrl+]`; outside a burst `Ctrl+]` is an ordinary shortcut. A gun that sends another substitute character for FNC1 has to be set to send GS (most can: "FNC1 as GS" or "Ctrl+]").
+
+For a page without a scanner field, put the Station Listener in GS1 mode. Every burst goes to the server instead of into an input: a valid label fills the mapped fields, a rejected one fills nothing and shows its reason under the listener.
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
+
+QrHardwareScannerListener::make()
+    ->gs1(
+        fill: ['01' => 'gtin', '17' => 'expires_at', '10' => 'batch'],
+        require: ['01', '17'],
+    );
+```
+
+The listener sends `qr-hardware-scanned` with `{ value, field: null, gs1: true }` on success and `qr-scan-rejected` with `{ value, field: null, source: 'hardware', message }` on rejection, and fires `QrCodeScanned` with `source` `hardware` and the AIs in `context['gs1']`. A focused `QrScanner` still wins the burst. The listener needs a component key to be called; `gs1()` sets `qrGs1Listener` when there is none, so give each GS1 listener on one page its own `->key()`.
+
+`QrCollector` and `QrScanSequence` do not have `->gs1()` yet: parse in `validateUsing()` or `onScanned()` with `Gs1::parse()` there.

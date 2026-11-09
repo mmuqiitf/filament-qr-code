@@ -44,6 +44,7 @@ Option reference:
 - `scanFormat()` / `onScan()` — programmatic-only hooks; they do **not** run on live camera or hardware scans. Normalize live values with `normalizeUsing()` — see [Normalize live scans](customizing.md#normalize-live-scans).
 - `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning. Buffers are sanitized (STX/ETX/CR/LF stripped, mirroring `HasHardwareScanner::sanitizeScannedValue()`), IME compositions never count, and terminator-less guns flush after `scanTimeoutMs` (default 150).
 - `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify. Camera and gun scans are checked on the server before the field accepts them, so screen readers only hear the rejection.
+- `gs1(fill: ['01' => 'gtin', '17' => 'expires_at'], require: ['01', '17'])` — read scans as GS1 labels: the field stores the bracketed string, mapped AIs fill sibling fields, and an invalid label or a missing AI is rejected before any state is written. See [Scanning GS1 labels](gs1.md#scanning-gs1-labels).
 - `hardwareInput(scope: HardwareInputScope::Page)` — also catch wedge scans when no scan field has focus (default `Focus`: only while focused; config `hardware_scanner.default_scope`). A focused scan field always wins.
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
 - `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a _maximum_: the actual decode box scales to the viewfinder and the green reticle follows it.
@@ -96,6 +97,8 @@ When no target is found, nothing is written and the listener dispatches a `qr-sc
 ```blade
 <div x-on:qr-scan-unrouted.window="alert(`No field for ${$event.detail.value}`)"></div>
 ```
+
+For GS1 pallet and case labels, `QrHardwareScannerListener::make()->gs1(fill: [...], require: [...])` sends every burst to the server instead of into an input, fills the mapped fields and shows a rejection under the listener. See [Scanning GS1 labels](gs1.md#hardware-scanners).
 
 Fields are matched by their exact name — `data-field-name`, `name`, `id`, or a `wire:model` path equal to the name or ending in `.<name>` — so `sku` never matches `parent_sku`, and nested names such as `items.0.sku` work in `make([...])` and `nextField()`.
 
