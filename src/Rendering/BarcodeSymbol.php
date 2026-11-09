@@ -8,7 +8,9 @@ use Com\Tecnick\Barcode\Barcode;
 use Com\Tecnick\Barcode\Exception as TcBarcodeException;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
 use Mmuqiitf\FilamentQrCode\Exceptions\InvalidBarcodeException;
+use Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception;
 use Mmuqiitf\FilamentQrCode\Gs1\CheckDigit;
+use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
 
 /**
  * A validated, encoded barcode in module units: the bars to draw and the
@@ -33,10 +35,10 @@ final readonly class BarcodeSymbol
      */
     public static function encode(BarcodeType $type, string $value): self
     {
-        self::validate($type, $value);
+        $payload = self::payload($type, $value);
 
         try {
-            $model = (new Barcode)->getBarcodeObj(self::libraryType($type), $value, -1, -1);
+            $model = (new Barcode)->getBarcodeObj(self::libraryType($type), $payload, -1, -1);
         } catch (TcBarcodeException $e) {
             throw new InvalidBarcodeException($type, $value, self::reason($e->getMessage()), $e);
         }
@@ -48,6 +50,34 @@ final readonly class BarcodeSymbol
         ));
 
         return new self($bars, (int) $array['ncols'], (int) $array['nrows'], self::text($type, $model->getExtendedCode()));
+    }
+
+    /**
+     * Value handed to tc-lib-barcode. GS1-128 is the bracketed element string.
+     *
+     * @throws InvalidBarcodeException
+     */
+    private static function payload(BarcodeType $type, string $value): string
+    {
+        if ($type !== BarcodeType::Gs1128) {
+            self::validate($type, $value);
+
+            return $value;
+        }
+
+        try {
+            $parsed = Gs1::parse($value);
+        } catch (InvalidGs1Exception $e) {
+            throw new InvalidBarcodeException($type, $value, $e->reason, $e);
+        }
+
+        foreach ($parsed->elements() as $element) {
+            if (strcspn($element->value, '()') !== strlen($element->value)) {
+                throw new InvalidBarcodeException($type, $value, 'parentheses are reserved as application identifier delimiters');
+            }
+        }
+
+        return $parsed->bracketed();
     }
 
     private static function validate(BarcodeType $type, string $value): void
@@ -91,6 +121,7 @@ final readonly class BarcodeSymbol
             BarcodeType::UpcA => 'UPCA',
             BarcodeType::Code39 => 'C39',
             BarcodeType::Itf14 => 'ITF14',
+            BarcodeType::Gs1128 => 'GS1128',
         };
     }
 

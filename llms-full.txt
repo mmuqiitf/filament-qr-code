@@ -169,8 +169,8 @@ The full walkthrough, with config publishing, symbologies and a first server che
 - **Scanning**: [QR Scanner Field](docs/scanning.md#qr-scanner-field-qrscanner), [Station Listener](docs/scanning.md#station-listener-qrhardwarescannerlistener) for hands-free guns, [Scan Sequence Container](docs/scanning.md#scan-sequence-container-qrscansequence), [server-side checks](docs/scanning.md#server-side-checks) and the [cashier POS tutorial](docs/scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
-- **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39 and ITF-14](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
-- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers. Drawing a GS1-128 symbol is not included.
+- **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14 and GS1-128](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
+- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers. Draw them with `BarcodeType::Gs1128`.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
 - **Every public method**: the generated [API map](docs/api.md).
 
@@ -1198,7 +1198,7 @@ QrPayload::geo(-6.2, 106.8, 'Warehouse 7');                   // geo with query
 
 > Back to [README](../README.md) · [Generating QR codes](generating.md) · [Reference](reference.md)
 
-Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14) in forms, infolists and tables, or generate them in PHP. Encoding comes from [tc-lib-barcode](https://github.com/tecnickcom/tc-lib-barcode); the package draws the bars itself, so the SVG output is stable and accessible. QR codes still use [BaconQR](https://github.com/Bacon/BaconQrCode).
+Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128) in forms, infolists and tables, or generate them in PHP. Encoding comes from [tc-lib-barcode](https://github.com/tecnickcom/tc-lib-barcode); the package draws the bars itself, so the SVG output is stable and accessible. QR codes still use [BaconQR](https://github.com/Bacon/BaconQrCode).
 
 ## Supported types
 
@@ -1210,10 +1210,9 @@ Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14) in forms, i
 | `UpcA` | 11 or 12 digits | appended or checked |
 | `Code39` | `0-9`, `A-Z`, space and `- . $ / + %` (uppercase only) | none |
 | `Itf14` | 13 or 14 digits | appended or checked; drawn with bearer bars and its own quiet zone |
+| `Gs1128` | a GS1 element string: `(01)09521101530001(10)LOT-1`, the same data with group separators, or an AIM prefix such as `]C1` | not added or checked. One symbol holds at most 48 data characters |
 
-That check digit is the GS1 mod-10 digit. Calculate or validate it on its own with [`CheckDigit`](gs1.md#check-digit).
-
-GS1-128 symbols are not drawn yet. Application identifiers can already be read and written with [`Gs1::parse()` and `Gs1::build()`](gs1.md).
+That check digit is the GS1 mod-10 digit. Calculate or validate it on its own with [`CheckDigit`](gs1.md#check-digit). GS1-128 does not append one: a GTIN you pass is encoded as given. Read and write the element string with [`Gs1`](gs1.md). Parentheses inside a value are rejected, because they delimit application identifiers.
 
 ## Components
 
@@ -1351,6 +1350,21 @@ $gs1->raw(); // "010952110153000110LOT-1\x1D17251231"
 ```
 
 Order is the order of the array. Write every key as a string. `'01'` and `'00'` keep their leading zero only as strings. PHP turns `'10'` and `'8003'` into integer keys on its own; `build()` casts those back.
+
+## Drawing GS1-128
+
+`BarcodeType::Gs1128` (`type('gs1-128')`) draws the element string as a GS1-128 symbol. The human-readable text is the bracketed form. A raw scan, a `]C1` prefix and the bracketed string encode the same bars. The symbol holds at most 48 data characters. Check digits are not added.
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
+use Mmuqiitf\FilamentQrCode\Services\BarcodeService;
+
+$barcode = BarcodeService::make()
+    ->type(BarcodeType::Gs1128)
+    ->generate('(01)09521101530001(17)251231(10)LOT-1');
+
+$barcode->getText(); // '(01)09521101530001(17)251231(10)LOT-1'
+```
 
 ## Check digit
 
@@ -2018,6 +2032,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | download one QR / many as a ZIP | `DownloadQrAction` / `DownloadQrBulkAction` | `Mmuqiitf\FilamentQrCode\Tables\Actions` |
 | generate an SVG/PNG in PHP | `FilamentQrCode` facade or `QrCodeService` | `…\Facades`, `…\Services` |
 | read or write GS1 application identifiers | `Gs1::parse()` / `Gs1::build()` | `Mmuqiitf\FilamentQrCode\Gs1` |
+| draw a GS1-128 barcode | `BarcodeType::Gs1128` (`type('gs1-128')`) | `Mmuqiitf\FilamentQrCode\Enums` |
 | check a GTIN, SSCC, GLN or EAN check digit | `CheckDigit` / `ValidCheckDigit` | `…\Gs1`, `…\Validation` |
 | a Wi-Fi, vCard, mailto, SMS or geo payload | `QrPayload` | `Mmuqiitf\FilamentQrCode\Support` |
 
@@ -3395,7 +3410,7 @@ Getters (read the resolved option; used by the views): `getRaw()`
 
 ### `BarcodeService`
 
-`Mmuqiitf\FilamentQrCode\Services\BarcodeService` — Fluent builder for linear barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14), the barcode counterpart of QrCodeService.
+`Mmuqiitf\FilamentQrCode\Services\BarcodeService` — Fluent builder for linear barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128), the barcode counterpart of QrCodeService.
 
 | Method | Purpose |
 | --- | --- |
@@ -3578,7 +3593,7 @@ Getters (read the resolved option; used by the views): `getLabel()`
 
 `Mmuqiitf\FilamentQrCode\Enums\BarcodeType` — Linear symbologies the barcode generator can draw.
 
-Cases: `Code128` (`code128`), `Ean13` (`ean13`), `Ean8` (`ean8`), `UpcA` (`upca`), `Code39` (`code39`), `Itf14` (`itf14`)
+Cases: `Code128` (`code128`), `Ean13` (`ean13`), `Ean8` (`ean8`), `UpcA` (`upca`), `Code39` (`code39`), `Itf14` (`itf14`), `Gs1128` (`gs1-128`)
 
 Getters (read the resolved option; used by the views): `getDefaultMargin()`, `getDigitLengths()`, `getLabel()`
 

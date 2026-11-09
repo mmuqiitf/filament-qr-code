@@ -436,7 +436,7 @@ Getters (read the resolved option; used by the views): `getRaw()`
 
 ### `BarcodeService`
 
-`Mmuqiitf\FilamentQrCode\Services\BarcodeService` — Fluent builder for linear barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14), the barcode counterpart of QrCodeService.
+`Mmuqiitf\FilamentQrCode\Services\BarcodeService` — Fluent builder for linear barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128), the barcode counterpart of QrCodeService.
 
 | Method | Purpose |
 | --- | --- |
@@ -619,7 +619,7 @@ Getters (read the resolved option; used by the views): `getLabel()`
 
 `Mmuqiitf\FilamentQrCode\Enums\BarcodeType` — Linear symbologies the barcode generator can draw.
 
-Cases: `Code128` (`code128`), `Ean13` (`ean13`), `Ean8` (`ean8`), `UpcA` (`upca`), `Code39` (`code39`), `Itf14` (`itf14`)
+Cases: `Code128` (`code128`), `Ean13` (`ean13`), `Ean8` (`ean8`), `UpcA` (`upca`), `Code39` (`code39`), `Itf14` (`itf14`), `Gs1128` (`gs1-128`)
 
 Getters (read the resolved option; used by the views): `getDefaultMargin()`, `getDigitLengths()`, `getLabel()`
 

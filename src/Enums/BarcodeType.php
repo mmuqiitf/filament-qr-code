@@ -17,6 +17,7 @@ enum BarcodeType: string
     case UpcA = 'upca';
     case Code39 = 'code39';
     case Itf14 = 'itf14';
+    case Gs1128 = 'gs1-128';
 
     /** Human-readable name, e.g. "EAN-13". */
     public function getLabel(): string
@@ -28,6 +29,7 @@ enum BarcodeType: string
             self::UpcA => 'UPC-A',
             self::Code39 => 'Code 39',
             self::Itf14 => 'ITF-14',
+            self::Gs1128 => 'GS1-128',
         };
     }
 

@@ -21,12 +21,13 @@ function validBarcodes(): array
         'upc-a' => [BarcodeType::UpcA, '036000291452', '036000291452'],
         'code 39' => [BarcodeType::Code39, 'HELLO-1', 'HELLO-1'],
         'itf-14' => [BarcodeType::Itf14, '00012345678905', '00012345678905'],
+        'gs1-128' => [BarcodeType::Gs1128, '(01)09521101530001(17)251231(10)LOT-1', '(01)09521101530001(17)251231(10)LOT-1'],
     ];
 }
 
-it('covers exactly the 1.1 symbologies', function () {
+it('covers the linear symbologies', function () {
     expect(array_map(fn (BarcodeType $type) => $type->getLabel(), BarcodeType::cases()))
-        ->toBe(['Code 128', 'EAN-13', 'EAN-8', 'UPC-A', 'Code 39', 'ITF-14']);
+        ->toBe(['Code 128', 'EAN-13', 'EAN-8', 'UPC-A', 'Code 39', 'ITF-14', 'GS1-128']);
 });
 
 it('renders every type as an accessible SVG by default', function (BarcodeType $type, string $value, string $text) {
@@ -101,7 +102,23 @@ it('rejects invalid values with InvalidBarcodeException', function (BarcodeType 
     'code 39 symbol' => [BarcodeType::Code39, 'A~B', 'Code 39'],
     'code 128 non-ascii' => [BarcodeType::Code128, 'café', 'ASCII'],
     'empty' => [BarcodeType::Code128, '', 'empty'],
+    'gs1-128 unknown ai' => [BarcodeType::Gs1128, '(05)1234', 'unknown application identifier'],
+    'gs1-128 parentheses in a value' => [BarcodeType::Gs1128, '10A(B', 'parentheses'],
+    'gs1-128 too long' => [BarcodeType::Gs1128, '(10)'.str_repeat('A', 20).'(21)'.str_repeat('B', 20).'(240)EXTRA', 'too long'],
 ]);
+
+it('draws the same GS1-128 bars from bracketed data, raw scan data and a symbology prefix', function () {
+    $bracketed = '(01)09521101530001(10)LOT-1(17)251231';
+    $raw = "010952110153000110LOT-1\x1D17251231";
+
+    $fromBracketed = BarcodeService::make()->type(BarcodeType::Gs1128)->generate($bracketed);
+    $fromRaw = BarcodeService::make()->type('gs1-128')->generate($raw);
+    $fromPrefix = BarcodeService::make()->type(BarcodeType::Gs1128)->generate(']C1'.$raw);
+
+    expect($fromBracketed->getText())->toBe($bracketed)
+        ->and($fromRaw->getRaw())->toBe($fromBracketed->getRaw())
+        ->and($fromPrefix->getRaw())->toBe($fromBracketed->getRaw());
+});
 
 it('applies foreground and background colours', function () {
     $svg = BarcodeService::make()->color('#1d4ed8')->backgroundColor('#fef3c7')->generate('ABC')->getRaw();

@@ -46,6 +46,21 @@ $gs1->raw(); // "010952110153000110LOT-1\x1D17251231"
 
 Order is the order of the array. Write every key as a string. `'01'` and `'00'` keep their leading zero only as strings. PHP turns `'10'` and `'8003'` into integer keys on its own; `build()` casts those back.
 
+## Drawing GS1-128
+
+`BarcodeType::Gs1128` (`type('gs1-128')`) draws the element string as a GS1-128 symbol. The human-readable text is the bracketed form. A raw scan, a `]C1` prefix and the bracketed string encode the same bars. The symbol holds at most 48 data characters. Check digits are not added.
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
+use Mmuqiitf\FilamentQrCode\Services\BarcodeService;
+
+$barcode = BarcodeService::make()
+    ->type(BarcodeType::Gs1128)
+    ->generate('(01)09521101530001(17)251231(10)LOT-1');
+
+$barcode->getText(); // '(01)09521101530001(17)251231(10)LOT-1'
+```
+
 ## Check digit
 
 `CheckDigit` is the GS1 mod-10 digit on a GTIN, SSCC, GLN, GDTI or GSRN. EAN-13, EAN-8, UPC-A and ITF-14 use the same digit. Pass the number, not a whole element string. `Gs1::parse()` does not check it. The GMN alphanumeric check character (AI 8013) is a different algorithm.

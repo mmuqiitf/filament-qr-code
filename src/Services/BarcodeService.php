@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Fluent builder for linear barcodes (Code 128, EAN-13, EAN-8, UPC-A,
- * Code 39, ITF-14), the barcode counterpart of QrCodeService.
+ * Code 39, ITF-14, GS1-128), the barcode counterpart of QrCodeService.
  */
 class BarcodeService
 {

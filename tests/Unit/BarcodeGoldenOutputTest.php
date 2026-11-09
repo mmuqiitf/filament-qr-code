@@ -40,6 +40,7 @@ function barcodeGoldenValues(): array
         'upca' => [BarcodeType::UpcA, '036000291452'],
         'code39' => [BarcodeType::Code39, 'HELLO-1'],
         'itf14' => [BarcodeType::Itf14, '00012345678905'],
+        'gs1128' => [BarcodeType::Gs1128, '(01)09521101530001(17)251231(10)LOT-1'],
     ];
 }
 

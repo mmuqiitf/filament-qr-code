@@ -35,6 +35,7 @@ class BarcodeSmoke extends Page implements HasForms
             'upca' => '036000291452',
             'code39' => 'HELLO-1',
             'itf14' => '00012345678905',
+            'gs1128' => '(01)09521101530001(17)251231(10)LOT-1',
             'invalid' => '4006381333932',
         ]);
     }
@@ -48,6 +49,7 @@ class BarcodeSmoke extends Page implements HasForms
             BarcodeDisplay::make('upca')->label('UPC-A')->type(BarcodeType::UpcA)->showText(false),
             BarcodeDisplay::make('code39')->label('Code 39')->type(BarcodeType::Code39),
             BarcodeDisplay::make('itf14')->label('ITF-14')->type(BarcodeType::Itf14),
+            BarcodeDisplay::make('gs1128')->label('GS1-128')->type(BarcodeType::Gs1128),
             BarcodeDisplay::make('invalid')->label('Invalid EAN-13')->type(BarcodeType::Ean13),
             BarcodeEntry::make('entry')->label('Entry')->type(BarcodeType::Code128)->data('ENTRY-1'),
         ]);

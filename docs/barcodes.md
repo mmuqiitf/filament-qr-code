@@ -2,7 +2,7 @@
 
 > Back to [README](../README.md) · [Generating QR codes](generating.md) · [Reference](reference.md)
 
-Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14) in forms, infolists and tables, or generate them in PHP. Encoding comes from [tc-lib-barcode](https://github.com/tecnickcom/tc-lib-barcode); the package draws the bars itself, so the SVG output is stable and accessible. QR codes still use [BaconQR](https://github.com/Bacon/BaconQrCode).
+Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128) in forms, infolists and tables, or generate them in PHP. Encoding comes from [tc-lib-barcode](https://github.com/tecnickcom/tc-lib-barcode); the package draws the bars itself, so the SVG output is stable and accessible. QR codes still use [BaconQR](https://github.com/Bacon/BaconQrCode).
 
 ## Supported types
 
@@ -14,10 +14,9 @@ Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14) in forms, i
 | `UpcA` | 11 or 12 digits | appended or checked |
 | `Code39` | `0-9`, `A-Z`, space and `- . $ / + %` (uppercase only) | none |
 | `Itf14` | 13 or 14 digits | appended or checked; drawn with bearer bars and its own quiet zone |
+| `Gs1128` | a GS1 element string: `(01)09521101530001(10)LOT-1`, the same data with group separators, or an AIM prefix such as `]C1` | not added or checked. One symbol holds at most 48 data characters |
 
-That check digit is the GS1 mod-10 digit. Calculate or validate it on its own with [`CheckDigit`](gs1.md#check-digit).
-
-GS1-128 symbols are not drawn yet. Application identifiers can already be read and written with [`Gs1::parse()` and `Gs1::build()`](gs1.md).
+That check digit is the GS1 mod-10 digit. Calculate or validate it on its own with [`CheckDigit`](gs1.md#check-digit). GS1-128 does not append one: a GTIN you pass is encoded as given. Read and write the element string with [`Gs1`](gs1.md). Parentheses inside a value are rejected, because they delimit application identifiers.
 
 ## Components
 
