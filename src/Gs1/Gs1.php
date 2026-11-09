@@ -38,7 +38,7 @@ final class Gs1
         $input = ltrim($input, self::SEPARATOR);
 
         if ($input === '') {
-            throw new InvalidGs1Exception($original, 'the element string is empty');
+            throw new InvalidGs1Exception($original, 'the element string is empty', kind: InvalidGs1Exception::EMPTY);
         }
 
         $pairs = str_starts_with($input, '(')
@@ -60,7 +60,7 @@ final class Gs1
     public static function build(array $elements): ElementString
     {
         if ($elements === []) {
-            throw new InvalidGs1Exception('', 'the element string is empty');
+            throw new InvalidGs1Exception('', 'the element string is empty', kind: InvalidGs1Exception::EMPTY);
         }
 
         if (array_is_list($elements)) {
@@ -136,14 +136,14 @@ final class Gs1
             $ai = self::matchAi($input, $offset);
 
             if ($ai === null) {
-                throw new InvalidGs1Exception($original, 'unknown application identifier '.self::snippet($input, $offset));
+                throw new InvalidGs1Exception($original, 'unknown application identifier '.self::snippet($input, $offset), kind: InvalidGs1Exception::UNKNOWN_AI);
             }
 
             $rule = SyntaxTable::find($ai);
             $offset += strlen($ai);
 
             if ($rule === null) {
-                throw new InvalidGs1Exception($original, "unknown application identifier {$ai}");
+                throw new InvalidGs1Exception($original, "unknown application identifier {$ai}", kind: InvalidGs1Exception::UNKNOWN_AI, ai: $ai);
             }
 
             if ($rule->fixed) {
@@ -166,7 +166,7 @@ final class Gs1
         }
 
         if ($pairs === []) {
-            throw new InvalidGs1Exception($original, 'the element string is empty');
+            throw new InvalidGs1Exception($original, 'the element string is empty', kind: InvalidGs1Exception::EMPTY);
         }
 
         return $pairs;
@@ -204,17 +204,17 @@ final class Gs1
             $rule = SyntaxTable::find($ai);
 
             if ($rule === null) {
-                throw new InvalidGs1Exception($shown, "unknown application identifier {$ai}");
+                throw new InvalidGs1Exception($shown, "unknown application identifier {$ai}", kind: InvalidGs1Exception::UNKNOWN_AI, ai: $ai);
             }
 
             if (isset($seen[$ai])) {
-                throw new InvalidGs1Exception($shown, "duplicate application identifier {$ai}");
+                throw new InvalidGs1Exception($shown, "duplicate application identifier {$ai}", kind: InvalidGs1Exception::DUPLICATE_AI, ai: $ai);
             }
 
-            $reason = $rule->rejectReason($value);
+            $rejection = $rule->rejection($value);
 
-            if ($reason !== null) {
-                throw new InvalidGs1Exception($shown, $reason);
+            if ($rejection !== null) {
+                throw new InvalidGs1Exception($shown, $rejection['reason'], kind: $rejection['kind'], ai: $ai);
             }
 
             $seen[$ai] = true;

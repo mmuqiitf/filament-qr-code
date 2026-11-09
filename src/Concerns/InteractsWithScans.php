@@ -289,12 +289,33 @@ trait InteractsWithScans
      */
     public function runScanChecks(string $code, ?ScanInput $source): ScanResult
     {
+        $prepared = $this->prepareScanCode($code, $source);
+
+        if ($prepared instanceof ScanResult) {
+            return $prepared;
+        }
+
         return $this->getScanCheckPipeline()->run(
-            $code,
+            $prepared,
             $source,
             fn (Closure $closure, array $named = [], array $typed = []): mixed => $this->evaluate($closure, $named, $typed),
             $this->getScanAttributeLabel(),
         );
+    }
+
+    /**
+     * Rewrite or reject a code before the pipeline runs (QrScanner::gs1()
+     * normalizes GS1 strings here). A ScanResult is a rejection.
+     */
+    protected function prepareScanCode(string $code, ?ScanInput $source): ScanResult|string
+    {
+        return $code;
+    }
+
+    /** Whether prepareScanCode() does anything, which needs the server check. */
+    protected function hasScanCodePreparation(): bool
+    {
+        return false;
     }
 
     public function getScanCheckPipeline(): ScanCheckPipeline
@@ -351,6 +372,7 @@ trait InteractsWithScans
             || $this->scanStages !== []
             || $this->onScannedCallback !== null
             || $this->onRejectedCallback !== null
+            || $this->hasScanCodePreparation()
             || $this->usesContinuousScanMode();
     }
 
