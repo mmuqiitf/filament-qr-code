@@ -12,6 +12,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasAnnouncements;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
+use Mmuqiitf\FilamentQrCode\Concerns\HasGs1Scan;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasOptionsSync;
 use Mmuqiitf\FilamentQrCode\Concerns\HasOutcomeFeedback;
@@ -21,8 +22,11 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequentialScan;
 use Mmuqiitf\FilamentQrCode\Concerns\InteractsWithScans;
 use Mmuqiitf\FilamentQrCode\Enums\HardwareInputScope;
+use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
+use Mmuqiitf\FilamentQrCode\Gs1\ElementString;
 use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
+use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 
 class QrScanner extends Field
 {
@@ -31,6 +35,7 @@ class QrScanner extends Field
     use HasCameraScanning;
     use HasCodeNormalization;
     use HasFeedback;
+    use HasGs1Scan;
     use HasHardwareScanner;
     use HasOptionsSync;
     use HasOutcomeFeedback;
@@ -50,6 +55,8 @@ class QrScanner extends Field
     protected ?Closure $onScanCallback = null;
 
     protected HardwareInputScope|Closure|null $hardwareInputScope = null;
+
+    protected bool $hasRegisteredGs1Hook = false;
 
     /**
      * Focus: wedge scans reach this field only while it has focus (default).
@@ -88,8 +95,85 @@ class QrScanner extends Field
             ...$this->getScanModeScanPayload(),
             ...ScanMessages::forScannerAnnouncements(),
             'fieldLabel' => $this->getAnnouncementFieldLabel(),
+            'gs1' => $this->isGs1(),
             ...$this->getAnnouncementsScanPayload(),
         ];
+    }
+
+    /**
+     * Read every scan as a GS1 element string (GS1-128, GS1 DataMatrix,
+     * GS1 QR, raw with group separators or bracketed). The field stores the
+     * normalized bracketed form, such as `(01)09506000134352(17)261231(10)ABC`.
+     *
+     * `$fill` maps AIs to sibling fields by relative path, like `$set`:
+     * dates are written as `Y-m-d`, implied-decimal AIs (310n to 369n,
+     * 390n to 395n) as exact decimal strings, others as the raw value.
+     * Unmapped AIs are ignored. `$require` lists AIs every scan must carry.
+     *
+     * A scan that is not valid GS1, or misses a required AI, is rejected
+     * before any state is written, like rejectWhen(), and before it. The same
+     * rules run again on submit.
+     *
+     * @param  array<string, string>|Closure  $fill  AI => field, e.g. `['01' => 'gtin', '17' => 'expires_at']`
+     * @param  list<string>|Closure  $require  AIs every scan must carry, e.g. `['01', '17', '10']`
+     */
+    public function gs1(array|Closure $fill = [], array|Closure $require = []): static
+    {
+        $this->configureGs1($fill, $require);
+        $this->registerScanChecksRule();
+
+        if ($this->hasRegisteredGs1Hook) {
+            return $this;
+        }
+
+        $this->hasRegisteredGs1Hook = true;
+
+        // Typed or programmatic values: first, so later hooks see the bracketed string.
+        array_unshift($this->afterStateUpdated, function (QrScanner $component, mixed $state, mixed $livewire): void {
+            if (! is_string($state) || blank($state)) {
+                return;
+            }
+
+            $check = $component->getGs1ScanCheck();
+            $elements = $check->inspect($state);
+
+            if (! $elements instanceof ElementString) {
+                $component->state(null);
+
+                if (is_object($livewire) && method_exists($livewire, 'dispatch')) {
+                    $livewire->dispatch('qr-scan-rejected', message: $elements);
+                }
+
+                return;
+            }
+
+            if ($elements->bracketed() !== $state) {
+                $component->state($elements->bracketed());
+            }
+
+            $component->fillGs1Fields($elements, $check);
+        });
+
+        return $this;
+    }
+
+    protected function prepareScanCode(string $code, ?ScanInput $source): ScanResult|string
+    {
+        // An empty scan keeps its own "empty" message from the pipeline.
+        if (! $this->isGs1() || $code === '') {
+            return $code;
+        }
+
+        $elements = $this->getGs1ScanCheck()->inspect($code);
+
+        return $elements instanceof ElementString
+            ? $elements->bracketed()
+            : ScanResult::reject($code, $source, $elements);
+    }
+
+    protected function hasScanCodePreparation(): bool
+    {
+        return $this->isGs1();
     }
 
     /** Show the image-upload fallback in the camera modal. */

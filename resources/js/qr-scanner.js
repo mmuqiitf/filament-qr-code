@@ -55,6 +55,7 @@ const DEFAULT_OPTIONS = {
     pauseOnReject: false,
     keepCameraOpen: false,
     syncOptions: 'morph',
+    gs1: false,
 };
 
 const ROUTER_OPTIONS = ['hardwareScanner', 'hardwareScope', 'burstThresholdMs', 'minFastKeys', 'minBarcodeLength', 'terminators', 'scanTimeoutMs', 'preventSubmit'];
@@ -701,7 +702,8 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 this.value = '';
             }
 
-            if (this.isContinuous()) {
+            // GS1 fields show why a label was refused under the field in every mode.
+            if (this.isContinuous() || this.options.gs1) {
                 this.rejectionMessage = message ?? '';
             }
 

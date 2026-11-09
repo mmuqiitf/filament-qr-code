@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Gs1;
 
 use Carbon\CarbonImmutable;
+use Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception;
 
 /**
  * One application identifier from the GS1 Barcode Syntax Dictionary.
@@ -46,10 +47,21 @@ final readonly class AiRule
      */
     public function rejectReason(string $value): ?string
     {
+        return $this->rejection($value)['reason'] ?? null;
+    }
+
+    /**
+     * Why `$value` cannot follow this AI, with the InvalidGs1Exception kind,
+     * or null when it can.
+     *
+     * @return array{kind: string, reason: string}|null
+     */
+    public function rejection(string $value): ?array
+    {
         $length = strlen($value);
 
         if ($length < $this->minLength || $length > $this->maxLength) {
-            return $this->lengthReason($length);
+            return ['kind' => InvalidGs1Exception::LENGTH, 'reason' => $this->lengthReason($length)];
         }
 
         $offset = 0;
@@ -64,16 +76,19 @@ final readonly class AiRule
             $take = $component['min'] === $component['max'] ? $component['min'] : $remaining;
 
             if ($take > $component['max'] || $remaining < $take) {
-                return $this->formatReason();
+                return ['kind' => InvalidGs1Exception::FORMAT, 'reason' => $this->formatReason()];
             }
 
             $slice = substr($value, $offset, $take);
 
             if (! $this->inCharacterSet($component['kind'], $slice)) {
-                return "AI {$this->ai} ({$this->title}) contains a character outside ".$this->characterSetName($component['kind']);
+                return [
+                    'kind' => InvalidGs1Exception::CHARACTER_SET,
+                    'reason' => "AI {$this->ai} ({$this->title}) contains a character outside ".$this->characterSetName($component['kind']),
+                ];
             }
 
-            $lint = $this->lintReason($component['linters'], $slice);
+            $lint = $this->lintRejection($component['linters'], $slice);
 
             if ($lint !== null) {
                 return $lint;
@@ -82,7 +97,7 @@ final readonly class AiRule
             $offset += $take;
         }
 
-        return $offset === $length ? null : $this->formatReason();
+        return $offset === $length ? null : ['kind' => InvalidGs1Exception::FORMAT, 'reason' => $this->formatReason()];
     }
 
     /**
@@ -135,18 +150,22 @@ final readonly class AiRule
 
     /**
      * @param  list<string>  $linters
+     * @return array{kind: string, reason: string}|null
      */
-    private function lintReason(array $linters, string $slice): ?string
+    private function lintRejection(array $linters, string $slice): ?array
     {
         foreach ($linters as $linter) {
             if ($linter === 'csum' && ! CheckDigit::validate($slice)) {
                 $expected = CheckDigit::calculate(substr($slice, 0, -1));
 
-                return "AI {$this->ai} ({$this->title}) has an invalid check digit, expected {$expected}";
+                return [
+                    'kind' => InvalidGs1Exception::CHECK_DIGIT,
+                    'reason' => "AI {$this->ai} ({$this->title}) has an invalid check digit, expected {$expected}",
+                ];
             }
 
             if (in_array($linter, Gs1Date::LINTERS, true) && Gs1Date::resolve($linter, $slice) === null) {
-                return "AI {$this->ai} ({$this->title}) is not a valid date";
+                return ['kind' => InvalidGs1Exception::DATE, 'reason' => "AI {$this->ai} ({$this->title}) is not a valid date"];
             }
         }
 

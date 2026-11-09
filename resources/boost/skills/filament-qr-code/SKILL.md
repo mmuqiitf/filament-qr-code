@@ -11,7 +11,7 @@ Use this skill when a task scans QR codes or barcodes in a Filament panel, throu
 
 ## Steps
 
-1. Pick the component: `QrScanner` for one field, `QrHardwareScannerListener` for a gun-driven station, `QrScanSequence` + `ScanStep` for one camera filling fields in order, `QrCollector` / `QrCollectAction` for lists, and `QrCodeDisplay` / `QrColumn` / `QrEntry` / `DownloadQrAction` for output.
+1. Pick the component: `QrScanner` for one field (`->gs1()` for GS1 labels), `QrHardwareScannerListener` for a gun-driven station, `QrScanSequence` + `ScanStep` for one camera filling fields in order, `QrCollector` / `QrCollectAction` for lists, and `QrCodeDisplay` / `QrColumn` / `QrEntry` / `DownloadQrAction` for output.
 2. Write out the full `use` imports for every package class and enum.
 3. Set `->formats([...])` when the symbology is known.
 4. Add server checks (`lookup()`, `validateUsing()`, `rejectWhen()`, `pipe()`) so bad live scans are rejected, not only checked on submit.
@@ -46,6 +46,16 @@ $gs1 = Gs1::parse($scan); // throws InvalidGs1Exception on a bad check digit or 
 $gtin = $gs1->get('01');
 $expiry = $gs1->date('17');      // ?CarbonImmutable
 $weight = $gs1->decimal('3103'); // ?string, e.g. '1.250'
+</code-snippet>
+
+<code-snippet name="Scan a GS1 label into a receiving form" lang="php">
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
+QrScanner::make('label')
+    ->gs1(
+        fill: ['01' => 'gtin', '17' => 'expires_at', '10' => 'batch'],
+        require: ['01', '17', '10'],
+    ); // stores '(01)…(17)…(10)…'; bad check digits, dates or missing AIs are rejected
 </code-snippet>
 
 ## Avoid

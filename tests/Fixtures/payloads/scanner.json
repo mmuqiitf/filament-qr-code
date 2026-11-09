@@ -27,6 +27,7 @@
         "QR_CODE"
     ],
     "fps": 10,
+    "gs1": false,
     "hardwareScanner": true,
     "hardwareScope": "focus",
     "insecureMessage": "Camera needs a secure context: serve this page over https or open it on localhost, then allow camera access.",

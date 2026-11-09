@@ -24,6 +24,14 @@ export function sanitizeScannedValue(value) {
     return String(value ?? '').replace(/^[\u0000-\u0020\u007F]+|[\u0000-\u0020\u007F]+$/g, '');
 }
 
+/** GS1 group separator (ASCII 29), which scanners send for FNC1 between fields. */
+export const GROUP_SEPARATOR = '\x1D';
+
+function isGroupSeparatorChord(event) {
+    return event.ctrlKey && !event.altKey && !event.metaKey && !event.isComposing
+        && (event.key === ']' || event.code === 'BracketRight' || event.key === GROUP_SEPARATOR);
+}
+
 /**
  * Hardware keyboard scanner interceptor.
  * Detects rapid burst keystrokes typical of USB/Bluetooth barcode guns,
@@ -98,6 +106,16 @@ export function createHardwareScannerHandler({
 
     return {
         handleKeyDown(event) {
+            // Keyboard-wedge guns type the GS1 group separator (FNC1) as Ctrl+].
+            // Only inside a burst, so the shortcut itself is never buffered.
+            if (isGroupSeparatorChord(event) && buffer.length > 0 && !event.repeat) {
+                lastKeyTime = Date.now();
+                buffer += GROUP_SEPARATOR;
+                scheduleFlush();
+
+                return false;
+            }
+
             // IME compositions / modifier-held keys are human typing, not scans.
             if (event.isComposing || event.ctrlKey || event.altKey || event.metaKey) {
                 return false;
@@ -196,13 +214,20 @@ export function qrHardwareScannerListenerComponent({
     scanTimeoutMs = 150,
     autoFocusNext = true,
     fallbackToAnyInput = true,
+    gs1 = false,
+    componentKey = null,
+    scanFailedMessage = null,
 } = {}) {
     // Filament text inputs plus numeric / textarea fallbacks for cashier forms.
     const SCANNABLE_SELECTOR = 'input[type="text"], input[type="search"], input[type="number"], textarea';
 
+    // GS1 mode: the server parses each burst and fills the mapped fields.
+    const checksGs1 = Boolean(gs1 && componentKey);
+
     return {
         registeredFields: fields,
         unregisterTarget: null,
+        rejectionMessage: '',
 
         init() {
             trackGlobalListener(1);
@@ -215,9 +240,9 @@ export function qrHardwareScannerListenerComponent({
                 scope: 'page',
                 fallback: fallbackToAnyInput,
                 detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs, preventSubmit },
-                candidates: () => this.registeredFields
+                candidates: () => (checksGs1 ? [this.$root ?? this.$el] : this.registeredFields
                     .map((fieldName) => this.findFieldElement(fieldName))
-                    .filter((element) => isWritable(element) && !element.value),
+                    .filter((element) => isWritable(element) && !element.value)),
                 ownsFocus: (element) => isTextEntry(element)
                     && (this.registeredFields.length === 0 || this.isRegisteredField(element)),
                 deliver: (scannedValue, { element }) => {
@@ -242,7 +267,42 @@ export function qrHardwareScannerListenerComponent({
             return this.registeredFields.some((fieldName) => findFieldInput(fieldName) === element || fieldName === name);
         },
 
+        async handleGs1Scan(scannedValue) {
+            let result = null;
+
+            try {
+                result = await this.$wire.callSchemaComponentMethod(componentKey, 'handleGs1Scan', { code: scannedValue });
+            } catch (error) {
+                console.error('GS1 scan check failed:', error);
+            }
+
+            if (!result || result.passes !== true) {
+                // Never beep or announce a refused label as scanned.
+                const message = result?.message ?? scanFailedMessage;
+                this.rejectionMessage = message ?? '';
+                window.dispatchEvent(new CustomEvent('qr-scan-rejected', {
+                    detail: { value: scannedValue, field: null, source: 'hardware', message },
+                }));
+
+                return result;
+            }
+
+            this.rejectionMessage = '';
+
+            emitScanFeedback(qrFeedback, { sound, vibrate, beepFrequency, beepDurationMs, vibrateDurationMs });
+
+            window.dispatchEvent(new CustomEvent('qr-hardware-scanned', {
+                detail: { value: result.code ?? scannedValue, field: null, gs1: true },
+            }));
+
+            return result;
+        },
+
         handleGlobalScan(scannedValue, preferredInput = null) {
+            if (checksGs1 && this.$wire) {
+                return this.handleGs1Scan(scannedValue);
+            }
+
             let targetInput = null;
             let targetFieldName = null;
             const active = document.activeElement;
