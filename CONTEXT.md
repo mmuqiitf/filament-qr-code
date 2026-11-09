@@ -18,6 +18,10 @@ _Avoid_: linear QR, 1D QR
 The application identifiers inside a GS1 symbol, read and written with `Gs1::parse()` and `Gs1::build()`. Separate from drawing a GS1-128 barcode, which is not supported yet.
 _Avoid_: GS1 payload, AI blob
 
+**GS1 Check Digit**:
+The mod-10 digit on a GTIN, SSCC or GLN, which is also the EAN-13, EAN-8, UPC-A and ITF-14 check digit. `CheckDigit::calculate()` / `validate()`, and `ValidCheckDigit` on a form field. Not the GMN alphanumeric check character.
+_Avoid_: checksum, CRC
+
 **QR Scanner Field**:
 A Filament form field that captures QR code values through a camera stream, image upload, or manual entry.
 _Avoid_: QR input, barcode box

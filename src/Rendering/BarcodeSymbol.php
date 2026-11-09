@@ -8,6 +8,7 @@ use Com\Tecnick\Barcode\Barcode;
 use Com\Tecnick\Barcode\Exception as TcBarcodeException;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
 use Mmuqiitf\FilamentQrCode\Exceptions\InvalidBarcodeException;
+use Mmuqiitf\FilamentQrCode\Gs1\CheckDigit;
 
 /**
  * A validated, encoded barcode in module units: the bars to draw and the
@@ -65,8 +66,8 @@ final readonly class BarcodeSymbol
                 throw new InvalidBarcodeException($type, $value, "expected {$lengths[0]} or {$lengths[1]} digits, got ".strlen($value));
             }
 
-            if (strlen($value) === $lengths[1] && self::gtinCheckDigit(substr($value, 0, -1)) !== (int) substr($value, -1)) {
-                throw new InvalidBarcodeException($type, $value, 'wrong check digit, expected '.self::gtinCheckDigit(substr($value, 0, -1)));
+            if (strlen($value) === $lengths[1] && ! CheckDigit::validate($value)) {
+                throw new InvalidBarcodeException($type, $value, 'wrong check digit, expected '.CheckDigit::calculate(substr($value, 0, -1)));
             }
 
             return;
@@ -79,17 +80,6 @@ final readonly class BarcodeSymbol
         if ($type === BarcodeType::Code128 && preg_match('/^[\x00-\x7F]+$/', $value) !== 1) {
             throw new InvalidBarcodeException($type, $value, 'Code 128 allows only ASCII characters');
         }
-    }
-
-    /** GS1 mod-10 check digit shared by EAN-13, EAN-8, UPC-A and ITF-14. */
-    private static function gtinCheckDigit(string $digits): int
-    {
-        $sum = 0;
-        foreach (array_reverse(str_split($digits)) as $index => $digit) {
-            $sum += (int) $digit * ($index % 2 === 0 ? 3 : 1);
-        }
-
-        return (10 - $sum % 10) % 10;
     }
 
     private static function libraryType(BarcodeType $type): string

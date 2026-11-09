@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `Gs1::parse()` and `Gs1::build()` read and write GS1 element strings (bracketed, raw scan data with group separators, or an AIM symbology prefix). Length and character set follow the GS1 Barcode Syntax Dictionary (2026-01-27). Check digits, dates and GS1-128 drawing are not part of this. See [GS1 element strings](docs/gs1.md).
+- `Gs1::parse()` and `Gs1::build()` read and write GS1 element strings (bracketed, raw scan data with group separators, or an AIM symbology prefix). Length and character set follow the GS1 Barcode Syntax Dictionary (2026-01-27). Dates and GS1-128 drawing are not part of this. See [GS1 element strings](docs/gs1.md).
+- `CheckDigit::calculate()` and `CheckDigit::validate()` compute the GS1 mod-10 check digit (GTIN, SSCC, GLN, and the EAN-13, EAN-8, UPC-A and ITF-14 digit). `ValidCheckDigit` is the matching validation rule.
 
 ## [1.1.2] - 2026-11-04
 

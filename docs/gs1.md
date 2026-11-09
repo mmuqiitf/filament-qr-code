@@ -46,6 +46,22 @@ $gs1->raw(); // "010952110153000110LOT-1\x1D17251231"
 
 Order is the order of the array. Write every key as a string. `'01'` and `'00'` keep their leading zero only as strings. PHP turns `'10'` and `'8003'` into integer keys on its own; `build()` casts those back.
 
+## Check digit
+
+`CheckDigit` is the GS1 mod-10 digit on a GTIN, SSCC, GLN, GDTI or GSRN. EAN-13, EAN-8, UPC-A and ITF-14 use the same digit. Pass the number, not a whole element string. `Gs1::parse()` does not check it. The GMN alphanumeric check character (AI 8013) is a different algorithm.
+
+```php
+use Mmuqiitf\FilamentQrCode\Gs1\CheckDigit;
+use Mmuqiitf\FilamentQrCode\Validation\ValidCheckDigit;
+
+CheckDigit::calculate('400638133393'); // 1
+CheckDigit::validate('4006381333931'); // true
+
+TextInput::make('gtin')->rule(new ValidCheckDigit);
+```
+
+`calculate()` throws `InvalidArgumentException` when the input is empty or not all digits. `validate()` returns false for that, and when the last digit is wrong.
+
 ## Invalid values
 
 `parse()` and `build()` throw `InvalidGs1Exception`. The message names the AI and the reason, for example a GTIN that is not 14 digits, a batch with a character outside GS1 character set 82, an unknown AI, or the same AI twice. `reason` is the part after the colon.

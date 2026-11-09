@@ -12,6 +12,7 @@ return [
     'collect_description' => 'Pindai kode QR secara terus-menerus untuk menambah item.',
     'done' => 'Selesai',
     'duplicate_codes' => 'Kode duplikat tidak diizinkan.',
+    'invalid_check_digit' => ':attribute harus diakhiri digit periksa GS1 yang valid.',
     'barcode_invalid' => 'Nilai :type tidak valid: :reason.',
     'barcode_no_data' => 'Data barcode tidak tersedia',
     'download' => 'Unduh',

@@ -470,6 +470,15 @@ Getters (read the resolved option; used by the views): `getAccessibleName()`, `g
 | `static build(array $elements): ElementString` | Build an element string from application identifier => value, in order. Write keys as strings (`'01'`, `'10'`). PHP stores `'10'` as an int key; that is cast back. A leading zero (`'01'`, `'00'`) only survives as a string. |
 | `static parse(string $input): ElementString` | Read an element string into application identifiers. |
 
+### `CheckDigit`
+
+`Mmuqiitf\FilamentQrCode\Gs1\CheckDigit` — GS1 mod-10 check digit used by GTIN, SSCC, GLN, GDTI, GSRN and by EAN-13, EAN-8, UPC-A and ITF-14. The GMN alphanumeric check character (AI 8013) is a different algorithm.
+
+| Method | Purpose |
+| --- | --- |
+| `static calculate(string $digits): int` | Check digit for the digits that precede it. |
+| `static validate(string $value): bool` | Whether $value ends with the check digit for the digits before it. |
+
 ### `ElementString`
 
 `Mmuqiitf\FilamentQrCode\Gs1\ElementString` — Application identifiers from one GS1 element string, in the order they were parsed or built. `raw()` is the canonical unbracketed form.
@@ -531,6 +540,11 @@ Getters (read the resolved option; used by the views): `getAccessibleName()`, `g
 ### `DistinctCodes`
 
 `Mmuqiitf\FilamentQrCode\Validation\DistinctCodes`
+
+
+### `ValidCheckDigit`
+
+`Mmuqiitf\FilamentQrCode\Validation\ValidCheckDigit` — The value is digits ending in the GS1 mod-10 check digit. Pass the number itself (a GTIN, SSCC or GLN), not a whole GS1 element string.
 
 
 ### `ScanChecksRule`

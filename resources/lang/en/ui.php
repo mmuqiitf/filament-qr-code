@@ -12,6 +12,7 @@ return [
     'collect_description' => 'Continuously scan QR codes to add items.',
     'done' => 'Done',
     'duplicate_codes' => 'Duplicate codes are not allowed.',
+    'invalid_check_digit' => 'The :attribute must end with a valid GS1 check digit.',
     'barcode_invalid' => 'Invalid :type value: :reason.',
     'barcode_no_data' => 'No barcode data available',
     'download' => 'Download',
