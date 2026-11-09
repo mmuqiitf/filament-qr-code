@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception;
 use Mmuqiitf\FilamentQrCode\Gs1\AiRule;
+use Mmuqiitf\FilamentQrCode\Gs1\CheckDigit;
 use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
 use Mmuqiitf\FilamentQrCode\Gs1\SyntaxTable;
 
@@ -119,11 +120,15 @@ function gs1Sample(AiRule $rule, bool $fillOptional): string
         }
 
         $length = $fillOptional ? $component['max'] : $component['min'];
-        $pad = match ($component['kind']) {
-            'N' => '1',
-            default => 'A',
+        $linters = $component['linters'];
+
+        $value .= match (true) {
+            in_array('csum', $linters, true) => ($body = str_repeat('1', $length - 1)).CheckDigit::calculate($body),
+            in_array('yyyymmdd', $linters, true) => '20261231',
+            in_array('yymmd0', $linters, true), in_array('yymmdd', $linters, true) => '261231',
+            $component['kind'] === 'N' => str_repeat('1', $length),
+            default => str_repeat('A', $length),
         };
-        $value .= str_repeat($pad, $length);
     }
 
     return $value;

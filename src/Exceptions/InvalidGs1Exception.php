@@ -9,7 +9,8 @@ use Throwable;
 
 /**
  * A GS1 element string could not be parsed or built: unknown application
- * identifier, wrong length, a character outside the AI's set, or a duplicate.
+ * identifier, wrong length, a character outside the AI's set, a wrong check
+ * digit, a date that is not on the calendar, or a duplicate.
  */
 class InvalidGs1Exception extends InvalidArgumentException
 {

@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Gs1;
 
+use Carbon\CarbonImmutable;
+
 /**
  * One application identifier from the GS1 Barcode Syntax Dictionary.
  *
- * Length and character set are checked. Linters (check digits, dates, ISO
- * codes) are not.
+ * Length, character set, check digits (`csum`) and calendar dates (`yymmd0`,
+ * `yymmdd`, `yyyymmdd`) are checked. Other linters (ISO codes, times, AI
+ * pairing) are not.
  *
  * @internal Not an extension point. Use Gs1::parse() and Gs1::build().
  */
@@ -26,7 +29,7 @@ final readonly class AiRule
     private const CSET64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
     /**
-     * @param  list<array{optional: bool, kind: string, min: int, max: int}>  $components
+     * @param  list<array{optional: bool, kind: string, min: int, max: int, linters: list<string>}>  $components
      */
     public function __construct(
         public string $ai,
@@ -70,10 +73,110 @@ final readonly class AiRule
                 return "AI {$this->ai} ({$this->title}) contains a character outside ".$this->characterSetName($component['kind']);
             }
 
+            $lint = $this->lintReason($component['linters'], $slice);
+
+            if ($lint !== null) {
+                return $lint;
+            }
+
             $offset += $take;
         }
 
         return $offset === $length ? null : $this->formatReason();
+    }
+
+    /**
+     * The first calendar date in `$value`, or null when this AI carries none.
+     * Time components are ignored. `$value` must already be valid.
+     */
+    public function date(string $value): ?CarbonImmutable
+    {
+        foreach ($this->slices($value) as [$component, $slice]) {
+            foreach ($component['linters'] as $linter) {
+                if (in_array($linter, Gs1Date::LINTERS, true)) {
+                    return Gs1Date::resolve($linter, $slice);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The value of an implied-decimal AI (310n to 369n, 390n to 395n) as an
+     * exact decimal string, or null for any other AI. The last AI digit is
+     * the number of decimal places. For 391n and 393n the leading ISO 4217
+     * currency code is not part of the amount.
+     */
+    public function decimal(string $value): ?string
+    {
+        if (preg_match('/^(?:3[1-6]\d|39[0-5])(\d)$/', $this->ai, $match) !== 1) {
+            return null;
+        }
+
+        $slices = $this->slices($value);
+        $last = end($slices);
+
+        if ($last === false || ctype_digit($last[1]) !== true) {
+            return null;
+        }
+
+        $places = (int) $match[1];
+        $digits = str_pad($last[1], $places + 1, '0', STR_PAD_LEFT);
+        $whole = ltrim(substr($digits, 0, strlen($digits) - $places), '0');
+        $whole = $whole === '' ? '0' : $whole;
+
+        if ($places === 0) {
+            return $whole;
+        }
+
+        return $whole.'.'.substr($digits, -$places);
+    }
+
+    /**
+     * @param  list<string>  $linters
+     */
+    private function lintReason(array $linters, string $slice): ?string
+    {
+        foreach ($linters as $linter) {
+            if ($linter === 'csum' && ! CheckDigit::validate($slice)) {
+                $expected = CheckDigit::calculate(substr($slice, 0, -1));
+
+                return "AI {$this->ai} ({$this->title}) has an invalid check digit, expected {$expected}";
+            }
+
+            if (in_array($linter, Gs1Date::LINTERS, true) && Gs1Date::resolve($linter, $slice) === null) {
+                return "AI {$this->ai} ({$this->title}) is not a valid date";
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Each present component of `$value` with its slice.
+     *
+     * @return list<array{0: array{optional: bool, kind: string, min: int, max: int, linters: list<string>}, 1: string}>
+     */
+    private function slices(string $value): array
+    {
+        $slices = [];
+        $offset = 0;
+        $length = strlen($value);
+
+        foreach ($this->components as $component) {
+            $remaining = $length - $offset;
+
+            if ($remaining <= 0) {
+                break;
+            }
+
+            $take = $component['min'] === $component['max'] ? min($component['min'], $remaining) : $remaining;
+            $slices[] = [$component, substr($value, $offset, $take)];
+            $offset += $take;
+        }
+
+        return $slices;
     }
 
     private function lengthReason(int $length): string
