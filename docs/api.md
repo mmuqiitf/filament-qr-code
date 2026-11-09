@@ -486,6 +486,8 @@ Getters (read the resolved option; used by the views): `getAccessibleName()`, `g
 | Method | Purpose |
 | --- | --- |
 | `bracketed(): string` | Bracketed element string, such as `(01)09521101530001(10)LOT-1`. |
+| `date(string $ai): ?CarbonImmutable` | The date for an application identifier, or null when it is absent or carries no date. See Element::date(). |
+| `decimal(string $ai): ?string` | The exact decimal string for an application identifier, or null when it is absent or has no implied decimal point. See Element::decimal(). |
 | `elements(): array` | Application identifiers in element order. |
 | `get(string $ai): ?string` | The value for an application identifier, or null when it is absent. |
 | `raw(): string` | Unbracketed element string. A group separator (ASCII 29) follows a variable-length AI that is not last. Fixed-length AIs are concatenated. |
@@ -493,12 +495,16 @@ Getters (read the resolved option; used by the views): `getAccessibleName()`, `g
 
 ### `Element`
 
-`Mmuqiitf\FilamentQrCode\Gs1\Element` — One application identifier and its value from a GS1 element string.
+`Mmuqiitf\FilamentQrCode\Gs1\Element` — One application identifier and its value from a GS1 element string. `value` is always the raw string; `date()` and `decimal()` read it.
 
+| Method | Purpose |
+| --- | --- |
+| `date(): ?CarbonImmutable` | The first date in the value at the start of the day, or null when the AI carries no date. Day `00` is the last day of the month. A two-digit year uses the GS1 sliding window. Times are ignored. |
+| `decimal(): ?string` | The value as an exact decimal string, such as `'1.250'` for `(3103)001250`, or null when the AI has no implied decimal point. Applies to 310n to 369n and 390n to 395n; the currency code of 391n and 393n is left out. |
 
 ### `InvalidGs1Exception`
 
-`Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception` — A GS1 element string could not be parsed or built: unknown application identifier, wrong length, a character outside the AI's set, or a duplicate.
+`Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception` — A GS1 element string could not be parsed or built: unknown application identifier, wrong length, a character outside the AI's set, a wrong check digit, a date that is not on the calendar, or a duplicate.
 
 
 ### `InvalidBarcodeException`

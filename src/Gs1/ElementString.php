@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Gs1;
 
+use Carbon\CarbonImmutable;
+
 /**
  * Application identifiers from one GS1 element string, in the order they
  * were parsed or built. `raw()` is the canonical unbracketed form.
@@ -35,13 +37,25 @@ final readonly class ElementString
      */
     public function get(string $ai): ?string
     {
-        foreach ($this->elements as $element) {
-            if ($element->ai === $ai) {
-                return $element->value;
-            }
-        }
+        return $this->element($ai)?->value;
+    }
 
-        return null;
+    /**
+     * The date for an application identifier, or null when it is absent or
+     * carries no date. See Element::date().
+     */
+    public function date(string $ai): ?CarbonImmutable
+    {
+        return $this->element($ai)?->date();
+    }
+
+    /**
+     * The exact decimal string for an application identifier, or null when
+     * it is absent or has no implied decimal point. See Element::decimal().
+     */
+    public function decimal(string $ai): ?string
+    {
+        return $this->element($ai)?->decimal();
     }
 
     /**
@@ -81,5 +95,16 @@ final readonly class ElementString
         }
 
         return $out;
+    }
+
+    private function element(string $ai): ?Element
+    {
+        foreach ($this->elements as $element) {
+            if ($element->ai === $ai) {
+                return $element;
+            }
+        }
+
+        return null;
     }
 }

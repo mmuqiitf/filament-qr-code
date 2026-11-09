@@ -42,7 +42,10 @@ QrScanSequence::make()
 <code-snippet name="GS1 element string" lang="php">
 use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
 
-$gtin = Gs1::parse($scan)->get('01');
+$gs1 = Gs1::parse($scan); // throws InvalidGs1Exception on a bad check digit or date
+$gtin = $gs1->get('01');
+$expiry = $gs1->date('17');      // ?CarbonImmutable
+$weight = $gs1->decimal('3103'); // ?string, e.g. '1.250'
 </code-snippet>
 
 ## Avoid

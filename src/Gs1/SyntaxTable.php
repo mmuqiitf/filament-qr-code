@@ -165,7 +165,7 @@ final class SyntaxTable
     }
 
     /**
-     * @return array{optional: bool, kind: string, min: int, max: int}
+     * @return array{optional: bool, kind: string, min: int, max: int, linters: list<string>}
      */
     private static function component(string $token, int $lineNumber): array
     {
@@ -182,12 +182,14 @@ final class SyntaxTable
 
         $length = $match[3];
         $variable = str_starts_with($length, '..');
+        $linters = array_values(array_filter(explode(',', substr($token, strlen($match[0]))), fn (string $linter): bool => $linter !== ''));
 
         return [
             'optional' => $open,
             'kind' => $match[2],
             'min' => $variable ? 1 : (int) $length,
             'max' => $variable ? (int) substr($length, 2) : (int) $length,
+            'linters' => $linters,
         ];
     }
 }

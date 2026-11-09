@@ -12,8 +12,9 @@ use Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception;
  * Accepts the bracketed form `(01)09521101530001(10)LOT-1`, the unbracketed
  * form with group separators, and an optional AIM symbology identifier
  * (`]C1`, `]e0`, `]d2`, `]Q3`). Length and character set come from the GS1
- * Barcode Syntax Dictionary. Check digits, dates and AI pairing rules are
- * not applied.
+ * Barcode Syntax Dictionary, as do check digits (GS1 mod-10 on `csum`
+ * components) and calendar dates. Unknown AIs are rejected. ISO codes, times
+ * and AI pairing rules are not applied.
  */
 final class Gs1
 {
