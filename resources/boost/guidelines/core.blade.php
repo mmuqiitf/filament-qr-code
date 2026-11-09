@@ -9,6 +9,7 @@
 - One camera filling many fields in order: `Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence` with `Mmuqiitf\FilamentQrCode\Support\ScanStep` (Scan Sequence Container).
 - Many scans appended to one list: `Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector` or `Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction` (Batch Collector Scanning).
 - Showing QR codes: `QrCodeDisplay` (forms), `QrColumn` (tables), `QrEntry` (infolists), `DownloadQrAction` / `DownloadQrBulkAction`; in PHP the `Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode` facade and `Mmuqiitf\FilamentQrCode\Support\QrPayload`.
+- Showing 1D barcodes: `BarcodeDisplay` and `BarcodeEntry` embed a data URI. `BarcodeColumn` loads the signed `filamentQrCode.barcode` route.
 - GS1 application identifiers: `Mmuqiitf\FilamentQrCode\Gs1\Gs1::parse()` and `Gs1::build()`. Draw the element string with `BarcodeType::Gs1128` (`type('gs1-128')`). The GS1 mod-10 check digit is `Mmuqiitf\FilamentQrCode\Gs1\CheckDigit` and the rule `Mmuqiitf\FilamentQrCode\Validation\ValidCheckDigit`.
 
 ### Rules

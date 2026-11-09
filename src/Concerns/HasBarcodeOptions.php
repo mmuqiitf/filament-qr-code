@@ -9,6 +9,7 @@ use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 use Mmuqiitf\FilamentQrCode\Exceptions\InvalidBarcodeException;
 use Mmuqiitf\FilamentQrCode\Services\BarcodeService;
+use Mmuqiitf\FilamentQrCode\Support\BarcodeRenderSpec;
 
 /**
  * Shared setters and rendering for BarcodeDisplay, BarcodeEntry and
@@ -151,24 +152,35 @@ trait HasBarcodeOptions
      */
     public function getBarcodeService(): BarcodeService
     {
+        return $this->getBarcodeRenderSpec()->toService()->generate((string) $this->getBarcodeData());
+    }
+
+    /**
+     * Resolved draw options. The column signs them; forms and infolists render them inline.
+     *
+     * @internal Used by the package views.
+     */
+    public function getBarcodeRenderSpec(): BarcodeRenderSpec
+    {
         $format = $this->evaluate($this->format);
         $margin = $this->evaluate($this->barcodeMargin);
 
-        return BarcodeService::make()
-            ->type($this->getType())
-            ->format($format instanceof QrFormat ? $format : (string) $format)
-            ->barWidth((int) ($this->evaluate($this->barWidth) ?? $this->getDefaultBarWidth()))
-            ->height((int) ($this->evaluate($this->barHeight) ?? $this->getDefaultBarHeight()))
-            ->margin($margin === null ? null : (int) $margin)
-            ->color((string) $this->evaluate($this->foregroundColor))
-            ->backgroundColor((string) $this->evaluate($this->backgroundColor))
-            ->showText((bool) ($this->evaluate($this->barcodeShowText) ?? $this->getDefaultShowText()))
-            ->generate((string) $this->getBarcodeData());
+        return new BarcodeRenderSpec(
+            type: $this->getType(),
+            format: $format instanceof QrFormat ? $format : (QrFormat::tryFrom(strtolower((string) $format)) ?? QrFormat::Svg),
+            barWidth: (int) ($this->evaluate($this->barWidth) ?? $this->getDefaultBarWidth()),
+            height: (int) ($this->evaluate($this->barHeight) ?? $this->getDefaultBarHeight()),
+            margin: $margin === null ? null : (int) $margin,
+            foreground: (string) $this->evaluate($this->foregroundColor),
+            background: (string) $this->evaluate($this->backgroundColor),
+            showText: (bool) ($this->evaluate($this->barcodeShowText) ?? $this->getDefaultShowText()),
+        );
     }
 
     /**
      * View data: the image data URI ('' when empty or invalid), its alt text,
      * file extension and the translated error for an invalid value.
+     * BarcodeColumn replaces the data URI with a signed image URL.
      *
      * @internal Used by the package views.
      *
@@ -178,16 +190,13 @@ trait HasBarcodeOptions
     {
         $data = $this->getBarcodeData();
         if ($data === null || $data === '') {
-            return ['uri' => '', 'alt' => '', 'extension' => 'svg', 'error' => null];
+            return $this->emptyBarcodeRender();
         }
 
         try {
             $service = $this->getBarcodeService();
         } catch (InvalidBarcodeException $e) {
-            return ['uri' => '', 'alt' => '', 'extension' => 'svg', 'error' => __('filament-qr-code::ui.barcode_invalid', [
-                'type' => $e->type->getLabel(),
-                'reason' => $e->reason,
-            ])];
+            return $this->invalidBarcodeRender($e);
         }
 
         return [
@@ -196,6 +205,25 @@ trait HasBarcodeOptions
             'extension' => $service->getFormat()->getExtension(),
             'error' => null,
         ];
+    }
+
+    /**
+     * @return array{uri: string, alt: string, extension: string, error: null}
+     */
+    protected function emptyBarcodeRender(): array
+    {
+        return ['uri' => '', 'alt' => '', 'extension' => 'svg', 'error' => null];
+    }
+
+    /**
+     * @return array{uri: string, alt: string, extension: string, error: string}
+     */
+    protected function invalidBarcodeRender(InvalidBarcodeException $e): array
+    {
+        return ['uri' => '', 'alt' => '', 'extension' => 'svg', 'error' => __('filament-qr-code::ui.barcode_invalid', [
+            'type' => $e->type->getLabel(),
+            'reason' => $e->reason,
+        ])];
     }
 
     protected function getDefaultBarWidth(): int

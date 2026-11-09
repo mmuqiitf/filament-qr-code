@@ -135,8 +135,8 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 
 | Key             | Default | Meaning |
 | --------------- | ------- | ------- |
-| `ttl`           | `null`  | minutes a lazy-preview URL stays valid (`temporarySignedRoute`); also caps `Cache-Control: private` `max-age` at the TTL (never above a day). `null` = never expires |
-| `throttle`      | `null`  | rate limit for the image route, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
+| `ttl`           | `null`  | minutes a signed image URL stays valid (`temporarySignedRoute`) for QR previews and barcode columns; also caps `Cache-Control: private` `max-age` at the TTL (never above a day). `null` = never expires |
+| `throttle`      | `null`  | shared rate limit for both image routes, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
 | `strict_colors` | `false` | require `#rrggbb` colours on the image route (default accepts `#rgb`, `#rrggbb` or bare hex); anything else gets 422 |
 
 ### `audit`

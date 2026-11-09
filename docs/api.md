@@ -378,7 +378,7 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 
 ### `BarcodeColumn`
 
-`Mmuqiitf\FilamentQrCode\Tables\Columns\BarcodeColumn` — Table column that shows a compact 1D barcode of its state or data(): bar width 1, 32px high and no text line unless configured.
+`Mmuqiitf\FilamentQrCode\Tables\Columns\BarcodeColumn` — Table column that shows a compact 1D barcode of its state or data() through the signed filamentQrCode.barcode route. Defaults are bar width 1, 32px high and no text line.
 
 | Method | Purpose |
 | --- | --- |

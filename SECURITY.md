@@ -15,7 +15,7 @@ Only the 1.x release line receives security fixes. 0.x is no longer supported, w
 
 Reports are especially welcome for:
 
-- **The signed image route** (`filamentQrCode.image`): signature or `ttl` expiry bypasses, rendering unsigned or tampered parameters, `throttle` bypasses, and cache or header issues that leak a render.
+- **The signed image routes** (`filamentQrCode.image` for QR previews, `filamentQrCode.barcode` for table barcodes): signature or `ttl` expiry bypasses, rendering unsigned or tampered parameters, `throttle` bypasses, and cache or header issues that leak a render.
 - **Logo paths** (`logo()`, `qrLogo()` and `qr-code.generator.logo_base_paths`): reading files outside the configured base paths, path traversal, or embedding non-image files.
 - **Scanned input handling**: scanned or uploaded code values reaching HTML, JavaScript or the database unescaped or unvalidated (XSS, injection), hardware-scanner input bypassing field validation, or camera and image-upload decoding that can be abused.
 

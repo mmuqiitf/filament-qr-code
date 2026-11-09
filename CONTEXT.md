@@ -11,7 +11,7 @@ A backend service and UI component that encodes data into QR code images (SVG/PN
 _Avoid_: QR maker, barcode creator
 
 **Barcode Generator**:
-`BarcodeService` and the `BarcodeDisplay`, `BarcodeEntry` and `BarcodeColumn` components, which encode data into 1D barcodes (`BarcodeType`: Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128) via tc-lib-barcode. Separate from `BarcodeFormat`, which lists formats the scanner decodes. Start one with `BarcodeService::make()` or `FilamentQrCode::barcode()`. Barcodes render as data URIs; a signed barcode image route is planned for 1.2.
+`BarcodeService` and the `BarcodeDisplay`, `BarcodeEntry` and `BarcodeColumn` components, which encode data into 1D barcodes (`BarcodeType`: Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128) via tc-lib-barcode. Separate from `BarcodeFormat`, which lists formats the scanner decodes. Start one with `BarcodeService::make()` or `FilamentQrCode::barcode()`. Forms and infolists embed a data URI. `BarcodeColumn` loads the image from the signed `filamentQrCode.barcode` route.
 _Avoid_: linear QR, 1D QR
 
 **GS1 Element String**:

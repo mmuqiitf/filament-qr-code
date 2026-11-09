@@ -13,7 +13,7 @@ Scanned values write straight into the Livewire form state. Lookups and validati
 - [Scanning](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/scanning.md): QR Scanner Field, Station Listener, Scan Sequence Container, server checks, continuous mode, runtime control
 - [Batch collecting](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/collecting.md): `QrCollector` and `QrCollectAction`
 - [Generating](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/generating.md): display components, download actions, ZIP export, facade, payload builders
-- [Barcodes](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/barcodes.md): Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14 and GS1-128 in forms, infolists, tables and PHP
+- [Barcodes](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/barcodes.md): Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14 and GS1-128 in forms, infolists, tables and PHP. Table cells use the signed `filamentQrCode.barcode` route
 - [GS1 element strings](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/gs1.md): `Gs1::parse()` and `Gs1::build()` for application identifiers
 - [Customizing](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/customizing.md): lookups, normalization, check stages, hooks, auditing, macros, styling, views
 - [Extension points](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/extending.md): every seam in one table

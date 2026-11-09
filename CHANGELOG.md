@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Gs1::parse()` and `Gs1::build()` read and write GS1 element strings (bracketed, raw scan data with group separators, or an AIM symbology prefix). Length and character set follow the GS1 Barcode Syntax Dictionary (2026-01-27). Dates and GS1-128 drawing are not part of this. See [GS1 element strings](docs/gs1.md).
 - `CheckDigit::calculate()` and `CheckDigit::validate()` compute the GS1 mod-10 check digit (GTIN, SSCC, GLN, and the EAN-13, EAN-8, UPC-A and ITF-14 digit). `ValidCheckDigit` is the matching validation rule.
 - GS1-128 barcodes: `BarcodeType::Gs1128` (`type('gs1-128')`) on `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`. Pass a bracketed element string, raw scan data, or an AIM prefix such as `]C1`. The human-readable text is the bracketed form. Check digits are not added, and one symbol holds at most 48 data characters.
+- Signed barcode images: `BarcodeColumn` loads `/filament-qr-code/barcode-image` (`filamentQrCode.barcode`) instead of embedding a data URI. `BarcodeDisplay` and `BarcodeEntry` still embed the image. The route shares the QR preview route's signature, `image_route` ttl, throttle and strict colours. Invalid input, and a value the symbology rejects, returns 422.
 
 ## [1.1.2] - 2026-11-04
 

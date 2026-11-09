@@ -217,7 +217,7 @@ php artisan qr-code:doctor
 
 ## Security notes
 
-Lazy modal previews are served by the signed `filamentQrCode.image` route. Signatures already stop tampering; if QR data or logo paths can come from users, turn on the opt-in hardening (all off by default): `generator.logo_base_paths` limits logos to listed directories, and `image_route.ttl` / `throttle` / `strict_colors` add expiring URLs, a rate limit and `#rrggbb`-only colours. See [Image route security](docs/generating.md#image-route-security).
+Lazy modal previews are served by the signed `filamentQrCode.image` route, and barcode table cells by `filamentQrCode.barcode`. Signatures already stop tampering; if QR data or logo paths can come from users, turn on the opt-in hardening (all off by default): `generator.logo_base_paths` limits logos to listed directories, and `image_route.ttl` / `throttle` / `strict_colors` add expiring URLs, a rate limit and `#rrggbb`-only colours. Both image routes share those settings. See [Image route security](docs/generating.md#image-route-security).
 
 ## Reporting issues
 

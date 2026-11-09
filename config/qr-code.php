@@ -172,8 +172,9 @@ return [
     | Image Route Hardening
     |--------------------------------------------------------------------------
     |
-    | Opt-in limits for the signed filamentQrCode.image route that serves
-    | lazy modal previews. Everything is off by default.
+    | Opt-in limits for the signed image routes. filamentQrCode.image serves
+    | lazy QR previews. filamentQrCode.barcode serves table barcode columns.
+    | Both share these settings. Everything is off by default.
     |
     */
     'image_route' => [

@@ -23,10 +23,19 @@ dataset('barcode components', [
 it('renders an accessible SVG by default', function ($component) {
     $render = $component->type(BarcodeType::Ean13)->data('400638133393')->getBarcodeRender();
 
-    expect($render['uri'])->toStartWith('data:image/svg+xml;base64,')
-        ->and($render['alt'])->toBe('EAN-13 barcode: 4006381333931')
+    expect($render['alt'])->toBe('EAN-13 barcode: 4006381333931')
         ->and($render['error'])->toBeNull()
         ->and($render['extension'])->toBe('svg');
+
+    if ($component instanceof BarcodeColumn) {
+        expect($render['uri'])->toContain('filament-qr-code/barcode-image')
+            ->and($render['uri'])->toContain('signature=');
+        $this->get($render['uri'])->assertOk()->assertHeader('Content-Type', 'image/svg+xml');
+
+        return;
+    }
+
+    expect($render['uri'])->toStartWith('data:image/svg+xml;base64,');
 })->with('barcode components');
 
 it('applies every option', function ($component) {
@@ -34,9 +43,12 @@ it('applies every option', function ($component) {
         ->barWidth(3)->height(50)->margin(4)->color('#1d4ed8')->backgroundColor('#fef3c7')->showText(false)->downloadable(false);
 
     $render = $component->getBarcodeRender();
-    $image = imagecreatefromstring(base64_decode(substr($render['uri'], strlen('data:image/png;base64,'))));
+    $png = str_starts_with($render['uri'], 'data:image/png;base64,')
+        ? base64_decode(substr($render['uri'], strlen('data:image/png;base64,')))
+        : $this->get($render['uri'])->assertOk()->assertHeader('Content-Type', 'image/png')->getContent();
+    $image = imagecreatefromstring($png);
 
-    expect($render['uri'])->toStartWith('data:image/png;base64,')
+    expect($image)->toBeInstanceOf(GdImage::class)
         ->and($render['extension'])->toBe('png')
         ->and(imagesy($image))->toBe(50)
         ->and($component->isDownloadable())->toBeFalse()

@@ -226,7 +226,7 @@ php artisan qr-code:doctor
 
 ## Security notes
 
-Lazy modal previews are served by the signed `filamentQrCode.image` route. Signatures already stop tampering; if QR data or logo paths can come from users, turn on the opt-in hardening (all off by default): `generator.logo_base_paths` limits logos to listed directories, and `image_route.ttl` / `throttle` / `strict_colors` add expiring URLs, a rate limit and `#rrggbb`-only colours. See [Image route security](docs/generating.md#image-route-security).
+Lazy modal previews are served by the signed `filamentQrCode.image` route, and barcode table cells by `filamentQrCode.barcode`. Signatures already stop tampering; if QR data or logo paths can come from users, turn on the opt-in hardening (all off by default): `generator.logo_base_paths` limits logos to listed directories, and `image_route.ttl` / `throttle` / `strict_colors` add expiring URLs, a rate limit and `#rrggbb`-only colours. Both image routes share those settings. See [Image route security](docs/generating.md#image-route-security).
 
 ## Reporting issues
 
@@ -1055,7 +1055,7 @@ Thumbnails and modal previews share a capped in-process render cache (clear it w
 
 #### Image route security
 
-The signed `filamentQrCode.image` route is safe by default (signatures stop tampering), and 1.0.1 adds opt-in hardening for apps where QR data or logo paths come from users. Invalid query input (missing `data`, out-of-range `size`, unknown `format` or `ec`, unparseable colours) always gets a 422, never a redirect or a 500; colours may be `#rgb`, `#rrggbb` or bare hex. Every hardening key is off by default, so upgrading changes nothing until you set one:
+The signed `filamentQrCode.image` route is safe by default (signatures stop tampering), and 1.0.1 adds opt-in hardening for apps where QR data or logo paths come from users. `BarcodeColumn` uses `filamentQrCode.barcode` and the same `image_route` settings; see [Signed column images](barcodes.md#signed-column-images). Invalid query input (missing `data`, out-of-range `size`, unknown `format` or `ec`, unparseable colours) always gets a 422, never a redirect or a 500; colours may be `#rgb`, `#rrggbb` or bare hex. Every hardening key is off by default, so upgrading changes nothing until you set one:
 
 ```php
 // config/qr-code.php
@@ -1296,7 +1296,24 @@ $uri = FilamentQrCode::barcode()->type('ean8')->generate('9638507')->toDataUri()
 
 Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`), and `BarcodeService::flushRenderCache()` clears it.
 
-Barcodes have no signed image route yet: components embed the image as a data URI. A barcode image route is planned for 1.2.
+## Signed column images
+
+`BarcodeColumn` does not embed the image. The cell `<img>` loads `filamentQrCode.barcode` (`/filament-qr-code/barcode-image`), a signed URL of the value and the draw options (type, format, bar width, height, margin, colours, text). `BarcodeDisplay` and `BarcodeEntry` still embed a data URI. One table page then sends a short URL per row instead of a base64 SVG.
+
+The route is outside the `web` middleware group, same as the QR preview route, so a preview does not start a session. Responses send `Cache-Control: private` and `X-Content-Type-Options: nosniff`. `qr-code.image_route` `ttl`, `throttle` and `strict_colors` apply to both routes, and they share one throttle bucket. A missing or expired signature is 403. A value the symbology rejects, or a query outside the limits below, is 422.
+
+| Query | Default | Limit |
+| --- | --- | --- |
+| `data` | required | 2000 characters |
+| `type` | `code128` | a `BarcodeType` value (`ean13`, `gs1-128`, …) |
+| `format` | `svg` | `svg` or `png` |
+| `barWidth` | `2` | 1–64 |
+| `height` | `60` | 10–2000 |
+| `margin` | the type's quiet zone | 0–100 |
+| `showText` | `1` | boolean |
+| `foreground`, `background` | `#000000`, `#ffffff` | `#rgb`, `#rrggbb` or bare hex; `#rrggbb` only when `strict_colors` is on |
+
+The column signs its own defaults (bar width 1, height 32, text off, margin resolved). Check digits are still applied by the symbology, and the alt text includes the digit. GS1-128 accepts the same bracketed, raw and `]C1` strings as `BarcodeService`.
 
 
 ---
@@ -1902,8 +1919,8 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 
 | Key             | Default | Meaning |
 | --------------- | ------- | ------- |
-| `ttl`           | `null`  | minutes a lazy-preview URL stays valid (`temporarySignedRoute`); also caps `Cache-Control: private` `max-age` at the TTL (never above a day). `null` = never expires |
-| `throttle`      | `null`  | rate limit for the image route, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
+| `ttl`           | `null`  | minutes a signed image URL stays valid (`temporarySignedRoute`) for QR previews and barcode columns; also caps `Cache-Control: private` `max-age` at the TTL (never above a day). `null` = never expires |
+| `throttle`      | `null`  | shared rate limit for both image routes, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
 | `strict_colors` | `false` | require `#rrggbb` colours on the image route (default accepts `#rgb`, `#rrggbb` or bare hex); anything else gets 422 |
 
 ### `audit`
@@ -2033,6 +2050,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | generate an SVG/PNG in PHP | `FilamentQrCode` facade or `QrCodeService` | `…\Facades`, `…\Services` |
 | read or write GS1 application identifiers | `Gs1::parse()` / `Gs1::build()` | `Mmuqiitf\FilamentQrCode\Gs1` |
 | draw a GS1-128 barcode | `BarcodeType::Gs1128` (`type('gs1-128')`) | `Mmuqiitf\FilamentQrCode\Enums` |
+| show a 1D barcode in a table | `BarcodeColumn` (signed `filamentQrCode.barcode` image) | `…\Tables\Columns` |
 | check a GTIN, SSCC, GLN or EAN check digit | `CheckDigit` / `ValidCheckDigit` | `…\Gs1`, `…\Validation` |
 | a Wi-Fi, vCard, mailto, SMS or geo payload | `QrPayload` | `Mmuqiitf\FilamentQrCode\Support` |
 
@@ -3352,7 +3370,7 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 
 ### `BarcodeColumn`
 
-`Mmuqiitf\FilamentQrCode\Tables\Columns\BarcodeColumn` — Table column that shows a compact 1D barcode of its state or data(): bar width 1, 32px high and no text line unless configured.
+`Mmuqiitf\FilamentQrCode\Tables\Columns\BarcodeColumn` — Table column that shows a compact 1D barcode of its state or data() through the signed filamentQrCode.barcode route. Defaults are bar width 1, 32px high and no text line.
 
 | Method | Purpose |
 | --- | --- |

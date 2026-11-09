@@ -133,13 +133,22 @@ class QrCodeDoctorCommand extends Command
     private function checkSignedRoute(): int
     {
         try {
-            $hasRoute = app('router')->has('filamentQrCode.image');
+            $router = app('router');
+            $hasQr = $router->has('filamentQrCode.image');
+            $hasBarcode = $router->has('filamentQrCode.barcode');
         } catch (Throwable) {
-            $hasRoute = false;
+            $hasQr = false;
+            $hasBarcode = false;
         }
 
-        if (! $hasRoute) {
-            $this->error('  [FAIL] Route filamentQrCode.image is not registered: lazy table previews will fall back to inline data-URIs.');
+        if (! $hasQr || ! $hasBarcode) {
+            if (! $hasQr) {
+                $this->error('  [FAIL] Route filamentQrCode.image is not registered: lazy table previews will fall back to inline data-URIs.');
+            }
+
+            if (! $hasBarcode) {
+                $this->error('  [FAIL] Route filamentQrCode.barcode is not registered: barcode columns will fall back to inline data-URIs.');
+            }
 
             return 1;
         }
@@ -150,7 +159,7 @@ class QrCodeDoctorCommand extends Command
             return 1;
         }
 
-        $this->line('  [PASS] Signed preview route registered with an app key.');
+        $this->line('  [PASS] Signed preview route registered with an app key (QR and barcode).');
 
         return 0;
     }

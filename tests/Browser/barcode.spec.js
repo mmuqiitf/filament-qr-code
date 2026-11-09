@@ -29,5 +29,5 @@ test('BarcodeColumn renders a compact barcode in the table', async ({ page }) =>
 
     const image = page.getByRole('img', { name: 'Code 128 barcode: SKU-TABLE-1', exact: true });
     await expect(image).toBeVisible();
-    expect(await image.evaluate((img) => img.naturalHeight)).toBe(32);
+    await expect.poll(async () => image.evaluate((img) => (img.complete && img.naturalWidth > 0 ? img.naturalHeight : 0))).toBe(32);
 });

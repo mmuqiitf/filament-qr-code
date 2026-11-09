@@ -18,6 +18,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | generate an SVG/PNG in PHP | `FilamentQrCode` facade or `QrCodeService` | `…\Facades`, `…\Services` |
 | read or write GS1 application identifiers | `Gs1::parse()` / `Gs1::build()` | `Mmuqiitf\FilamentQrCode\Gs1` |
 | draw a GS1-128 barcode | `BarcodeType::Gs1128` (`type('gs1-128')`) | `Mmuqiitf\FilamentQrCode\Enums` |
+| show a 1D barcode in a table | `BarcodeColumn` (signed `filamentQrCode.barcode` image) | `…\Tables\Columns` |
 | check a GTIN, SSCC, GLN or EAN check digit | `CheckDigit` / `ValidCheckDigit` | `…\Gs1`, `…\Validation` |
 | a Wi-Fi, vCard, mailto, SMS or geo payload | `QrPayload` | `Mmuqiitf\FilamentQrCode\Support` |
 

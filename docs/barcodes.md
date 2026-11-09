@@ -100,4 +100,21 @@ $uri = FilamentQrCode::barcode()->type('ean8')->generate('9638507')->toDataUri()
 
 Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`), and `BarcodeService::flushRenderCache()` clears it.
 
-Barcodes have no signed image route yet: components embed the image as a data URI. A barcode image route is planned for 1.2.
+## Signed column images
+
+`BarcodeColumn` does not embed the image. The cell `<img>` loads `filamentQrCode.barcode` (`/filament-qr-code/barcode-image`), a signed URL of the value and the draw options (type, format, bar width, height, margin, colours, text). `BarcodeDisplay` and `BarcodeEntry` still embed a data URI. One table page then sends a short URL per row instead of a base64 SVG.
+
+The route is outside the `web` middleware group, same as the QR preview route, so a preview does not start a session. Responses send `Cache-Control: private` and `X-Content-Type-Options: nosniff`. `qr-code.image_route` `ttl`, `throttle` and `strict_colors` apply to both routes, and they share one throttle bucket. A missing or expired signature is 403. A value the symbology rejects, or a query outside the limits below, is 422.
+
+| Query | Default | Limit |
+| --- | --- | --- |
+| `data` | required | 2000 characters |
+| `type` | `code128` | a `BarcodeType` value (`ean13`, `gs1-128`, …) |
+| `format` | `svg` | `svg` or `png` |
+| `barWidth` | `2` | 1–64 |
+| `height` | `60` | 10–2000 |
+| `margin` | the type's quiet zone | 0–100 |
+| `showText` | `1` | boolean |
+| `foreground`, `background` | `#000000`, `#ffffff` | `#rgb`, `#rrggbb` or bare hex; `#rrggbb` only when `strict_colors` is on |
+
+The column signs its own defaults (bar width 1, height 32, text off, margin resolved). Check digits are still applied by the symbology, and the alt text includes the digit. GS1-128 accepts the same bracketed, raw and `]C1` strings as `BarcodeService`.

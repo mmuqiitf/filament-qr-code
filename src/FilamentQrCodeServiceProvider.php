@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Mmuqiitf\FilamentQrCode\Console\Commands;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
+use Mmuqiitf\FilamentQrCode\Http\Controllers\BarcodeImageController;
 use Mmuqiitf\FilamentQrCode\Http\Controllers\QrImageController;
 use Mmuqiitf\FilamentQrCode\Http\Middleware\ThrottleQrImage;
 use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScanListener;
@@ -102,6 +103,8 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
         Route::middleware(['signed', ThrottleQrImage::class])->group(function (): void {
             Route::get('filament-qr-code/qr-image', QrImageController::class)
                 ->name('filamentQrCode.image');
+            Route::get('filament-qr-code/barcode-image', BarcodeImageController::class)
+                ->name('filamentQrCode.barcode');
         });
     }
 }
