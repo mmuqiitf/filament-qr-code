@@ -161,7 +161,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
 - **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14 and GS1-128](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
-- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers. Draw them with `BarcodeType::Gs1128`.
+- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128`.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
 - **Every public method**: the generated [API map](docs/api.md).
 
