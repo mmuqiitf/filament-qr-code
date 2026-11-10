@@ -98,7 +98,7 @@ When no target is found, nothing is written and the listener dispatches a `qr-sc
 <div x-on:qr-scan-unrouted.window="alert(`No field for ${$event.detail.value}`)"></div>
 ```
 
-For GS1 pallet and case labels, `QrHardwareScannerListener::make()->gs1(fill: [...], require: [...])` sends every burst to the server instead of into an input, fills the mapped fields and shows a rejection under the listener. See [Scanning GS1 labels](gs1.md#hardware-scanners).
+For GS1 pallet and case labels, `QrHardwareScannerListener::make()->gs1(fill: [...], require: [...], store: 'label')` sends every burst to the server instead of into an input, fills the mapped fields (and the bracketed label into `store`) and shows a rejection under the listener. See [Scanning GS1 labels](gs1.md#hardware-scanners).
 
 Fields are matched by their exact name — `data-field-name`, `name`, `id`, or a `wire:model` path equal to the name or ending in `.<name>` — so `sku` never matches `parent_sku`, and nested names such as `items.0.sku` work in `make([...])` and `nextField()`.
 
@@ -385,6 +385,7 @@ QrScanner::make('sku')
 - Accepted live scans fire `ScanAccepted` and `QrCodeScanned` (with `source` `camera`, `hardware` or `upload`); rejected ones fire `ScanRejected`. With `qr-code.audit.enabled`, accepted live scans are logged.
 - If `onScanned` throws, the field keeps its previous value, the error is reported, and the scan is rejected with the generic message.
 - Configuring `onScanned` or `onRejected` alone makes the field call the server on every scan and enables the default cooldown.
+- In single mode a rejected scan's message goes into the form's error bag under the field (`data.sku`), so it shows as the field's error in the server-rendered HTML and `assertHasErrors(['data.sku'])` sees it. The next accepted scan clears it. Calling `addError()` in `onRejected` is no longer needed. Continuous mode shows rejections in its status line instead.
 
 ### In the browser
 

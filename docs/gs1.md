@@ -172,7 +172,8 @@ Scanning `]C1` `0109506000134352` `17261231` `10ABC` GS `3103001250` gives:
 | `net_weight_kg` | `1.250` |
 
 - **What the field stores.** The normalized bracketed string, whatever arrived: raw scan data with group separators (ASCII 29), a leading FNC1, an AIM prefix (`]C1`, `]d2`, `]Q3`, `]e0`) or the bracketed form. `Gs1::parse($state)` reads it back unchanged.
-- **`fill`** maps AIs to fields by path relative to the scanner, like `$set`, so it works inside a `Group`, `Section` or repeater item. Date AIs are written as `Y-m-d` (day `00` is the last day of the month, times are dropped), implied-decimal AIs (310n to 369n, 390n to 395n) as exact decimal strings, others as the raw value. AIs you do not map are ignored. A mapped AI missing from the scan leaves its field as it was.
+- **`fill`** maps AIs to fields by path relative to the scanner, like `$set`, so it works inside a `Group`, `Section` or repeater item. Date AIs are written as `Y-m-d` (day `00` is the last day of the month, times are dropped), implied-decimal AIs (310n to 369n, 390n to 395n) as exact decimal strings, others as the raw value. AIs you do not map are ignored. Write the keys as strings; PHP turns `'10'`, `'17'` or `'3103'` into int keys, and both are accepted (the PHPDoc is `array<int|string, string>`, so PHPStan agrees).
+- **Missing AIs.** When a label is accepted, a mapped field whose AI the label does not carry is emptied (set to `null`), so a serial, batch or weight from the previous label is never saved with this one. Pass `keepMissing: true` to leave those fields as they were.
 - **`require`** lists AIs every scan must carry. Without it, any valid GS1 string is accepted.
 - An unknown AI in `fill` or `require` throws `InvalidArgumentException` when the form is built.
 
@@ -188,11 +189,11 @@ Scanning `]C1` `0109506000134352` `17261231` `10ABC` GS `3103001250` gives:
 | Unreadable (no AI found, missing `)`) | Not a GS1 label |
 | A required AI is absent | Missing AI (17) USE BY or EXPIRY (the title comes from the Syntax Dictionary) |
 
-The messages are translated (`filament-qr-code::ui.gs1_*`). A rejection works like `rejectWhen()`: the reason shows under the field, screen readers hear "Rejected: …", the `qr-scan-rejected` window event and the `ScanRejected` event fire, `onRejected()` runs, and the field is cleared or kept per `clearOnReject()`. It is never announced as accepted.
+The messages are translated (`filament-qr-code::ui.gs1_*`). A rejection works like `rejectWhen()`: the reason goes into the form's error bag under the field (so it shows as the field's error), screen readers hear "Rejected: …", the `qr-scan-rejected` window event and the `ScanRejected` event fire, `onRejected()` runs, and the field is cleared or kept per `clearOnReject()`. Mapped fields are not touched. It is never announced as accepted.
 
 A bare 8, 12, 13 or 14-digit number with a valid check digit is treated as a plain product barcode, because it would otherwise parse as AI 400, 10 or 95 by accident. Scan the GS1 label, or turn on AIM symbology identifiers on the scanner.
 
-**Order of checks.** `->gs1()` runs first: the GS1 check, then `validateUsing()` rules, `lookup()` / `lookupUsing()`, `rejectWhen()` and `validateUsing()` closures, then `pipe()` stages. Every later check, and `onScanned()`, sees the bracketed string, so look records up by an AI with `lookupUsing(fn (string $code) => Product::firstWhere('gtin', Gs1::parse($code)->get('01')))`. A typed value goes through the same GS1 check in `afterStateUpdated()` before your own hooks.
+**Order of checks.** `->gs1()` runs first: the GS1 check, then `validateUsing()` rules, `lookup()` / `lookupUsing()`, `rejectWhen()` and `validateUsing()` closures, then `pipe()` stages. Every later check, and `onScanned()`, sees the bracketed string, so look records up by an AI with `lookupUsing(fn (string $code) => Product::firstWhere('gtin', Gs1::parse($code)->get('01')))`. A typed or pasted value is checked like a scan, with source `manual`, before your own `afterStateUpdated()` hooks: the GS1 check and every later check run, a rejection runs `onRejected()` and lands in the error bag, and an accepted value is normalized, fills (and empties) the mapped fields and runs `onScanned()`.
 
 **On submit.** The same GS1 and `require` rules run again as a validation rule, so a value posted around the scanner is refused.
 
@@ -203,14 +204,21 @@ Keyboard-wedge guns send FNC1 as the group separator. The router keeps it inside
 For a page without a scanner field, put the Station Listener in GS1 mode. Every burst goes to the server instead of into an input: a valid label fills the mapped fields, a rejected one fills nothing and shows its reason under the listener.
 
 ```php
+use Filament\Forms\Components\Hidden;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
 
-QrHardwareScannerListener::make()
-    ->gs1(
-        fill: ['01' => 'gtin', '17' => 'expires_at', '10' => 'batch'],
-        require: ['01', '17'],
-    );
+$components = [
+    QrHardwareScannerListener::make()
+        ->gs1(
+            fill: ['01' => 'gtin', '17' => 'expires_at', '10' => 'batch'],
+            require: ['01', '17'],
+            store: 'label',
+        ),
+    Hidden::make('label'), // receives (01)…(17)…(10)…
+];
 ```
+
+`store` names the field that receives the normalized bracketed label, by path relative to the listener like `fill`, so a form can save the whole label without a scanner field. It is written only when a label is accepted. `keepMissing` works as on `QrScanner`. A rejection leaves the stored label and the mapped fields as they were.
 
 The listener sends `qr-hardware-scanned` with `{ value, field: null, gs1: true }` on success and `qr-scan-rejected` with `{ value, field: null, source: 'hardware', message }` on rejection, and fires `QrCodeScanned` with `source` `hardware` and the AIs in `context['gs1']`. A focused `QrScanner` still wins the burst. The listener needs a component key to be called; `gs1()` sets `qrGs1Listener` when there is none, so give each GS1 listener on one page its own `->key()`.
 

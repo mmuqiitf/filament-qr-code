@@ -497,7 +497,7 @@ When no target is found, nothing is written and the listener dispatches a `qr-sc
 <div x-on:qr-scan-unrouted.window="alert(`No field for ${$event.detail.value}`)"></div>
 ```
 
-For GS1 pallet and case labels, `QrHardwareScannerListener::make()->gs1(fill: [...], require: [...])` sends every burst to the server instead of into an input, fills the mapped fields and shows a rejection under the listener. See [Scanning GS1 labels](gs1.md#hardware-scanners).
+For GS1 pallet and case labels, `QrHardwareScannerListener::make()->gs1(fill: [...], require: [...], store: 'label')` sends every burst to the server instead of into an input, fills the mapped fields (and the bracketed label into `store`) and shows a rejection under the listener. See [Scanning GS1 labels](gs1.md#hardware-scanners).
 
 Fields are matched by their exact name — `data-field-name`, `name`, `id`, or a `wire:model` path equal to the name or ending in `.<name>` — so `sku` never matches `parent_sku`, and nested names such as `items.0.sku` work in `make([...])` and `nextField()`.
 
@@ -784,6 +784,7 @@ QrScanner::make('sku')
 - Accepted live scans fire `ScanAccepted` and `QrCodeScanned` (with `source` `camera`, `hardware` or `upload`); rejected ones fire `ScanRejected`. With `qr-code.audit.enabled`, accepted live scans are logged.
 - If `onScanned` throws, the field keeps its previous value, the error is reported, and the scan is rejected with the generic message.
 - Configuring `onScanned` or `onRejected` alone makes the field call the server on every scan and enables the default cooldown.
+- In single mode a rejected scan's message goes into the form's error bag under the field (`data.sku`), so it shows as the field's error in the server-rendered HTML and `assertHasErrors(['data.sku'])` sees it. The next accepted scan clears it. Calling `addError()` in `onRejected` is no longer needed. Continuous mode shows rejections in its status line instead.
 
 ### In the browser
 
@@ -1497,7 +1498,8 @@ Scanning `]C1` `0109506000134352` `17261231` `10ABC` GS `3103001250` gives:
 | `net_weight_kg` | `1.250` |
 
 - **What the field stores.** The normalized bracketed string, whatever arrived: raw scan data with group separators (ASCII 29), a leading FNC1, an AIM prefix (`]C1`, `]d2`, `]Q3`, `]e0`) or the bracketed form. `Gs1::parse($state)` reads it back unchanged.
-- **`fill`** maps AIs to fields by path relative to the scanner, like `$set`, so it works inside a `Group`, `Section` or repeater item. Date AIs are written as `Y-m-d` (day `00` is the last day of the month, times are dropped), implied-decimal AIs (310n to 369n, 390n to 395n) as exact decimal strings, others as the raw value. AIs you do not map are ignored. A mapped AI missing from the scan leaves its field as it was.
+- **`fill`** maps AIs to fields by path relative to the scanner, like `$set`, so it works inside a `Group`, `Section` or repeater item. Date AIs are written as `Y-m-d` (day `00` is the last day of the month, times are dropped), implied-decimal AIs (310n to 369n, 390n to 395n) as exact decimal strings, others as the raw value. AIs you do not map are ignored. Write the keys as strings; PHP turns `'10'`, `'17'` or `'3103'` into int keys, and both are accepted (the PHPDoc is `array<int|string, string>`, so PHPStan agrees).
+- **Missing AIs.** When a label is accepted, a mapped field whose AI the label does not carry is emptied (set to `null`), so a serial, batch or weight from the previous label is never saved with this one. Pass `keepMissing: true` to leave those fields as they were.
 - **`require`** lists AIs every scan must carry. Without it, any valid GS1 string is accepted.
 - An unknown AI in `fill` or `require` throws `InvalidArgumentException` when the form is built.
 
@@ -1513,11 +1515,11 @@ Scanning `]C1` `0109506000134352` `17261231` `10ABC` GS `3103001250` gives:
 | Unreadable (no AI found, missing `)`) | Not a GS1 label |
 | A required AI is absent | Missing AI (17) USE BY or EXPIRY (the title comes from the Syntax Dictionary) |
 
-The messages are translated (`filament-qr-code::ui.gs1_*`). A rejection works like `rejectWhen()`: the reason shows under the field, screen readers hear "Rejected: …", the `qr-scan-rejected` window event and the `ScanRejected` event fire, `onRejected()` runs, and the field is cleared or kept per `clearOnReject()`. It is never announced as accepted.
+The messages are translated (`filament-qr-code::ui.gs1_*`). A rejection works like `rejectWhen()`: the reason goes into the form's error bag under the field (so it shows as the field's error), screen readers hear "Rejected: …", the `qr-scan-rejected` window event and the `ScanRejected` event fire, `onRejected()` runs, and the field is cleared or kept per `clearOnReject()`. Mapped fields are not touched. It is never announced as accepted.
 
 A bare 8, 12, 13 or 14-digit number with a valid check digit is treated as a plain product barcode, because it would otherwise parse as AI 400, 10 or 95 by accident. Scan the GS1 label, or turn on AIM symbology identifiers on the scanner.
 
-**Order of checks.** `->gs1()` runs first: the GS1 check, then `validateUsing()` rules, `lookup()` / `lookupUsing()`, `rejectWhen()` and `validateUsing()` closures, then `pipe()` stages. Every later check, and `onScanned()`, sees the bracketed string, so look records up by an AI with `lookupUsing(fn (string $code) => Product::firstWhere('gtin', Gs1::parse($code)->get('01')))`. A typed value goes through the same GS1 check in `afterStateUpdated()` before your own hooks.
+**Order of checks.** `->gs1()` runs first: the GS1 check, then `validateUsing()` rules, `lookup()` / `lookupUsing()`, `rejectWhen()` and `validateUsing()` closures, then `pipe()` stages. Every later check, and `onScanned()`, sees the bracketed string, so look records up by an AI with `lookupUsing(fn (string $code) => Product::firstWhere('gtin', Gs1::parse($code)->get('01')))`. A typed or pasted value is checked like a scan, with source `manual`, before your own `afterStateUpdated()` hooks: the GS1 check and every later check run, a rejection runs `onRejected()` and lands in the error bag, and an accepted value is normalized, fills (and empties) the mapped fields and runs `onScanned()`.
 
 **On submit.** The same GS1 and `require` rules run again as a validation rule, so a value posted around the scanner is refused.
 
@@ -1528,14 +1530,21 @@ Keyboard-wedge guns send FNC1 as the group separator. The router keeps it inside
 For a page without a scanner field, put the Station Listener in GS1 mode. Every burst goes to the server instead of into an input: a valid label fills the mapped fields, a rejected one fills nothing and shows its reason under the listener.
 
 ```php
+use Filament\Forms\Components\Hidden;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
 
-QrHardwareScannerListener::make()
-    ->gs1(
-        fill: ['01' => 'gtin', '17' => 'expires_at', '10' => 'batch'],
-        require: ['01', '17'],
-    );
+$components = [
+    QrHardwareScannerListener::make()
+        ->gs1(
+            fill: ['01' => 'gtin', '17' => 'expires_at', '10' => 'batch'],
+            require: ['01', '17'],
+            store: 'label',
+        ),
+    Hidden::make('label'), // receives (01)…(17)…(10)…
+];
 ```
+
+`store` names the field that receives the normalized bracketed label, by path relative to the listener like `fill`, so a form can save the whole label without a scanner field. It is written only when a label is accepted. `keepMissing` works as on `QrScanner`. A rejection leaves the stored label and the mapped fields as they were.
 
 The listener sends `qr-hardware-scanned` with `{ value, field: null, gs1: true }` on success and `qr-scan-rejected` with `{ value, field: null, source: 'hardware', message }` on rejection, and fires `QrCodeScanned` with `source` `hardware` and the AIs in `context['gs1']`. A focused `QrScanner` still wins the burst. The listener needs a component key to be called; `gs1()` sets `qrGs1Listener` when there is none, so give each GS1 listener on one page its own `->key()`.
 
@@ -2176,7 +2185,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | download one QR / many as a ZIP | `DownloadQrAction` / `DownloadQrBulkAction` | `Mmuqiitf\FilamentQrCode\Tables\Actions` |
 | generate an SVG/PNG in PHP | `FilamentQrCode` facade or `QrCodeService` | `…\Facades`, `…\Services` |
 | read or write GS1 application identifiers | `Gs1::parse()` / `Gs1::build()` | `Mmuqiitf\FilamentQrCode\Gs1` |
-| scan a GS1 label into a form (GTIN, expiry, batch into fields) | `QrScanner::gs1(fill: [...], require: [...])`, or `QrHardwareScannerListener::gs1(...)` for a gun with no scanner field | `Mmuqiitf\FilamentQrCode\Forms\Components` |
+| scan a GS1 label into a form (GTIN, expiry, batch into fields) | `QrScanner::gs1(fill: [...], require: [...])`, or `QrHardwareScannerListener::gs1(..., store: 'label')` for a gun with no scanner field | `Mmuqiitf\FilamentQrCode\Forms\Components` |
 | a GS1 date or weight/price as a usable value | `ElementString::date()` (`CarbonImmutable`) / `ElementString::decimal()` (exact string) | `Mmuqiitf\FilamentQrCode\Gs1` |
 | draw a GS1-128 barcode | `BarcodeType::Gs1128` (`type('gs1-128')`) | `Mmuqiitf\FilamentQrCode\Enums` |
 | show a 1D barcode in a table | `BarcodeColumn` (signed `filamentQrCode.barcode` image) | `…\Tables\Columns` |
@@ -2188,7 +2197,7 @@ This guide is written for agents that build *with* the package. Agents working *
 - **Write out every import**, including enums (`BarcodeFormat`, `ScanMode`, …) and Filament classes (`Filament\Schemas\Schema`). Nothing is global.
 - **Set `->formats([...])`** whenever you know the symbology. It speeds up decoding and cuts false positives.
 - **Check on the server** with `lookup()`, `lookupUsing()`, `validateUsing()`, `rejectWhen()` or `pipe()`. Live scans write straight into the Livewire state, and the server checks are what reject bad codes.
-- **Scan GS1 labels with `->gs1()`**, not a hand-written `rejectWhen()` around `Gs1::parse()`. The field stores the bracketed string, `fill` keys are AIs as strings (`'01'`, `'17'`), and checks after it (`lookupUsing()`, `rejectWhen()`) receive the bracketed string.
+- **Scan GS1 labels with `->gs1()`**, not a hand-written `rejectWhen()` around `Gs1::parse()`. The field stores the bracketed string, `fill` keys are AIs as strings (`'01'`, `'17'`; PHP's int keys work too), mapped fields a label lacks are emptied unless `keepMissing: true`, a rejection lands in the field's error bag (no `addError()` needed), typed values are checked like scans, and checks after it (`lookupUsing()`, `rejectWhen()`) receive the bracketed string.
 - **Normalize live scans** with `normalizeWith()` / `normalizeUsing()` (or `normalizeStepUsing()` on a sequence).
 - **Give a `QrScanSequence` a `->statePath()`** (or `->key()`), and read it on submit with `mergeSequenceState()` / `isSequenceComplete()`.
 - **Name fields exactly** in `nextField()` and `QrHardwareScannerListener::make([...])`. Dot paths like `items.0.sku` work, and `sku` never matches `parent_sku`.
@@ -3162,7 +3171,7 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `formatScannedValue(string $rawValue): mixed` | Run the scanFormat() closure on a value (programmatic only; live scans use normalizeUsing()). |
 | `formats(Closure\|array $formats): static` | Symbologies the camera decodes (BarcodeFormat cases or strings); filtering speeds decoding. |
 | `fps(Closure\|int $fps): static` | Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. |
-| `gs1(Closure\|array $fill = [], Closure\|array $require = []): static` | Read every scan as a GS1 element string (GS1-128, GS1 DataMatrix, GS1 QR, raw with group separators or bracketed). The field stores the normalized bracketed form, such as `(01)09506000134352(17)261231(10)ABC`. |
+| `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false): static` | Read every scan as a GS1 element string (GS1-128, GS1 DataMatrix, GS1 QR, raw with group separators or bracketed). The field stores the normalized bracketed form, such as `(01)09506000134352(17)261231(10)ABC`. |
 | `handleScan(string $code, string $source): array` | Run the server checks for a scan; called by the field JS, usable from tests. |
 | `hardwareInput(HardwareInputScope\|Closure $scope = HardwareInputScope::Focus, Closure\|bool $enabled = true): static` | Focus: wedge scans reach this field only while it has focus (default). Page: the field also catches wedge scans when no scan field has focus. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
@@ -3195,7 +3204,7 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getContinuousDisplay()`, `getCooldownMs()`, `getEffectiveFps()`, `getErrorFeedback()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareInputScope()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getMode()`, `getNextField()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getOutcomeFeedbackScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanCheckPipeline()`, `getScanChecksScanPayload()`, `getScanModeScanPayload()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSequentialScanPayload()`, `getSuccessFeedback()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerScanChecks()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `isUploadAllowed()`, `shouldClearOnReject()`, `shouldKeepCameraOpen()`, `shouldPauseOnReject()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getContinuousDisplay()`, `getCooldownMs()`, `getEffectiveFps()`, `getErrorFeedback()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareInputScope()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getMode()`, `getNextField()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getOutcomeFeedbackScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanCheckPipeline()`, `getScanChecksScanPayload()`, `getScanModeScanPayload()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSequentialScanPayload()`, `getSuccessFeedback()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerScanChecks()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `isUploadAllowed()`, `shouldClearOnReject()`, `shouldKeepCameraOpen()`, `shouldKeepMissingGs1Fields()`, `shouldPauseOnReject()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrHardwareScannerListener`
 
@@ -3208,7 +3217,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `beepFrequency(Closure\|int $hertz): static` | Beep pitch in hertz (config `feedback.beep_frequency`). |
 | `fallbackToAnyInput(Closure\|bool $condition = true): static` | Fill the first empty form input when no registered field is free; false dispatches `qr-scan-unrouted` (config `hardware_scanner.fallback_to_any_input`). |
 | `fields(Closure\|array $fields): static` | Field names (dot paths allowed) the listener routes scans into. |
-| `gs1(Closure\|array $fill = [], Closure\|array $require = []): static` | Read every gun burst as a GS1 label and fill the mapped fields on the server instead of typing the burst into an input. Same `$fill` and `$require` rules as QrScanner::gs1(); paths are relative to the listener's schema. A rejected label fills nothing and shows its reason under the listener. Give each GS1 listener on one page its own key(). |
+| `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false, Closure\|string\|null $store = null): static` | Read every gun burst as a GS1 label and fill the mapped fields on the server instead of typing the burst into an input. Same `$fill` and `$require` rules as QrScanner::gs1(); paths are relative to the listener's schema. A rejected label fills nothing and shows its reason under the listener. Give each GS1 listener on one page its own key(). |
 | `handleGs1Scan(string $code): array` | Check a gun burst as GS1 and fill the mapped fields; called by the listener JS, usable from tests. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `static make(Closure\|array $fields = []): static` | Create a Station Listener routing gun scans into these fields. |
@@ -3219,7 +3228,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getComponentScanPayload()`, `getFeedbackScanPayload()`, `getFields()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getScanPayload()`, `getScanTimeoutMs()`, `getTerminators()`, `getVibrateDurationMs()`, `hasSound()`, `hasVibration()`, `isAutoFocusNext()`, `isGs1()`, `isHardwareScannerEnabled()`, `shouldFallbackToAnyInput()`, `shouldPreventFormSubmit()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getComponentScanPayload()`, `getFeedbackScanPayload()`, `getFields()`, `getGs1StorePath()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getScanPayload()`, `getScanTimeoutMs()`, `getTerminators()`, `getVibrateDurationMs()`, `hasSound()`, `hasVibration()`, `isAutoFocusNext()`, `isGs1()`, `isHardwareScannerEnabled()`, `shouldFallbackToAnyInput()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`
 
 ### `QrScanSequence`
 
@@ -3882,7 +3891,10 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 
 ## Unreleased
 
-Nothing to change in application code. No asset rebuild.
+Run `php artisan filament:assets`: the scanner JavaScript changed.
+
+- **New barcode type.** `BarcodeType` gains `Gs1128`. Code that covers every case with a fixed lookup breaks on it: a `match ($type)` without `default` throws `UnhandledMatchError`, and an array keyed by `$type->value` (for example sample values per symbology for `BarcodeType::cases()`) has no `'gs1-128'` entry. Add the case, or skip it with `array_filter(BarcodeType::cases(), fn ($type) => $type !== BarcodeType::Gs1128)`.
+- **Scan rejections in the error bag.** A rejected scan on a single-mode `QrScanner` now adds its message to the form's error bag under the field, and the next accepted scan clears it. If your `onRejected()` already calls `resetErrorBag()` and `addError()` for the field, you can drop that; leaving it shows the message once, not twice. Tests that asserted `assertHasNoErrors()` after a rejected scan need `assertHasErrors()`.
 
 - **Render cache.** Keys now include a generation (`filament-qr-code:render:vN:`). The first render after upgrading misses. `flushPersistentCache()` bumps the generation and clears the in-process map. It no longer deletes entries, and the 1.1.2 `filament-qr-code:render-index` is unused. Retired entries expire with `generator.cache_ttl` (86400 seconds by default). A `cache_ttl` of `null` leaves them until you flush that store yourself. Octane clears the in-process map at the start of each request, task, and tick.
 

@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-Nothing to change in application code. No asset rebuild.
+Run `php artisan filament:assets`: the scanner JavaScript changed.
+
+- **New barcode type.** `BarcodeType` gains `Gs1128`. Code that covers every case with a fixed lookup breaks on it: a `match ($type)` without `default` throws `UnhandledMatchError`, and an array keyed by `$type->value` (for example sample values per symbology for `BarcodeType::cases()`) has no `'gs1-128'` entry. Add the case, or skip it with `array_filter(BarcodeType::cases(), fn ($type) => $type !== BarcodeType::Gs1128)`.
+- **Scan rejections in the error bag.** A rejected scan on a single-mode `QrScanner` now adds its message to the form's error bag under the field, and the next accepted scan clears it. If your `onRejected()` already calls `resetErrorBag()` and `addError()` for the field, you can drop that; leaving it shows the message once, not twice. Tests that asserted `assertHasNoErrors()` after a rejected scan need `assertHasErrors()`.
 
 - **Render cache.** Keys now include a generation (`filament-qr-code:render:vN:`). The first render after upgrading misses. `flushPersistentCache()` bumps the generation and clears the in-process map. It no longer deletes entries, and the 1.1.2 `filament-qr-code:render-index` is unused. Retired entries expire with `generator.cache_ttl` (86400 seconds by default). A `cache_ttl` of `null` leaves them until you flush that store yourself. Octane clears the in-process map at the start of each request, task, and tick.
 
