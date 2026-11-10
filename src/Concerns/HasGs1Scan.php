@@ -22,11 +22,13 @@ trait HasGs1Scan
     /** @var array<int|string, mixed>|Closure */
     protected array|Closure $gs1Require = [];
 
+    protected bool|Closure $gs1KeepMissing = false;
+
     /**
      * @param  array<int|string, mixed>|Closure  $fill
      * @param  array<int|string, mixed>|Closure  $require
      */
-    protected function configureGs1(array|Closure $fill, array|Closure $require): void
+    protected function configureGs1(array|Closure $fill, array|Closure $require, bool|Closure $keepMissing = false): void
     {
         // Arrays are checked now, so a typo in an AI fails at boot, not at the first scan.
         if (is_array($fill) && is_array($require)) {
@@ -36,6 +38,13 @@ trait HasGs1Scan
         $this->isGs1 = true;
         $this->gs1Fill = $fill;
         $this->gs1Require = $require;
+        $this->gs1KeepMissing = $keepMissing;
+    }
+
+    /** Whether mapped fields keep their value when an accepted label lacks their AI. */
+    public function shouldKeepMissingGs1Fields(): bool
+    {
+        return (bool) $this->evaluate($this->gs1KeepMissing);
     }
 
     /** Whether `->gs1()` is on. */
@@ -53,13 +62,24 @@ trait HasGs1Scan
         return Gs1ScanCheck::from(is_array($fill) ? $fill : [], is_array($require) ? $require : []);
     }
 
-    /** Write the mapped AIs into their fields, by path relative to this component like `$set`. */
+    /**
+     * Write the mapped AIs into their fields, by path relative to this
+     * component like `$set`. A mapped AI the label does not carry empties
+     * its field, so nothing from an earlier label is kept, unless
+     * `keepMissing` is on.
+     */
     protected function fillGs1Fields(ElementString $elements, Gs1ScanCheck $check): void
     {
         $set = $this->makeSetUtility();
+        $values = $check->fillValues($elements);
+        $keepMissing = $this->shouldKeepMissingGs1Fields();
 
-        foreach ($check->fillValues($elements) as $path => $value) {
-            $set($path, $value);
+        foreach ($check->fill as $path) {
+            if (array_key_exists($path, $values)) {
+                $set($path, $values[$path]);
+            } elseif (! $keepMissing) {
+                $set($path, null);
+            }
         }
     }
 }

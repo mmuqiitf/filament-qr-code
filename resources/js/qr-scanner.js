@@ -695,15 +695,17 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             window.dispatchEvent(new CustomEvent('qr-hardware-scanned', { detail: { value: code, field } }));
         },
 
-        applyRejected({ code, source, message }, field) {
+        applyRejected({ code, source, message, checked }, field) {
             const { clearOnReject, pauseOnReject, errorFeedback, beepFrequency, beepDurationMs, mode } = this.options;
 
             if (clearOnReject) {
                 this.value = '';
             }
 
-            // GS1 fields show why a label was refused under the field in every mode.
-            if (this.isContinuous() || this.options.gs1) {
+            // Continuous mode keeps a status line. In single mode the server puts a
+            // rejection in the field's error bag, so GS1 fields only need the line
+            // when the check itself failed.
+            if (this.isContinuous() || (this.options.gs1 && checked === false)) {
                 this.rejectionMessage = message ?? '';
             }
 

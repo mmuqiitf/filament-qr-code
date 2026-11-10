@@ -25,6 +25,7 @@ use Mmuqiitf\FilamentQrCode\Enums\HardwareInputScope;
 use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Gs1\ElementString;
+use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
 use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 
@@ -44,7 +45,10 @@ class QrScanner extends Field
     use HasScanMode;
     use HasScanPayload;
     use HasSequentialScan;
-    use InteractsWithScans;
+    use InteractsWithScans {
+        acceptScan as protected acceptScanThroughState;
+        rejectScan as protected rejectScanThroughState;
+    }
 
     protected string $view = 'filament-qr-code::components.qr-scanner';
 
@@ -57,6 +61,9 @@ class QrScanner extends Field
     protected HardwareInputScope|Closure|null $hardwareInputScope = null;
 
     protected bool $hasRegisteredGs1Hook = false;
+
+    /** Set while handleScan() writes an accepted scan, so the typed-value GS1 hook stays out of it. */
+    protected bool $isAcceptingScan = false;
 
     /**
      * Focus: wedge scans reach this field only while it has focus (default).
@@ -114,12 +121,13 @@ class QrScanner extends Field
      * before any state is written, like rejectWhen(), and before it. The same
      * rules run again on submit.
      *
-     * @param  array<string, string>|Closure  $fill  AI => field, e.g. `['01' => 'gtin', '17' => 'expires_at']`
-     * @param  list<string>|Closure  $require  AIs every scan must carry, e.g. `['01', '17', '10']`
+     * @param  array<int|string, string>|Closure  $fill  AI => field, e.g. `['01' => 'gtin', '17' => 'expires_at']` (PHP turns keys such as '17' into ints; both work)
+     * @param  list<int|string>|Closure  $require  AIs every scan must carry, e.g. `['01', '17', '10']`
+     * @param  bool|Closure  $keepMissing  keep a mapped field's value when an accepted label lacks its AI (default: empty it)
      */
-    public function gs1(array|Closure $fill = [], array|Closure $require = []): static
+    public function gs1(array|Closure $fill = [], array|Closure $require = [], bool|Closure $keepMissing = false): static
     {
-        $this->configureGs1($fill, $require);
+        $this->configureGs1($fill, $require, $keepMissing);
         $this->registerScanChecksRule();
 
         if ($this->hasRegisteredGs1Hook) {
@@ -128,33 +136,98 @@ class QrScanner extends Field
 
         $this->hasRegisteredGs1Hook = true;
 
-        // Typed or programmatic values: first, so later hooks see the bracketed string.
+        // Typed or pasted values: first, so later hooks see the bracketed string.
         array_unshift($this->afterStateUpdated, function (QrScanner $component, mixed $state, mixed $livewire): void {
-            if (! is_string($state) || blank($state)) {
+            if ($component->isAcceptingScan || ! is_string($state) || blank($state)) {
                 return;
             }
 
-            $check = $component->getGs1ScanCheck();
-            $elements = $check->inspect($state);
-
-            if (! $elements instanceof ElementString) {
-                $component->state(null);
-
-                if (is_object($livewire) && method_exists($livewire, 'dispatch')) {
-                    $livewire->dispatch('qr-scan-rejected', message: $elements);
-                }
-
-                return;
-            }
-
-            if ($elements->bracketed() !== $state) {
-                $component->state($elements->bracketed());
-            }
-
-            $component->fillGs1Fields($elements, $check);
+            $component->checkTypedGs1Value($state, $livewire);
         });
 
         return $this;
+    }
+
+    /**
+     * A typed or pasted value goes through the same checks as a scan (GS1,
+     * then validateUsing(), lookup and rejectWhen()), with source `manual`.
+     * A rejection runs onRejected(), clears per clearOnReject() and shows
+     * the reason under the field; an accepted value is normalized, fills
+     * the mapped fields and runs onScanned().
+     */
+    protected function checkTypedGs1Value(string $state, mixed $livewire): void
+    {
+        $result = $this->runScanChecks($this->normalizeScannedCode($state), ScanInput::Manual);
+
+        if (! $result->passes) {
+            $this->rejectScan($result);
+
+            if (is_object($livewire) && method_exists($livewire, 'dispatch')) {
+                $livewire->dispatch('qr-scan-rejected', message: $result->message);
+            }
+
+            return;
+        }
+
+        if ($result->code !== $state) {
+            $this->state($result->code);
+        }
+
+        $this->clearScanError();
+        $this->fillGs1Fields(Gs1::parse($result->code), $this->getGs1ScanCheck());
+        $this->completeAcceptedScan($result);
+    }
+
+    protected function acceptScan(ScanResult $result): void
+    {
+        $this->clearScanError();
+
+        if ($this->isGs1()) {
+            $this->fillGs1Fields(Gs1::parse($result->code), $this->getGs1ScanCheck());
+        }
+
+        $this->isAcceptingScan = true;
+
+        try {
+            $this->acceptScanThroughState($result);
+        } finally {
+            $this->isAcceptingScan = false;
+        }
+    }
+
+    protected function rejectScan(ScanResult $result): void
+    {
+        $this->rejectScanThroughState($result);
+
+        if ($this->reportsScanErrorsInErrorBag()) {
+            $this->replaceScanError($result->message ?? (string) __('filament-qr-code::ui.scan_rejected'));
+        }
+    }
+
+    /**
+     * Single mode puts a rejection in the form's error bag under the field,
+     * so server-rendered HTML shows it. Continuous mode keeps its status
+     * line: the field is ready for the next scan, not invalid.
+     */
+    protected function reportsScanErrorsInErrorBag(): bool
+    {
+        return ! $this->isContinuous();
+    }
+
+    protected function replaceScanError(string $message): void
+    {
+        $livewire = $this->getLivewire();
+        $statePath = $this->getStatePath();
+
+        $livewire->resetErrorBag($statePath);
+        $livewire->addError($statePath, $message);
+    }
+
+    protected function clearScanError(): void
+    {
+        if ($this->reportsScanErrorsInErrorBag()) {
+            $this->getLivewire()->resetErrorBag($this->getStatePath());
+        }
     }
 
     protected function prepareScanCode(string $code, ?ScanInput $source): ScanResult|string
@@ -244,7 +317,8 @@ class QrScanner extends Field
         };
 
         $this->afterStateUpdated(function ($component, $state, $livewire) use ($predicate, $message): void {
-            if (blank($state)) {
+            // A gs1() field already ran this check with the others on the typed value.
+            if (blank($state) || $component->isGs1()) {
                 return;
             }
 
