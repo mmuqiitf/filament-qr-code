@@ -99,18 +99,35 @@ describe('QrScanner with gs1()', () => {
         );
     }
 
-    it('shows a GS1 rejection inline in single mode and never announces it as accepted', async () => {
+    it('leaves a server GS1 rejection to the field error in single mode and never announces it as accepted', async () => {
         const scanner = mountGs1Scanner(() => Promise.resolve({
             passes: false, code: '(01)09506000134353', source: 'hardware', message: 'Invalid check digit in AI (01)', record_key: null,
         }));
         const accepted = captureWindowEvent('qr-scan-accepted');
         const scanned = captureWindowEvent('qr-scanned');
+        const rejected = captureWindowEvent('qr-scan-rejected');
 
         await scanner.handleScanResult('(01)09506000134353', 'hardware');
 
-        expect(scanner.rejectionMessage).toBe('Invalid check digit in AI (01)');
+        // The server put the reason in the error bag; the status line would repeat it.
+        expect(scanner.rejectionMessage).toBe('');
+        expect(rejected.map((detail) => detail.message)).toEqual(['Invalid check digit in AI (01)']);
         expect(accepted).toEqual([]);
         expect(scanned).toEqual([]);
+    });
+
+    it('shows inline why a GS1 scan could not be checked', async () => {
+        const scanner = mountGs1Scanner(() => Promise.reject(new Error('offline')));
+        const originalError = console.error;
+        console.error = () => {};
+
+        try {
+            await scanner.handleScanResult('(01)09506000134352', 'hardware');
+        } finally {
+            console.error = originalError;
+        }
+
+        expect(scanner.rejectionMessage).toBe('The scan could not be checked. Please try again.');
     });
 
     it('shows the normalized bracketed string the server stored', async () => {

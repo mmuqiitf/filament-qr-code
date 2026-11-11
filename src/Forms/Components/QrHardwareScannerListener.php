@@ -7,6 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Forms\Components;
 use Closure;
 use Filament\Schemas\Components\Component;
 use Filament\Support\Components\Attributes\ExposedLivewireMethod;
+use InvalidArgumentException;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasGs1Scan;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
@@ -34,6 +35,8 @@ class QrHardwareScannerListener extends Component
     protected bool|Closure $autoFocusNext = true;
 
     protected bool|Closure|null $fallbackToAnyInput = null;
+
+    protected string|Closure|null $gs1Store = null;
 
     /**
      * Create a Station Listener routing gun scans into these fields.
@@ -67,12 +70,19 @@ class QrHardwareScannerListener extends Component
      * listener's schema. A rejected label fills nothing and shows its reason
      * under the listener. Give each GS1 listener on one page its own key().
      *
-     * @param  array<string, string>|Closure  $fill  AI => field, e.g. `['01' => 'gtin', '17' => 'expires_at']`
-     * @param  list<string>|Closure  $require  AIs every scan must carry, e.g. `['01', '17', '10']`
+     * @param  array<int|string, string>|Closure  $fill  AI => field, e.g. `['01' => 'gtin', '17' => 'expires_at']` (PHP turns keys such as '17' into ints; both work)
+     * @param  list<int|string>|Closure  $require  AIs every scan must carry, e.g. `['01', '17', '10']`
+     * @param  bool|Closure  $keepMissing  keep a mapped field's value when an accepted label lacks its AI (default: empty it)
+     * @param  string|Closure|null  $store  field that receives the normalized bracketed label, by path relative to the listener like `$fill`
      */
-    public function gs1(array|Closure $fill = [], array|Closure $require = []): static
+    public function gs1(array|Closure $fill = [], array|Closure $require = [], bool|Closure $keepMissing = false, string|Closure|null $store = null): static
     {
-        $this->configureGs1($fill, $require);
+        if ($store === '') {
+            throw new InvalidArgumentException('gs1(store:) needs a field name.');
+        }
+
+        $this->configureGs1($fill, $require, $keepMissing);
+        $this->gs1Store = $store;
 
         // The browser calls handleGs1Scan() by component key; a stateless component has none by default.
         if ($this->key === null) {
@@ -106,6 +116,12 @@ class QrHardwareScannerListener extends Component
 
         $this->fillGs1Fields($elements, $check);
 
+        $store = $this->getGs1StorePath();
+
+        if ($store !== null) {
+            $this->makeSetUtility()($store, $elements->bracketed());
+        }
+
         event(new QrCodeScanned(
             code: $elements->bracketed(),
             source: ScanInput::Hardware->value,
@@ -113,6 +129,14 @@ class QrHardwareScannerListener extends Component
         ));
 
         return ['passes' => true, 'code' => $elements->bracketed(), 'message' => null];
+    }
+
+    /** The field that receives the bracketed label, relative to the listener, or null. */
+    public function getGs1StorePath(): ?string
+    {
+        $store = $this->evaluate($this->gs1Store);
+
+        return is_string($store) && $store !== '' ? $store : null;
     }
 
     /** Focus the next registered field after each routed scan. */

@@ -25,7 +25,7 @@ export function createScanDeduper({ now = () => Date.now() } = {}) {
 
 export function normalizeScanResult(result, { code, source, scanFailedMessage }) {
     if (result === null || typeof result !== 'object' || typeof result.passes !== 'boolean') {
-        return { passes: false, code, source, message: scanFailedMessage, recordKey: null };
+        return { passes: false, code, source, message: scanFailedMessage, recordKey: null, checked: false };
     }
 
     return {
@@ -34,6 +34,8 @@ export function normalizeScanResult(result, { code, source, scanFailedMessage })
         source: result.source ?? source,
         message: result.message ?? null,
         recordKey: result.record_key ?? null,
+        // The server decided; in single mode it also put a rejection in the field's error bag.
+        checked: true,
     };
 }
 

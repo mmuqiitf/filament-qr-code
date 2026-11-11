@@ -121,6 +121,12 @@ trait InteractsWithScans
     {
         $this->state($result->code);
         $this->callAfterStateUpdated();
+        $this->completeAcceptedScan($result);
+    }
+
+    /** The accepted-scan tail once state is written: onScanned(), the events and the continuous-mode reset. */
+    protected function completeAcceptedScan(ScanResult $result): void
+    {
         $this->evaluateScanCallback($this->onScannedCallback, $result);
 
         event(new ScanAccepted($result, $this->getName(), ...$this->scanEventContext()));

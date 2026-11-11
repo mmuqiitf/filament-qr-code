@@ -55,7 +55,7 @@ describe('normalizeScanResult', () => {
                 { passes: true, code: 'SKU-1', source: 'hardware', message: null, record_key: 7 },
                 context,
             ),
-        ).toEqual({ passes: true, code: 'SKU-1', source: 'hardware', message: null, recordKey: 7 });
+        ).toEqual({ passes: true, code: 'SKU-1', source: 'hardware', message: null, recordKey: 7, checked: true });
     });
 
     it.each([[null], [undefined], ['oops'], [{}], [{ passes: 'yes' }]])('treats %j as a failed check', (result) => {
@@ -65,6 +65,7 @@ describe('normalizeScanResult', () => {
             source: 'camera',
             message: 'Check failed',
             recordKey: null,
+            checked: false,
         });
     });
 });
@@ -118,6 +119,7 @@ describe('requestScanCheck', () => {
             source: 'camera',
             message: 'Check failed',
             recordKey: null,
+            checked: false,
         });
         expect(errors).toHaveBeenCalledTimes(1);
     });

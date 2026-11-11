@@ -2,6 +2,8 @@ parameters:
     paths:
         - src
         - config
+        # Type fixtures: app-style calls that must pass level 9.
+        - tests/Types
 
     level: 9
     phpVersion: 80500
