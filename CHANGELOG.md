@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A live scan on an optional sequence step walks past later optional steps that also reject the code, and lands on the first later step that accepts it. `skipped` lists every optional step it walked past. A required step that rejects the code stops the walk. Typed corrections still do not skip.
 
+- A typed or pasted value rejected by `rejectWhen()` is cleared before the field's other `afterStateUpdated()` hooks run, so those hooks do not see the rejected value. Camera and gun scans are unchanged: they are still rejected in `handleScan()` before the field accepts them.
+
 - Station Listener fallback (`fallbackToAnyInput()`, config `hardware_scanner.fallback_to_any_input`) fills the first empty text, search, number or textarea in the form that contains the listener. An empty input in another form is left alone, and a listener that is not inside a form dispatches `qr-scan-unrouted`. Registered fields are still found by name anywhere on the page. The default stays `true`.
 
 - `BarcodeType` has a new case, `Gs1128`. Code that maps every `BarcodeType` case through a fixed lookup (a `match` without `default`, or an array indexed by `$type->value`) fails on it; see [UPGRADE](UPGRADE.md).
