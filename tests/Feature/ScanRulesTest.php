@@ -55,6 +55,44 @@ class ScanRulesLivewireComponent extends Component implements HasForms
     }
 }
 
+class RejectWhenOrderLivewireComponent extends Component implements HasForms
+{
+    use InteractsWithForms;
+
+    /**
+     * @var array<string, mixed>|null
+     */
+    public ?array $data = [];
+
+    /**
+     * @var list<mixed>
+     */
+    public array $seen = [];
+
+    public function form(Form|Schema $form): Form|Schema
+    {
+        return $form
+            ->schema([
+                QrScanner::make('sku')
+                    ->afterStateUpdated(function (mixed $state, RejectWhenOrderLivewireComponent $livewire): void {
+                        $livewire->seen[] = $state;
+                    })
+                    ->rejectWhen(
+                        fn ($state) => str_starts_with((string) $state, 'BAD'),
+                        'Bad code rejected.',
+                    ),
+            ])
+            ->statePath('data');
+    }
+
+    public function render(): string
+    {
+        return <<<'BLADE'
+        <div>{{ $this->form }}</div>
+        BLADE;
+    }
+}
+
 it('rejects matching live scans immediately with a browser event', function () {
     Livewire::test(ScanRulesLivewireComponent::class)
         ->set('data.sku', 'BAD-001')
@@ -92,4 +130,15 @@ it('rejects a matching live scan in handleScan with the rejectWhen message', fun
         ->assertReturned(fn (array $result): bool => $result['passes'] === true)
         ->assertSet('data.sku', 'GOOD-9')
         ->assertNotDispatched('qr-scan-rejected');
+});
+
+it('clears a typed rejectWhen value before other afterStateUpdated hooks see it', function () {
+    Livewire::test(RejectWhenOrderLivewireComponent::class)
+        ->set('data.sku', 'BAD-001')
+        ->assertSet('data.sku', null)
+        ->assertSet('seen', [null])
+        ->assertDispatched('qr-scan-rejected')
+        ->set('data.sku', 'GOOD-001')
+        ->assertSet('data.sku', 'GOOD-001')
+        ->assertSet('seen', [null, 'GOOD-001']);
 });
