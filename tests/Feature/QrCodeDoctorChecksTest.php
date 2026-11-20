@@ -110,6 +110,8 @@ it('fails on an invalid image route config', function (string $key, mixed $value
     'text throttle' => ['throttle', 'sixty', "must look like '60,1' (requests,minutes), or null"],
     'zero throttle' => ['throttle', '0,1', "must look like '60,1' (requests,minutes), or null"],
     'non-bool strict colours' => ['strict_colors', 'yes', 'must be true or false'],
+    'string middleware' => ['middleware', 'auth', 'must be a list of middleware class names or aliases'],
+    'blank middleware entry' => ['middleware', [''], 'must be a list of middleware class names or aliases'],
 ]);
 
 it('passes when every logo base path exists', function () {

@@ -341,6 +341,12 @@ class QrCodeDoctorCommand extends Command
             $problems++;
         }
 
+        $middleware = config('qr-code.image_route.middleware', []);
+        if (! is_array($middleware) || array_filter($middleware, fn (mixed $entry): bool => ! is_string($entry) || $entry === '') !== []) {
+            $this->error('  [FAIL] qr-code.image_route.middleware must be a list of middleware class names or aliases.');
+            $problems++;
+        }
+
         if ($problems > 0) {
             return $problems;
         }
