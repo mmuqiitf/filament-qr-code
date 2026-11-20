@@ -138,6 +138,7 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 | `ttl`           | `null`  | minutes a signed image URL stays valid (`temporarySignedRoute`) for QR previews and barcode columns; also caps `Cache-Control: private` `max-age` at the TTL (never above a day). `null` = never expires |
 | `throttle`      | `null`  | shared rate limit for both image routes, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
 | `strict_colors` | `false` | require `#rrggbb` colours on the image route (default accepts `#rgb`, `#rrggbb` or bare hex); anything else gets 422 |
+| `middleware`    | `[]`    | extra middleware on both image routes, after `signed` and the throttle. Class names or aliases. The routes stay off the `web` group. Non-strings are ignored at registration; `qr-code:doctor` fails the config |
 
 ### `audit`
 

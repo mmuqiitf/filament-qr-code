@@ -182,6 +182,9 @@ return [
         'ttl' => null, // minutes; null = signed URLs never expire
         'throttle' => null, // e.g. '60,1' = 60 requests per minute per client
         'strict_colors' => false, // true = colours must be #rrggbb, else 422
+        // Extra middleware on both image routes, after `signed` and the throttle.
+        // Class names or aliases. The routes stay off the `web` group.
+        'middleware' => [],
     ],
 
     /*

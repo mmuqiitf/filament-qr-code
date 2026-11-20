@@ -113,12 +113,38 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
         }
 
         // Not the `web` group: a preview <img> must not start a session or
-        // send a Set-Cookie that a shared cache could store.
-        Route::middleware(['signed', ThrottleQrImage::class])->group(function (): void {
+        // send a Set-Cookie that a shared cache could store. Extra middleware
+        // from image_route.middleware is appended; non-strings are ignored.
+        Route::middleware(['signed', ThrottleQrImage::class, ...$this->imageRouteMiddleware()])->group(function (): void {
             Route::get('filament-qr-code/qr-image', QrImageController::class)
                 ->name('filamentQrCode.image');
             Route::get('filament-qr-code/barcode-image', BarcodeImageController::class)
                 ->name('filamentQrCode.barcode');
         });
+    }
+
+    /**
+     * Extra middleware for both image routes. Only strings are kept, so a bad
+     * config value cannot break route registration.
+     *
+     * @return list<string>
+     */
+    protected function imageRouteMiddleware(): array
+    {
+        $middleware = config('qr-code.image_route.middleware', []);
+
+        if (! is_array($middleware)) {
+            return [];
+        }
+
+        $strings = [];
+
+        foreach ($middleware as $entry) {
+            if (is_string($entry) && $entry !== '') {
+                $strings[] = $entry;
+            }
+        }
+
+        return $strings;
     }
 }

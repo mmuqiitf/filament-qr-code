@@ -748,5 +748,6 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 | `image_route.ttl` | `null` |
 | `image_route.throttle` | `null` |
 | `image_route.strict_colors` | `false` |
+| `image_route.middleware` | `[]` |
 | `audit.enabled` | `false` |
 | `audit.channel` | `null` |

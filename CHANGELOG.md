@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `qr-code.image_route.middleware`: a list of extra middleware class names or aliases for the signed QR and barcode image routes. They run after `signed` and the image throttle. The default is `[]`, and the routes stay off the `web` group. Non-strings are ignored at registration. `qr-code:doctor` fails the config when the list is not strings.
+
 - `Gs1::parse()` and `Gs1::build()` read and write GS1 element strings (bracketed, raw scan data with group separators, or an AIM symbology prefix). Length and character set follow the GS1 Barcode Syntax Dictionary (2026-01-27). Check digits are always enforced on SSCC, GTIN, GLN and the other `csum` fields, dates must be on the calendar (day `00` is the last day of the month where allowed), and unknown AIs are rejected. See [GS1 element strings](docs/gs1.md).
 - `date()` and `decimal()` on `Element` and `ElementString` (`$gs1->date('17')`, `$gs1->decimal('3103')`). `date()` returns a `CarbonImmutable` with the GS1 two-digit-year window. `decimal()` returns an exact decimal string such as `'1.250'`, never a float. Values themselves stay strings.
 - `CheckDigit::calculate()` and `CheckDigit::validate()` compute the GS1 mod-10 check digit (GTIN, SSCC, GLN, and the EAN-13, EAN-8, UPC-A and ITF-14 digit). `ValidCheckDigit` is the matching validation rule.
