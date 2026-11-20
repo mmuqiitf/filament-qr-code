@@ -81,9 +81,9 @@ Add `QrHardwareScannerListener` anywhere in your schema. It intercepts hardware 
 
 1. the focused input or textarea, otherwise
 2. the first empty registered field (in the order passed to `make([...])`), otherwise
-3. the first empty `text`, `search`, `number` input or textarea in any form on the page — only while `fallbackToAnyInput()` is enabled (default `true`, config `hardware_scanner.fallback_to_any_input`).
+3. the first empty `text`, `search`, `number` input or textarea in the form that contains the listener — only while `fallbackToAnyInput()` is enabled (default `true`, config `hardware_scanner.fallback_to_any_input`). Inputs in other forms are left alone. A listener that is not inside a form does not fall back.
 
-Step 3 can catch a search or filter box. Turn it off so scans only land in the focused or registered fields:
+Step 3 can still catch a search or filter box that lives in that same form. Turn it off so scans only land in the focused or registered fields:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;

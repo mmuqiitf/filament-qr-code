@@ -29,7 +29,7 @@ The terminator is swallowed so the form doesn't submit. Slow Bluetooth guns can 
 
 ## A gun scan lands in the wrong field. Who gets the burst?
 
-One page-wide router hands every burst to exactly one owner. The order is: the open camera modal, then the focused scan field, then the first listening target on the page, then the Station Listener's first-empty-input fallback, and finally a `qr-scan-unrouted` event. See [Hardware routing](reference.md#hardware-routing). To keep a search box out of the fallback, use `->fallbackToAnyInput(false)`. To keep the router's hands off an input entirely, add `data-qr-ignore`.
+One page-wide router hands every burst to exactly one owner. The order is: the open camera modal, then the focused scan field, then the first listening target on the page, then the Station Listener's first-empty-input fallback (only inside the form that contains the listener), and finally a `qr-scan-unrouted` event. See [Hardware routing](reference.md#hardware-routing). To keep a search box in that form out of the fallback, use `->fallbackToAnyInput(false)`. To keep the router's hands off an input entirely, add `data-qr-ignore`.
 
 ## Does it work with several panels?
 
