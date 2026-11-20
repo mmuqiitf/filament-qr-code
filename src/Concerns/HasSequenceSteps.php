@@ -393,26 +393,23 @@ trait HasSequenceSteps
 
         $result = $this->checkStep($steps[$index], $code, $input, $values);
         $skipped = [];
-        $nextIndex = $this->findNextActiveIndex($index, $values);
 
-        if (! $result->passes && $input !== ScanInput::Manual && $steps[$index]->isOptional() && $nextIndex !== null) {
-            // An optional step whose check fails gives way when the code fits the next active step.
-            $nextStep = $steps[$nextIndex];
-            $nextResult = $nextStep->isRepeating()
-                ? $this->checkRepeatScan($nextStep, $code, $input, $values)
-                : $this->checkStep($nextStep, $code, $input, $values);
+        if (! $result->passes && $input !== ScanInput::Manual && $steps[$index]->isOptional()) {
+            $landed = $this->landPastOptionalSteps($steps, $index, $code, $input, $values);
 
-            if ($nextResult->passes && $nextStep->isRepeating()) {
-                unset($values[$step]);
+            if ($landed !== null && $steps[$landed['index']]->isRepeating()) {
+                foreach ($landed['skipped'] as $skippedKey) {
+                    unset($values[$skippedKey]);
+                }
 
-                return $this->acceptRepeatScan($nextIndex, $nextResult, $values, [$step])->toClient();
+                return $this->acceptRepeatScan($landed['index'], $landed['result'], $values, $landed['skipped'])->toClient();
             }
 
-            if ($nextResult->passes) {
-                $skipped = [$step];
-                $result = $nextResult;
-                $index = $nextIndex;
-                $step = $nextStep->getKey();
+            if ($landed !== null) {
+                $skipped = $landed['skipped'];
+                $result = $landed['result'];
+                $index = $landed['index'];
+                $step = $steps[$index]->getKey();
             }
         }
 
@@ -1070,6 +1067,44 @@ trait HasSequenceSteps
         }
 
         return null;
+    }
+
+    /**
+     * The first later active step that accepts $code. Optional steps that
+     * reject it are walked past. A required step that rejects it stops the walk.
+     *
+     * @param  array<int, ScanStep>  $steps
+     * @param  array<string, mixed>  $values
+     * @return array{index: int, result: ScanResult, skipped: list<string>}|null
+     */
+    protected function landPastOptionalSteps(array $steps, int $index, string $code, ScanInput $input, array $values): ?array
+    {
+        $skipped = [$steps[$index]->getKey()];
+        $walkIndex = $index;
+
+        while (true) {
+            $nextIndex = $this->findNextActiveIndex($walkIndex, $values);
+
+            if ($nextIndex === null) {
+                return null;
+            }
+
+            $nextStep = $steps[$nextIndex];
+            $nextResult = $nextStep->isRepeating()
+                ? $this->checkRepeatScan($nextStep, $code, $input, $values)
+                : $this->checkStep($nextStep, $code, $input, $values);
+
+            if ($nextResult->passes) {
+                return ['index' => $nextIndex, 'result' => $nextResult, 'skipped' => $skipped];
+            }
+
+            if (! $nextStep->isOptional()) {
+                return null;
+            }
+
+            $skipped[] = $nextStep->getKey();
+            $walkIndex = $nextIndex;
+        }
     }
 
     /** @param  array<string, mixed>  $values */

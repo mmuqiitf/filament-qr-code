@@ -238,7 +238,7 @@ QrScanSequence::make()
 
 ### Step order: optional skips and `when()`
 
-- **An optional step gives way.** When a live scan (camera or hardware) fails an optional step's checks but passes the next active step, the optional step is skipped (reported in `skipped`) and the code lands there. The next step can be a repeat step, so `po, sku, lot (optional), serials (repeat)` works: a serial scanned at the lot step goes straight into serials.
+- **An optional step gives way.** When a live scan (camera or hardware) fails an optional step's checks, the sequence tries each later active step. Optional steps that also reject the code are skipped. The code lands on the first step that accepts it, and every optional step it walked past is reported in `skipped`. A required step that rejects the code stops the walk, and the scan is rejected on the step the operator was on. Typed corrections do not skip. A later step can be a repeat step, so `lot (optional), note (optional), serials (repeat)` works: a serial scanned at the lot step goes straight into serials, with `skipped` of `lot` and `note`.
 - **`when()` makes a step conditional.** The closure receives `$values` (the sequence so far) and `$step`, and returns a bool:
 
 ```php

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A live scan on an optional sequence step walks past later optional steps that also reject the code, and lands on the first later step that accepts it. `skipped` lists every optional step it walked past. A required step that rejects the code stops the walk. Typed corrections still do not skip.
+
 - `BarcodeType` has a new case, `Gs1128`. Code that maps every `BarcodeType` case through a fixed lookup (a `match` without `default`, or an array indexed by `$type->value`) fails on it; see [UPGRADE](UPGRADE.md).
 
 - Render cache keys are `filament-qr-code:render:vN:` instead of an index of entries. `flushPersistentCache()` bumps that generation and clears the in-process map. Other keys in the store stay. Retired renders are not deleted: they expire with `generator.cache_ttl`, and a null TTL leaves them until that store is flushed. Octane clears the in-process map when a request, task, or tick starts.
