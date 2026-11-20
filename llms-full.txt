@@ -637,7 +637,7 @@ QrScanSequence::make()
 
 ### Step order: optional skips and `when()`
 
-- **An optional step gives way.** When a live scan (camera or hardware) fails an optional step's checks but passes the next active step, the optional step is skipped (reported in `skipped`) and the code lands there. The next step can be a repeat step, so `po, sku, lot (optional), serials (repeat)` works: a serial scanned at the lot step goes straight into serials.
+- **An optional step gives way.** When a live scan (camera or hardware) fails an optional step's checks, the sequence tries each later active step. Optional steps that also reject the code are skipped. The code lands on the first step that accepts it, and every optional step it walked past is reported in `skipped`. A required step that rejects the code stops the walk, and the scan is rejected on the step the operator was on. Typed corrections do not skip. A later step can be a repeat step, so `lot (optional), note (optional), serials (repeat)` works: a serial scanned at the lot step goes straight into serials, with `skipped` of `lot` and `note`.
 - **`when()` makes a step conditional.** The closure receives `$values` (the sequence so far) and `$step`, and returns a bool:
 
 ```php
@@ -3897,6 +3897,8 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 
 Run `php artisan filament:assets`: the scanner JavaScript changed.
 
+- **Optional sequence steps.** A camera or gun scan that fails an optional step now keeps walking through later optional steps until one accepts the code, or a required step rejects it. A sequence with two optional steps in a row (`lot`, `note`, then `serial`) used to reject a serial scanned at `lot` when `note` did not accept it. That serial now lands on `serial`, and `skipped` is `['lot', 'note']`. Typed corrections still stay on the step that was edited.
+- **Typed `rejectWhen()`.** A typed or pasted value that matches `rejectWhen()` is cleared before the field's other `afterStateUpdated()` hooks run. Those hooks used to see the rejected value and then the field was emptied. They now see an empty value. Camera and gun scans are unchanged.
 - **Station Listener fallback stays in its form.** With `fallbackToAnyInput()` left on (the default), an unmatched scan fills the first empty text, search, number or textarea in the form that contains the listener. It no longer fills an input in a different form, such as a table search beside the station. A listener rendered outside a form dispatches `qr-scan-unrouted` instead of searching the page. Registered fields in `make([...])` are unchanged and are still found by name anywhere on the page. To refuse every unmatched scan, call `fallbackToAnyInput(false)`.
 
 - **New barcode type.** `BarcodeType` gains `Gs1128`. Code that covers every case with a fixed lookup breaks on it: a `match ($type)` without `default` throws `UnhandledMatchError`, and an array keyed by `$type->value` (for example sample values per symbology for `BarcodeType::cases()`) has no `'gs1-128'` entry. Add the case, or skip it with `array_filter(BarcodeType::cases(), fn ($type) => $type !== BarcodeType::Gs1128)`.

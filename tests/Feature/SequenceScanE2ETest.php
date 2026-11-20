@@ -191,6 +191,76 @@ it('rejects on the optional step when the code fits neither step', function (): 
         ->assertSet('submissions', 0);
 });
 
+it('walks past several optional steps when a later step accepts the code', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->steps([
+        ScanStep::make('po')->validateUsing(['regex:/^PO-\d+$/']),
+        ScanStep::make('lot')->validateUsing(['regex:/^L\d{3}$/'])->optional(),
+        ScanStep::make('note')->validateUsing(['regex:/^N\d+$/'])->optional(),
+        ScanStep::make('serial')->validateUsing(['regex:/^SN\d+$/']),
+    ]);
+    $test = Livewire::test(SequenceScanTestComponent::class);
+
+    sequenceScan($test, 'po', 'PO-1');
+    sequenceScan($test, 'lot', 'SN5')
+        ->assertReturned(fn (array $result): bool => $result['passes']
+            && $result['step'] === 'serial'
+            && $result['skipped'] === ['lot', 'note']
+            && $result['completed'] === true)
+        ->assertSet('data.receipt', ['po' => 'PO-1', 'serial' => 'SN5'])
+        ->assertSet('submissions', 1);
+});
+
+it('stops the optional walk on the first later step that accepts the code', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->steps([
+        ScanStep::make('po')->validateUsing(['regex:/^PO-\d+$/']),
+        ScanStep::make('lot')->validateUsing(['regex:/^L\d{3}$/'])->optional(),
+        ScanStep::make('note')->validateUsing(['regex:/^N\d+$/'])->optional(),
+        ScanStep::make('serial')->validateUsing(['regex:/^SN\d+$/']),
+    ]);
+    $test = Livewire::test(SequenceScanTestComponent::class);
+
+    sequenceScan($test, 'po', 'PO-1');
+    sequenceScan($test, 'lot', 'N9')
+        ->assertReturned(fn (array $result): bool => $result['passes']
+            && $result['step'] === 'note'
+            && $result['skipped'] === ['lot']
+            && $result['next_step'] === 'serial')
+        ->assertSet('data.receipt', ['po' => 'PO-1', 'note' => 'N9']);
+});
+
+it('does not walk past a required step that rejects the code', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->steps([
+        ScanStep::make('po')->validateUsing(['regex:/^PO-\d+$/']),
+        ScanStep::make('lot')->validateUsing(['regex:/^L\d{3}$/'])->optional(),
+        ScanStep::make('sku')->lookup(ScanCheckProduct::class, 'sku'),
+        ScanStep::make('serial')->validateUsing(['regex:/^SN\d+$/']),
+    ]);
+    $test = Livewire::test(SequenceScanTestComponent::class);
+
+    sequenceScan($test, 'po', 'PO-1');
+    sequenceScan($test, 'lot', 'SN5')
+        ->assertReturned(fn (array $result): bool => ! $result['passes'] && $result['step'] === 'lot' && $result['skipped'] === [])
+        ->assertSet('data.receipt', ['po' => 'PO-1']);
+});
+
+it('walks optional steps into a repeat step', function (): void {
+    SequenceScanTestComponent::$configure = fn (QrScanSequence $sequence) => $sequence->steps([
+        ScanStep::make('po')->validateUsing(['regex:/^PO-\d+$/']),
+        ScanStep::make('lot')->validateUsing(['regex:/^L\d{3}$/'])->optional(),
+        ScanStep::make('note')->validateUsing(['regex:/^N\d+$/'])->optional(),
+        ScanStep::make('serials')->validateUsing(['regex:/^SN\d+$/'])->repeat(2),
+    ]);
+    $test = Livewire::test(SequenceScanTestComponent::class);
+
+    sequenceScan($test, 'po', 'PO-1');
+    sequenceScan($test, 'lot', 'SN5')
+        ->assertReturned(fn (array $result): bool => $result['passes']
+            && $result['step'] === 'serials'
+            && $result['skipped'] === ['lot', 'note']
+            && $result['next_step'] === 'serials')
+        ->assertSet('data.receipt', ['po' => 'PO-1', 'serials' => ['SN5']]);
+});
+
 function completeReceipt(mixed $test, string $serial = 'SN1'): mixed
 {
     sequenceScan($test, 'po', 'PO-1');
