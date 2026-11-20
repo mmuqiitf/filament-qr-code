@@ -4,6 +4,8 @@
 
 Run `php artisan filament:assets`: the scanner JavaScript changed.
 
+- **Station Listener fallback stays in its form.** With `fallbackToAnyInput()` left on (the default), an unmatched scan fills the first empty text, search, number or textarea in the form that contains the listener. It no longer fills an input in a different form, such as a table search beside the station. A listener rendered outside a form dispatches `qr-scan-unrouted` instead of searching the page. Registered fields in `make([...])` are unchanged and are still found by name anywhere on the page. To refuse every unmatched scan, call `fallbackToAnyInput(false)`.
+
 - **New barcode type.** `BarcodeType` gains `Gs1128`. Code that covers every case with a fixed lookup breaks on it: a `match ($type)` without `default` throws `UnhandledMatchError`, and an array keyed by `$type->value` (for example sample values per symbology for `BarcodeType::cases()`) has no `'gs1-128'` entry. Add the case, or skip it with `array_filter(BarcodeType::cases(), fn ($type) => $type !== BarcodeType::Gs1128)`.
 - **Scan rejections in the error bag.** A rejected scan on a single-mode `QrScanner` now adds its message to the form's error bag under the field, and the next accepted scan clears it. If your `onRejected()` already calls `resetErrorBag()` and `addError()` for the field, you can drop that; leaving it shows the message once, not twice. Tests that asserted `assertHasNoErrors()` after a rejected scan need `assertHasErrors()`.
 

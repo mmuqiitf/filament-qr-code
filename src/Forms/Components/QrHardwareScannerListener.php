@@ -167,7 +167,7 @@ class QrHardwareScannerListener extends Component
         return $result;
     }
 
-    /** Fill the first empty form input when no registered field is free; false dispatches `qr-scan-unrouted` (config `hardware_scanner.fallback_to_any_input`). */
+    /** Fill the first empty input in this listener's form when no registered field is free; false dispatches `qr-scan-unrouted` (config `hardware_scanner.fallback_to_any_input`). */
     public function fallbackToAnyInput(bool|Closure $condition = true): static
     {
         $this->fallbackToAnyInput = $condition;

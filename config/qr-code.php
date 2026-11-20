@@ -17,8 +17,9 @@ return [
     |   terminator counts as a scan. 3 (the 1.0 default) rejects fast human
     |   typing; 1 restores the 0.x behaviour.
     | - fallback_to_any_input: When the page-global listener finds no focused
-    |   or registered empty field, write into the first empty form input
-    |   (v0.2 behaviour). Set false to dispatch `qr-scan-unrouted` instead.
+    |   or registered empty field, write into the first empty input in the
+    |   form that contains the listener. Inputs in other forms are left
+    |   alone. Set false to dispatch `qr-scan-unrouted` instead.
     | - default_scope: Where a QrScanner field catches wedge scans. 'focus'
     |   (only while focused) or 'page' (also when no scan field has focus).
     |   Override per field with hardwareInput(scope:).

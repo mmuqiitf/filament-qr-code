@@ -49,7 +49,7 @@ QrScanner::make('sku')
 | `burst_threshold_ms`  | `50`               | max gap between keystrokes counted as one burst    |
 | `min_barcode_length`  | `2`                | shorter bursts are treated as typing               |
 | `min_fast_keys`       | `3`                | consecutive fast gaps required before a terminator counts; `3` rejects fast typists, `1` restores the 0.x behaviour |
-| `fallback_to_any_input` | `true`           | page-global listener may fill the first empty text, search, number or textarea in any form when no focused or registered field is free; `false` dispatches `qr-scan-unrouted` instead. `qr-code:doctor` warns while this stays on |
+| `fallback_to_any_input` | `true`           | page-global listener may fill the first empty text, search, number or textarea in the form that contains it when no focused or registered field is free; other forms are left alone; `false` dispatches `qr-scan-unrouted` instead. `qr-code:doctor` warns while this stays on |
 | `scan_timeout_ms`     | `150`              | flush window for terminator-less guns (0 disables) |
 | `prevent_form_submit` | `true`             | swallow the terminator key during bursts           |
 | `default_terminators` | `['Enter', 'Tab']` | gun suffix keys ending a scan                      |

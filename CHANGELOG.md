@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Station Listener fallback (`fallbackToAnyInput()`, config `hardware_scanner.fallback_to_any_input`) fills the first empty text, search, number or textarea in the form that contains the listener. An empty input in another form is left alone, and a listener that is not inside a form dispatches `qr-scan-unrouted`. Registered fields are still found by name anywhere on the page. The default stays `true`.
+
 - `BarcodeType` has a new case, `Gs1128`. Code that maps every `BarcodeType` case through a fixed lookup (a `match` without `default`, or an array indexed by `$type->value`) fails on it; see [UPGRADE](UPGRADE.md).
 
 - Render cache keys are `filament-qr-code:render:vN:` instead of an index of entries. `flushPersistentCache()` bumps that generation and clears the in-process map. Other keys in the store stay. Retired renders are not deleted: they expire with `generator.cache_ttl`, and a null TTL leaves them until that store is flushed. Octane clears the in-process map when a request, task, or tick starts.

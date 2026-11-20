@@ -246,7 +246,7 @@ class QrCodeDoctorCommand extends Command
     private function checkHardwareFallback(): int
     {
         if (config('qr-code.hardware_scanner.fallback_to_any_input') !== false) {
-            $this->warn('  [WARN] hardware_scanner.fallback_to_any_input is on: an unmatched scan can fill the first empty text field of any form. Set it to false, or call fallbackToAnyInput(false) on the station listener.');
+            $this->warn('  [WARN] hardware_scanner.fallback_to_any_input is on: an unmatched scan can fill the first empty text field in the listener\'s form. Set it to false, or call fallbackToAnyInput(false) on the station listener.');
         }
 
         return 0;
