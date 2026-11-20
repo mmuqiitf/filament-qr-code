@@ -4,9 +4,9 @@ import { qrHardwareScannerListenerComponent } from './qr-hardware-scanner.js';
 import { inputRouter } from './input-router.js';
 import { createWireSpy, mountComponent } from './alpine-test-harness.js';
 
-function mountListener(options = {}) {
+function mountListener(options = {}, parent = document.body) {
     const element = document.createElement('div');
-    document.body.appendChild(element);
+    parent.appendChild(element);
 
     return mountComponent(
         qrHardwareScannerListenerComponent({ sound: false, vibrate: false, autoFocusNext: false, ...options }),
@@ -27,19 +27,44 @@ afterEach(() => {
 });
 
 describe('qrHardwareScannerListener routing (P0.3)', () => {
-    it('keeps the v0.2 fallback into the first empty form input by default', () => {
-        document.body.innerHTML = '<form><input type="search" name="search"></form>';
-        const listener = mountListener({ fields: ['sku'] });
+    it('fills the first empty input in the listener form', () => {
+        document.body.innerHTML = '<form id="station"><input type="text" name="note"><input type="text" name="bin" value="A1"></form>';
+        const listener = mountListener({ fields: ['sku'] }, document.getElementById('station'));
 
         listener.handleGlobalScan('PRD-1001');
 
-        expect(document.querySelector('[name="search"]').value).toBe('PRD-1001');
+        expect(document.querySelector('[name="note"]').value).toBe('PRD-1001');
+        expect(document.querySelector('[name="bin"]').value).toBe('A1');
+    });
+
+    it('does not fill an empty input in another form', () => {
+        document.body.innerHTML = '<form id="filters"><input type="search" name="search"></form><form id="station"><input type="text" name="note"></form>';
+        const unrouted = captureUnrouted();
+        const listener = mountListener({ fields: ['sku'] }, document.getElementById('station'));
+
+        listener.handleGlobalScan('PRD-1001');
+
+        expect(document.querySelector('[name="search"]').value).toBe('');
+        expect(document.querySelector('[name="note"]').value).toBe('PRD-1001');
+        expect(unrouted).toEqual([]);
+    });
+
+    it('leaves another form alone when the listener form has no empty input', () => {
+        document.body.innerHTML = '<form id="filters"><input type="search" name="search"></form><form id="station"><input type="text" name="note" value="kept"></form>';
+        const unrouted = captureUnrouted();
+        const listener = mountListener({ fields: ['sku'] }, document.getElementById('station'));
+
+        listener.handleGlobalScan('PRD-1001');
+
+        expect(document.querySelector('[name="search"]').value).toBe('');
+        expect(document.querySelector('[name="note"]').value).toBe('kept');
+        expect(unrouted).toEqual([{ value: 'PRD-1001' }]);
     });
 
     it('never writes into an unrelated input when the fallback is disabled', () => {
-        document.body.innerHTML = '<form><input type="search" name="search"></form>';
+        document.body.innerHTML = '<form id="station"><input type="search" name="search"></form>';
         const unrouted = captureUnrouted();
-        const listener = mountListener({ fields: ['sku'], fallbackToAnyInput: false });
+        const listener = mountListener({ fields: ['sku'], fallbackToAnyInput: false }, document.getElementById('station'));
 
         listener.handleGlobalScan('PRD-1001');
 

@@ -55,7 +55,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | normalizer never runs | put on `scanFormat()` | move it to `normalizeUsing()` |
 | bad codes get saved | only `scanRules()` (which run on submit) | add `lookup()` / `validateUsing()` for live rejection |
 | a sequence submit misses values | reading `$this->data` directly | `$sequence->mergeSequenceState($this->form->getState())` |
-| a gun scan fills a search box | the Station Listener fell back to the first empty input | `->fallbackToAnyInput(false)` and listen for `qr-scan-unrouted` |
+| a gun scan fills a search box in the same form | the Station Listener fell back to the first empty input in its form | `->fallbackToAnyInput(false)` and listen for `qr-scan-unrouted` |
 | a slow Bluetooth gun is ignored | `min_fast_keys` is 3 | `->minFastKeys(1)` |
 | a table page is slow with many QRs | turned off `lazyModal()` or the cache | keep `->lazyModal()` (the default) and `generator.cache_ttl` |
 

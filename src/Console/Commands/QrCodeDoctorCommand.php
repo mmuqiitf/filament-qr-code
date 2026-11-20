@@ -246,7 +246,7 @@ class QrCodeDoctorCommand extends Command
     private function checkHardwareFallback(): int
     {
         if (config('qr-code.hardware_scanner.fallback_to_any_input') !== false) {
-            $this->warn('  [WARN] hardware_scanner.fallback_to_any_input is on: an unmatched scan can fill the first empty text field of any form. Set it to false, or call fallbackToAnyInput(false) on the station listener.');
+            $this->warn('  [WARN] hardware_scanner.fallback_to_any_input is on: an unmatched scan can fill the first empty text field in the listener\'s form. Set it to false, or call fallbackToAnyInput(false) on the station listener.');
         }
 
         return 0;
@@ -338,6 +338,12 @@ class QrCodeDoctorCommand extends Command
         $strictColors = config('qr-code.image_route.strict_colors', false);
         if (! is_bool($strictColors)) {
             $this->error('  [FAIL] qr-code.image_route.strict_colors must be true or false.');
+            $problems++;
+        }
+
+        $middleware = config('qr-code.image_route.middleware', []);
+        if (! is_array($middleware) || array_filter($middleware, fn (mixed $entry): bool => ! is_string($entry) || $entry === '') !== []) {
+            $this->error('  [FAIL] qr-code.image_route.middleware must be a list of middleware class names or aliases.');
             $problems++;
         }
 

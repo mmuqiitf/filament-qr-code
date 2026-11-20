@@ -219,7 +219,7 @@ php artisan qr-code:doctor
 | Sequence submit misses scanned values        | The form reads the steps from a different place than the sequence writes them | Give the sequence `->statePath()` and read it via `mergeSequenceState()`; the flat `{form}.{step}` paths follow the schema `statePath()`. |
 | Same burst handled twice                     | A custom key handler next to the package's wedge router                   | Register the handler with `FilamentQrCode.router.register()` so each burst has one owner ([Extension points](docs/extending.md#browser)).         |
 | Typed text becomes a "scan"                  | `minBarcodeLength` too low for a keyboard-heavy form                      | Raise `minBarcodeLength` to 4–6 on that component.                                                                                                |
-| Scan lands in the wrong input (e.g. search)  | Station Listener fell back to the first empty form input                  | `QrHardwareScannerListener::make([...])->fallbackToAnyInput(false)` (or `hardware_scanner.fallback_to_any_input => false`); listen for `qr-scan-unrouted`. |
+| Scan lands in the wrong input (e.g. search)  | Station Listener fell back to the first empty input in its own form       | `QrHardwareScannerListener::make([...])->fallbackToAnyInput(false)` (or `hardware_scanner.fallback_to_any_input => false`); listen for `qr-scan-unrouted`. |
 | A slow or Bluetooth gun's short codes are missed | `min_fast_keys` (default 3) needs three fast gaps in a row               | Lower it on that component with `->minFastKeys(1)` (or `hardware_scanner.min_fast_keys`).                                                         |
 | `nextField()` / listener misses a field      | Name does not match exactly                                               | Use the exact field name; nested paths like `items.0.sku` are supported, and `sku` never matches `parent_sku`.                                   |
 | Table page is slow with many QRs             | Eager modal data-URIs per row                                             | Keep `->lazyModal()` (default) and the persistent cache enabled; tune `generator.cache_ttl`.                                                      |
@@ -480,9 +480,9 @@ Add `QrHardwareScannerListener` anywhere in your schema. It intercepts hardware 
 
 1. the focused input or textarea, otherwise
 2. the first empty registered field (in the order passed to `make([...])`), otherwise
-3. the first empty `text`, `search`, `number` input or textarea in any form on the page — only while `fallbackToAnyInput()` is enabled (default `true`, config `hardware_scanner.fallback_to_any_input`).
+3. the first empty `text`, `search`, `number` input or textarea in the form that contains the listener — only while `fallbackToAnyInput()` is enabled (default `true`, config `hardware_scanner.fallback_to_any_input`). Inputs in other forms are left alone. A listener that is not inside a form does not fall back.
 
-Step 3 can catch a search or filter box. Turn it off so scans only land in the focused or registered fields:
+Step 3 can still catch a search or filter box that lives in that same form. Turn it off so scans only land in the focused or registered fields:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
@@ -1071,13 +1071,15 @@ The signed `filamentQrCode.image` route is safe by default (signatures stop tamp
     'ttl' => 60,             // preview URLs expire after an hour
     'throttle' => '60,1',    // 60 images per minute per client, then 429
     'strict_colors' => true, // #rrggbb only, else 422
+    'middleware' => [],      // extra middleware after signed + throttle; still not the web group
 ],
 ```
 
 - `logo_base_paths` resolves each logo with `realpath()` (so `../` and symlinks that escape are caught) and accepts only PNG, JPEG, GIF or WebP files inside a listed directory. Inline renders (columns, entries, downloads, `QrCodeService`) skip a rejected logo and log a warning; the image route answers 422.
 - `ttl` signs preview URLs with an `expires` parameter (expired links get 403) and caps the browser cache at the TTL.
 - The route is not on the `web` middleware group. A preview response does not start a session. It sends `Cache-Control: private` and `X-Content-Type-Options: nosniff`.
-- `qr-code:doctor` reports whether logos are restricted, flags base paths that do not exist, warns when `ttl` and `throttle` are both unset, and fails on an invalid `ttl`, `throttle` or `strict_colors` value.
+- `middleware` appends class names or aliases to both image routes, after `signed` and the throttle. It does not put the routes on the `web` group. An entry that is not a non-empty string is ignored when the routes are registered.
+- `qr-code:doctor` reports whether logos are restricted, flags base paths that do not exist, warns when `ttl` and `throttle` are both unset, and fails on an invalid `ttl`, `throttle`, `strict_colors` or `middleware` value.
 
 ### In Infolists
 
@@ -1969,7 +1971,7 @@ QrScanner::make('sku')
 | `burst_threshold_ms`  | `50`               | max gap between keystrokes counted as one burst    |
 | `min_barcode_length`  | `2`                | shorter bursts are treated as typing               |
 | `min_fast_keys`       | `3`                | consecutive fast gaps required before a terminator counts; `3` rejects fast typists, `1` restores the 0.x behaviour |
-| `fallback_to_any_input` | `true`           | page-global listener may fill the first empty text, search, number or textarea in any form when no focused or registered field is free; `false` dispatches `qr-scan-unrouted` instead. `qr-code:doctor` warns while this stays on |
+| `fallback_to_any_input` | `true`           | page-global listener may fill the first empty text, search, number or textarea in the form that contains it when no focused or registered field is free; other forms are left alone; `false` dispatches `qr-scan-unrouted` instead. `qr-code:doctor` warns while this stays on |
 | `scan_timeout_ms`     | `150`              | flush window for terminator-less guns (0 disables) |
 | `prevent_form_submit` | `true`             | swallow the terminator key during bursts           |
 | `default_terminators` | `['Enter', 'Tab']` | gun suffix keys ending a scan                      |
@@ -2058,6 +2060,7 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 | `ttl`           | `null`  | minutes a signed image URL stays valid (`temporarySignedRoute`) for QR previews and barcode columns; also caps `Cache-Control: private` `max-age` at the TTL (never above a day). `null` = never expires |
 | `throttle`      | `null`  | shared rate limit for both image routes, e.g. `'60,1'` (60 per minute per client); excess requests get 429 |
 | `strict_colors` | `false` | require `#rrggbb` colours on the image route (default accepts `#rgb`, `#rrggbb` or bare hex); anything else gets 422 |
+| `middleware`    | `[]`    | extra middleware on both image routes, after `signed` and the throttle. Class names or aliases. The routes stay off the `web` group. Non-strings are ignored at registration; `qr-code:doctor` fails the config |
 
 ### `audit`
 
@@ -2155,7 +2158,7 @@ The terminator is swallowed so the form doesn't submit. Slow Bluetooth guns can 
 
 ## A gun scan lands in the wrong field. Who gets the burst?
 
-One page-wide router hands every burst to exactly one owner. The order is: the open camera modal, then the focused scan field, then the first listening target on the page, then the Station Listener's first-empty-input fallback, and finally a `qr-scan-unrouted` event. See [Hardware routing](reference.md#hardware-routing). To keep a search box out of the fallback, use `->fallbackToAnyInput(false)`. To keep the router's hands off an input entirely, add `data-qr-ignore`.
+One page-wide router hands every burst to exactly one owner. The order is: the open camera modal, then the focused scan field, then the first listening target on the page, then the Station Listener's first-empty-input fallback (only inside the form that contains the listener), and finally a `qr-scan-unrouted` event. See [Hardware routing](reference.md#hardware-routing). To keep a search box in that form out of the fallback, use `->fallbackToAnyInput(false)`. To keep the router's hands off an input entirely, add `data-qr-ignore`.
 
 ## Does it work with several panels?
 
@@ -2223,7 +2226,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | normalizer never runs | put on `scanFormat()` | move it to `normalizeUsing()` |
 | bad codes get saved | only `scanRules()` (which run on submit) | add `lookup()` / `validateUsing()` for live rejection |
 | a sequence submit misses values | reading `$this->data` directly | `$sequence->mergeSequenceState($this->form->getState())` |
-| a gun scan fills a search box | the Station Listener fell back to the first empty input | `->fallbackToAnyInput(false)` and listen for `qr-scan-unrouted` |
+| a gun scan fills a search box in the same form | the Station Listener fell back to the first empty input in its form | `->fallbackToAnyInput(false)` and listen for `qr-scan-unrouted` |
 | a slow Bluetooth gun is ignored | `min_fast_keys` is 3 | `->minFastKeys(1)` |
 | a table page is slow with many QRs | turned off `lazyModal()` or the cache | keep `->lazyModal()` (the default) and `generator.cache_ttl` |
 
@@ -3215,7 +3218,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `autoFocusNext(Closure\|bool $condition = true): static` | Focus the next registered field after each routed scan. |
 | `beepDuration(Closure\|int $milliseconds): static` | Beep length in milliseconds (config `feedback.beep_duration_ms`). |
 | `beepFrequency(Closure\|int $hertz): static` | Beep pitch in hertz (config `feedback.beep_frequency`). |
-| `fallbackToAnyInput(Closure\|bool $condition = true): static` | Fill the first empty form input when no registered field is free; false dispatches `qr-scan-unrouted` (config `hardware_scanner.fallback_to_any_input`). |
+| `fallbackToAnyInput(Closure\|bool $condition = true): static` | Fill the first empty input in this listener's form when no registered field is free; false dispatches `qr-scan-unrouted` (config `hardware_scanner.fallback_to_any_input`). |
 | `fields(Closure\|array $fields): static` | Field names (dot paths allowed) the listener routes scans into. |
 | `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false, Closure\|string\|null $store = null): static` | Read every gun burst as a GS1 label and fill the mapped fields on the server instead of typing the burst into an input. Same `$fill` and `$require` rules as QrScanner::gs1(); paths are relative to the listener's schema. A rejected label fills nothing and shows its reason under the listener. Give each GS1 listener on one page its own key(). |
 | `handleGs1Scan(string $code): array` | Check a gun burst as GS1 and fill the mapped fields; called by the listener JS, usable from tests. |
@@ -3879,6 +3882,7 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 | `image_route.ttl` | `null` |
 | `image_route.throttle` | `null` |
 | `image_route.strict_colors` | `false` |
+| `image_route.middleware` | `[]` |
 | `audit.enabled` | `false` |
 | `audit.channel` | `null` |
 
@@ -3893,7 +3897,9 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 
 Run `php artisan filament:assets`: the scanner JavaScript changed.
 
+- **Optional sequence steps.** A camera or gun scan that fails an optional step now keeps walking through later optional steps until one accepts the code, or a required step rejects it. A sequence with two optional steps in a row (`lot`, `note`, then `serial`) used to reject a serial scanned at `lot` when `note` did not accept it. That serial now lands on `serial`, and `skipped` is `['lot', 'note']`. Typed corrections still stay on the step that was edited.
 - **Typed `rejectWhen()`.** A typed or pasted value that matches `rejectWhen()` is cleared before the field's other `afterStateUpdated()` hooks run. Those hooks used to see the rejected value and then the field was emptied. They now see an empty value. Camera and gun scans are unchanged.
+- **Station Listener fallback stays in its form.** With `fallbackToAnyInput()` left on (the default), an unmatched scan fills the first empty text, search, number or textarea in the form that contains the listener. It no longer fills an input in a different form, such as a table search beside the station. A listener rendered outside a form dispatches `qr-scan-unrouted` instead of searching the page. Registered fields in `make([...])` are unchanged and are still found by name anywhere on the page. To refuse every unmatched scan, call `fallbackToAnyInput(false)`.
 
 - **New barcode type.** `BarcodeType` gains `Gs1128`. Code that covers every case with a fixed lookup breaks on it: a `match ($type)` without `default` throws `UnhandledMatchError`, and an array keyed by `$type->value` (for example sample values per symbology for `BarcodeType::cases()`) has no `'gs1-128'` entry. Add the case, or skip it with `array_filter(BarcodeType::cases(), fn ($type) => $type !== BarcodeType::Gs1128)`.
 - **Scan rejections in the error bag.** A rejected scan on a single-mode `QrScanner` now adds its message to the form's error bag under the field, and the next accepted scan clears it. If your `onRejected()` already calls `resetErrorBag()` and `addError()` for the field, you can drop that; leaving it shows the message once, not twice. Tests that asserted `assertHasNoErrors()` after a rejected scan need `assertHasErrors()`.
