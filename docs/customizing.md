@@ -94,7 +94,7 @@ QrScanSequence::make([...])
     ->normalizeStepUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
 ```
 
-Filament's `afterStateUpdated()` works too. Reject bad live scans with `->rejectWhen(fn ($state) => ..., 'message')`, which clears the value and dispatches `qr-scan-rejected`.
+Filament's `afterStateUpdated()` works too. Reject bad live scans with `->rejectWhen(fn ($state) => ..., 'message')`, which clears the value before the field's other `afterStateUpdated()` hooks see it and dispatches `qr-scan-rejected`.
 
 ## Drive scans programmatically
 

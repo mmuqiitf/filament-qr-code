@@ -300,7 +300,8 @@ class QrScanner extends Field
      * cleared and a `qr-scan-rejected` browser event (with message) is
      * dispatched so the app can notify the operator. Camera and gun scans
      * are checked on the server first, so a rejected scan is never
-     * announced as added; typed values are checked after the state update.
+     * announced as added. A typed value is cleared before the field's other
+     * `afterStateUpdated()` hooks run, so they do not see the rejected value.
      */
     public function rejectWhen(Closure $predicate, string|Closure $message): static
     {
@@ -316,7 +317,8 @@ class QrScanner extends Field
             return (string) $this->evaluate($message, $named);
         };
 
-        $this->afterStateUpdated(function ($component, $state, $livewire) use ($predicate, $message): void {
+        // First, so a typed value is cleared before hooks the caller registered.
+        array_unshift($this->afterStateUpdated, function ($component, $state, $livewire) use ($predicate, $message): void {
             // A gs1() field already ran this check with the others on the typed value.
             if (blank($state) || $component->isGs1()) {
                 return;

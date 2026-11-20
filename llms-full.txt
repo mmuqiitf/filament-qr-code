@@ -442,7 +442,7 @@ Option reference:
 - `formats()` — symbologies the decoder attempts. Omit only when truly unknown. With no filter the effective `fps` auto-degrades 25 → 12 against main-thread lag (explicit `fps()` always wins).
 - `scanFormat()` / `onScan()` — programmatic-only hooks; they do **not** run on live camera or hardware scans. Normalize live values with `normalizeUsing()` — see [Normalize live scans](customizing.md#normalize-live-scans).
 - `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning. Buffers are sanitized (STX/ETX/CR/LF stripped, mirroring `HasHardwareScanner::sanitizeScannedValue()`), IME compositions never count, and terminator-less guns flush after `scanTimeoutMs` (default 150).
-- `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify. Camera and gun scans are checked on the server before the field accepts them, so screen readers only hear the rejection.
+- `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify. Camera and gun scans are checked on the server before the field accepts them, so screen readers only hear the rejection. A typed or pasted value that matches is cleared before the field's other `afterStateUpdated()` hooks run, so those hooks do not see it.
 - `gs1(fill: ['01' => 'gtin', '17' => 'expires_at'], require: ['01', '17'])` — read scans as GS1 labels: the field stores the bracketed string, mapped AIs fill sibling fields, and an invalid label or a missing AI is rejected before any state is written. See [Scanning GS1 labels](gs1.md#scanning-gs1-labels).
 - `hardwareInput(scope: HardwareInputScope::Page)` — also catch wedge scans when no scan field has focus (default `Focus`: only while focused; config `hardware_scanner.default_scope`). A focused scan field always wins.
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
@@ -1653,7 +1653,7 @@ QrScanSequence::make([...])
     ->normalizeStepUsing(fn ($rawValue) => strtoupper(trim((string) $rawValue)));
 ```
 
-Filament's `afterStateUpdated()` works too. Reject bad live scans with `->rejectWhen(fn ($state) => ..., 'message')`, which clears the value and dispatches `qr-scan-rejected`.
+Filament's `afterStateUpdated()` works too. Reject bad live scans with `->rejectWhen(fn ($state) => ..., 'message')`, which clears the value before the field's other `afterStateUpdated()` hooks see it and dispatches `qr-scan-rejected`.
 
 ## Drive scans programmatically
 
@@ -3194,7 +3194,7 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `pipe(ScanCheckStage\|string ...$stages): static` | Add custom checks that run after the rules, lookup and closures. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
-| `rejectWhen(Closure $predicate, Closure\|string $message): static` | Immediately reject a live scan matching $predicate: the state is cleared and a `qr-scan-rejected` browser event (with message) is dispatched so the app can notify the operator. Camera and gun scans are checked on the server first, so a rejected scan is never announced as added; typed values are checked after the state update. |
+| `rejectWhen(Closure $predicate, Closure\|string $message): static` | Immediately reject a live scan matching $predicate: the state is cleared and a `qr-scan-rejected` browser event (with message) is dispatched so the app can notify the operator. Camera and gun scans are checked on the server first, so a rejected scan is never announced as added. A typed value is cleared before the field's other `afterStateUpdated()` hooks run, so they do not see the rejected value. |
 | `runScanChecks(string $code, ?ScanInput $source): ScanResult` | Run the field's live-scan checks (rules, lookup, closures, piped stages) on an already normalized code. The first failure stops the run. |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
 | `scanFormat(?Closure $formatter): static` | Programmatic-only formatter. Runs only via formatScannedValue() in custom flows — never on live camera/hardware scans. For live values use normalizeUsing() (or afterStateUpdated() directly). |
