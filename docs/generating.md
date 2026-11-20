@@ -61,13 +61,15 @@ The signed `filamentQrCode.image` route is safe by default (signatures stop tamp
     'ttl' => 60,             // preview URLs expire after an hour
     'throttle' => '60,1',    // 60 images per minute per client, then 429
     'strict_colors' => true, // #rrggbb only, else 422
+    'middleware' => [],      // extra middleware after signed + throttle; still not the web group
 ],
 ```
 
 - `logo_base_paths` resolves each logo with `realpath()` (so `../` and symlinks that escape are caught) and accepts only PNG, JPEG, GIF or WebP files inside a listed directory. Inline renders (columns, entries, downloads, `QrCodeService`) skip a rejected logo and log a warning; the image route answers 422.
 - `ttl` signs preview URLs with an `expires` parameter (expired links get 403) and caps the browser cache at the TTL.
 - The route is not on the `web` middleware group. A preview response does not start a session. It sends `Cache-Control: private` and `X-Content-Type-Options: nosniff`.
-- `qr-code:doctor` reports whether logos are restricted, flags base paths that do not exist, warns when `ttl` and `throttle` are both unset, and fails on an invalid `ttl`, `throttle` or `strict_colors` value.
+- `middleware` appends class names or aliases to both image routes, after `signed` and the throttle. It does not put the routes on the `web` group. An entry that is not a non-empty string is ignored when the routes are registered.
+- `qr-code:doctor` reports whether logos are restricted, flags base paths that do not exist, warns when `ttl` and `throttle` are both unset, and fails on an invalid `ttl`, `throttle`, `strict_colors` or `middleware` value.
 
 ### In Infolists
 

@@ -84,7 +84,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `autoFocusNext(Closure\|bool $condition = true): static` | Focus the next registered field after each routed scan. |
 | `beepDuration(Closure\|int $milliseconds): static` | Beep length in milliseconds (config `feedback.beep_duration_ms`). |
 | `beepFrequency(Closure\|int $hertz): static` | Beep pitch in hertz (config `feedback.beep_frequency`). |
-| `fallbackToAnyInput(Closure\|bool $condition = true): static` | Fill the first empty form input when no registered field is free; false dispatches `qr-scan-unrouted` (config `hardware_scanner.fallback_to_any_input`). |
+| `fallbackToAnyInput(Closure\|bool $condition = true): static` | Fill the first empty input in this listener's form when no registered field is free; false dispatches `qr-scan-unrouted` (config `hardware_scanner.fallback_to_any_input`). |
 | `fields(Closure\|array $fields): static` | Field names (dot paths allowed) the listener routes scans into. |
 | `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false, Closure\|string\|null $store = null): static` | Read every gun burst as a GS1 label and fill the mapped fields on the server instead of typing the burst into an input. Same `$fill` and `$require` rules as QrScanner::gs1(); paths are relative to the listener's schema. A rejected label fills nothing and shows its reason under the listener. Give each GS1 listener on one page its own key(). |
 | `handleGs1Scan(string $code): array` | Check a gun burst as GS1 and fill the mapped fields; called by the listener JS, usable from tests. |
@@ -748,5 +748,6 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 | `image_route.ttl` | `null` |
 | `image_route.throttle` | `null` |
 | `image_route.strict_colors` | `false` |
+| `image_route.middleware` | `[]` |
 | `audit.enabled` | `false` |
 | `audit.channel` | `null` |

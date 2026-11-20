@@ -11,11 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A live scan on an optional sequence step walks past later optional steps that also reject the code, and lands on the first later step that accepts it. `skipped` lists every optional step it walked past. A required step that rejects the code stops the walk. Typed corrections still do not skip.
 
+- Station Listener fallback (`fallbackToAnyInput()`, config `hardware_scanner.fallback_to_any_input`) fills the first empty text, search, number or textarea in the form that contains the listener. An empty input in another form is left alone, and a listener that is not inside a form dispatches `qr-scan-unrouted`. Registered fields are still found by name anywhere on the page. The default stays `true`.
+
 - `BarcodeType` has a new case, `Gs1128`. Code that maps every `BarcodeType` case through a fixed lookup (a `match` without `default`, or an array indexed by `$type->value`) fails on it; see [UPGRADE](UPGRADE.md).
 
 - Render cache keys are `filament-qr-code:render:vN:` instead of an index of entries. `flushPersistentCache()` bumps that generation and clears the in-process map. Other keys in the store stay. Retired renders are not deleted: they expire with `generator.cache_ttl`, and a null TTL leaves them until that store is flushed. Octane clears the in-process map when a request, task, or tick starts.
 
 ### Added
+
+- `qr-code.image_route.middleware`: a list of extra middleware class names or aliases for the signed QR and barcode image routes. They run after `signed` and the image throttle. The default is `[]`, and the routes stay off the `web` group. Non-strings are ignored at registration. `qr-code:doctor` fails the config when the list is not strings.
 
 - `Gs1::parse()` and `Gs1::build()` read and write GS1 element strings (bracketed, raw scan data with group separators, or an AIM symbology prefix). Length and character set follow the GS1 Barcode Syntax Dictionary (2026-01-27). Check digits are always enforced on SSCC, GTIN, GLN and the other `csum` fields, dates must be on the calendar (day `00` is the last day of the month where allowed), and unknown AIs are rejected. See [GS1 element strings](docs/gs1.md).
 - `date()` and `decimal()` on `Element` and `ElementString` (`$gs1->date('17')`, `$gs1->decimal('3103')`). `date()` returns a `CarbonImmutable` with the GS1 two-digit-year window. `decimal()` returns an exact decimal string such as `'1.250'`, never a float. Values themselves stay strings.

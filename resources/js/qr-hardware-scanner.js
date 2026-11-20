@@ -330,8 +330,14 @@ export function qrHardwareScannerListenerComponent({
                 }
             }
 
+            // Only the form that contains this listener. A search box in
+            // another form stays empty; with no enclosing form, nothing matches.
             if (!targetInput && fallbackToAnyInput) {
-                const inputs = document.querySelectorAll(`form ${SCANNABLE_SELECTOR}:not([disabled]):not([readonly])`);
+                const form = (this.$root ?? this.$el)?.closest?.('form') ?? null;
+                const inputs = form
+                    ? form.querySelectorAll(`${SCANNABLE_SELECTOR}:not([disabled]):not([readonly])`)
+                    : [];
+
                 for (const input of inputs) {
                     if (!input.value) {
                         targetInput = input;
