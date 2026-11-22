@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `QrScanSequence`: a `repeat()` count that reads live state (a quantity input) is checked again on the Done button and on submit, not only on each scan, so the server agrees with the browser's `k / n` when the quantity changes mid-sequence. Submit fails a counted step with fewer codes than the live count ("Scan at least n code(s)") or more ("This step has more than n code(s)", new key `repeat_too_many`), and `getMissingSequenceKeys()` / `isSequenceComplete()` list a step that is short. When the count drops to the codes already scanned, an `'advance'` step finishes in the browser, so the sequence completes and auto-submits. The step payload gains `advance`.
+- Filament 5.12: an `afterStateUpdated()` hook added after `QrScanner::gs1()` or `rejectWhen()` no longer replaces the typed-value hook those methods put first. Filament 5.12 stores hooks under its own counter, and the package's prepended hook was renumbered into the slot the next hook took. Pasted GS1 labels then stayed raw and did not fill mapped fields, and a typed `rejectWhen()` value was not cleared. Each `rejectWhen()` keeps its own hook. `normalizeUsing()` also skips an empty value, so a `fn (string $code)` normalizer no longer gets `null` when a field is cleared or a typed value is rejected.
 
 ### Changed
 
@@ -39,10 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A rejected scan in single mode goes into the form's error bag under the field, so the server-rendered field shows the reason and `assertHasErrors()` sees it; the next accepted scan clears it. Continuous mode keeps its status line.
 - `InvalidGs1Exception` has `kind` (`InvalidGs1Exception::CHECK_DIGIT`, `::DATE`, `::UNKNOWN_AI`, …) and `ai`, so callers can word their own message.
 - Signed barcode images: `BarcodeColumn` loads `/filament-qr-code/barcode-image` (`filamentQrCode.barcode`) instead of embedding a data URI. `BarcodeDisplay` and `BarcodeEntry` still embed the image. The route shares the QR preview route's signature, `image_route` ttl, throttle and strict colours. Invalid input, and a value the symbology rejects, returns 422.
-
-### Fixed
-
-- Filament 5.12: an `afterStateUpdated()` hook added after `QrScanner::gs1()` or `rejectWhen()` no longer replaces the typed-value hook those methods put first. Filament 5.12 stores hooks under its own counter, and the package's prepended hook was renumbered into the slot the next hook took. Pasted GS1 labels then stayed raw and did not fill mapped fields, and a typed `rejectWhen()` value was not cleared. Each `rejectWhen()` keeps its own hook. `normalizeUsing()` also skips an empty value, so a `fn (string $code)` normalizer no longer gets `null` when a field is cleared or a typed value is rejected.
 
 ## [1.1.2] - 2026-11-04
 
