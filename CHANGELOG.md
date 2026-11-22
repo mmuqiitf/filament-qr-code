@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `QrScanSequence` and `QrCollector` (without `autoStart()`) no longer ask for the camera when the page loads. The device list is read up front only when camera permission is already granted. Otherwise it is read when Start is pressed, so "Camera access denied or unavailable." no longer shows before Start.
 - `QrScanner` with server checks (`gs1()`, `rejectWhen()`, `rules()`): pressing Enter on a typed or pasted value sends the value first and submits the form only when the value was accepted. A rejected value keeps its reason and no longer submits the form, where required-field errors used to replace it. An accepted value still submits on the same Enter.
 
+- Hardware bursts: keys typed into a textarea or a contenteditable editor are no longer read as a scan (unless a scan target owns the element). Fast typing in a notes field used to be cut off and sent to a page-scope scanner or sequence step.
+- Hardware burst detection counts the gaps between keystrokes on average instead of totting up quick pairs. A burst needs `min_fast_keys` gaps that average `burst_threshold_ms` or less, and no gap over three times the threshold. A few quick pairs in fast human typing no longer pass, and a short code such as `DONE` with one slow gap from a Bluetooth gun is no longer dropped.
+- `QrScanner` in continuous mode: a code typed into the field and sent with Enter is handled as a scan (source `manual`). It used to do nothing.
+- `QrCollector`: the empty-list text no longer mentions only the camera ("Scan a code with the camera or a handheld scanner.").
+
 ### Changed
 
 - A live scan on an optional sequence step walks past later optional steps that also reject the code, and lands on the first later step that accepts it. `skipped` lists every optional step it walked past. A required step that rejects the code stops the walk. Typed corrections still do not skip.

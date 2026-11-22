@@ -279,7 +279,30 @@ export function createInputRouter({ win = window, doc = document } = {}) {
         });
     };
 
+    // Free text (a textarea, a rich editor) is for people, so keys typed
+    // there are never read as a scan, unless a scan target owns the element.
+    const isUnownedFreeText = (event) => {
+        const element = event.target instanceof Element ? event.target : doc.activeElement;
+
+        if (!element) {
+            return false;
+        }
+
+        const freeText = element.tagName === 'TEXTAREA'
+            || element.isContentEditable === true
+            || Boolean(element.closest?.('[contenteditable]:not([contenteditable="false"])'));
+
+        return freeText && ![...targets.values()].some((target) => target.element?.contains?.(element));
+    };
+
     const handleKeyDown = (event) => {
+        if (isUnownedFreeText(event)) {
+            detector?.reset();
+            burstOrigin = null;
+
+            return;
+        }
+
         ensureDetector();
         rememberOrigin(event);
         detector.handleKeyDown(event);

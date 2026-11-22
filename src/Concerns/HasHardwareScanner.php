@@ -51,7 +51,7 @@ trait HasHardwareScanner
         return $this;
     }
 
-    /** Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). */
+    /** Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). */
     public function minFastKeys(int|Closure $count): static
     {
         $this->minFastKeys = $count;

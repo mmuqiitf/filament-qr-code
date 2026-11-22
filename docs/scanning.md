@@ -102,9 +102,9 @@ For GS1 pallet and case labels, `QrHardwareScannerListener::make()->gs1(fill: [.
 
 Fields are matched by their exact name — `data-field-name`, `name`, `id`, or a `wire:model` path equal to the name or ending in `.<name>` — so `sku` never matches `parent_sku`, and nested names such as `items.0.sku` work in `make([...])` and `nextField()`.
 
-The interceptor buffers keystrokes and treats gaps under `burstThresholdMs` (default 50) as a scanner burst. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), sanitizes, and routes the value — the delivery point (field, sequence, collector, or this listener) then plays the single confirmation beep, so one burst always yields one beep. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
+The interceptor buffers keystrokes and treats a run whose gaps average `burstThresholdMs` (default 50) or less as a scanner burst. Keys typed into a textarea or a contenteditable editor are never read as a scan, unless a scan field owns that element. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), sanitizes, and routes the value — the delivery point (field, sequence, collector, or this listener) then plays the single confirmation beep, so one burst always yields one beep. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
 
-Held-down keys (keyboard auto-repeat) never count toward a burst, so holding a key and pressing Enter is not a scan. For keyboard-heavy forms, require more consecutive fast keystrokes before a terminator counts with `minFastKeys()` (default `3`, config `hardware_scanner.min_fast_keys`; `1` accepts a single fast gap like 0.x did):
+Held-down keys (keyboard auto-repeat) never count toward a burst, so holding a key and pressing Enter is not a scan. For keyboard-heavy forms, require more keystroke gaps (averaging `burstThresholdMs` or less) before a terminator counts with `minFastKeys()` (default `3`, config `hardware_scanner.min_fast_keys`; `1` accepts a single fast gap like 0.x did):
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
@@ -438,7 +438,8 @@ QrScanner::make('scan')
     ->dehydrated(false);
 ```
 
-- Each code is one server call (`handleScan`), even without rules or a lookup, because that is where `onScanned()` runs. Merging lines (same SKU twice = quantity 2) is your job in `onScanned()`.
+- Each code is one server call (`handleScan`), even without rules or a lookup, because that is where `onScanned()` runs.
+- A code typed into the field and sent with Enter is handled like a scan, with source `manual`, and the form is not submitted. Merging lines (same SKU twice = quantity 2) is your job in `onScanned()`.
 - After an accepted scan the server clears the field (`continuousDisplay(ContinuousDisplay::Empty)`, the default) or keeps the code (`LastCode`). A `$set()` on the field's own path inside `onScanned()` is overwritten by the clear.
 - A rejected scan shows its message under the field. By default scanning carries on. With `pauseOnReject()` the field stops taking scans until the operator presses **Resume scanning** (or Escape); `qr-scan-paused` and `qr-scan-resumed` fire.
 - The camera closes after each accepted scan by default; `keepCameraOpen()` keeps it running for the next code.

@@ -19,7 +19,7 @@ return [
     'download_image' => 'Unduh Gambar',
     'download_qr_bulk' => 'Unduh QR (ZIP)',
     'download_qr_code' => 'Unduh Kode QR',
-    'empty_collector' => 'Belum ada item terpindai. Arahkan kode QR ke depan kamera.',
+    'empty_collector' => 'Belum ada item terpindai. Pindai kode dengan kamera atau pemindai genggam.',
     'items' => 'item',
     'no_data' => 'Data kode QR tidak tersedia',
     'pause' => 'Jeda',

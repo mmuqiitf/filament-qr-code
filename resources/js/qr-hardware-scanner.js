@@ -42,8 +42,9 @@ function isGroupSeparatorChord(event) {
  * owns exactly one feedback call, so one gun burst always yields one beep.
  *
  * Guards: IME compositions and modifier-held keys are never buffered, a
- * burst requires consecutive fast gaps (a single fast pair amid slow typing
- * is not enough), and terminator-less guns flush via scanTimeoutMs.
+ * burst needs at least minFastKeys gaps that average burstThresholdMs or
+ * less (a few quick pairs amid human typing are not enough), and
+ * terminator-less guns flush via scanTimeoutMs.
  */
 export function createHardwareScannerHandler({
     burstThresholdMs = 50,
@@ -56,8 +57,8 @@ export function createHardwareScannerHandler({
 } = {}) {
     let buffer = '';
     let lastKeyTime = 0;
-    let fastStreak = 0;
-    let isBursting = false;
+    // Gaps (ms) before each buffered character after the first.
+    let gaps = [];
     let flushTimer = null;
 
     const clearFlushTimer = () => {
@@ -67,12 +68,28 @@ export function createHardwareScannerHandler({
         }
     };
 
+    const clearBuffer = () => {
+        buffer = '';
+        gaps = [];
+        clearFlushTimer();
+    };
+
+    // A scan: at least minFastKeys gaps, at scanner speed on average. A few
+    // quick pairs amid human typing average well above the threshold, and a
+    // gun with one slow gap (Bluetooth jitter) still averages below it.
+    const looksLikeScan = () => {
+        if (gaps.length < minFastKeys || buffer.length < minBarcodeLength) {
+            return false;
+        }
+
+        const mean = gaps.reduce((total, gap) => total + gap, 0) / gaps.length;
+
+        return mean <= burstThresholdMs;
+    };
+
     const emit = (rawValue) => {
         const scannedValue = sanitizeScannedValue(rawValue);
-        buffer = '';
-        fastStreak = 0;
-        isBursting = false;
-        clearFlushTimer();
+        clearBuffer();
 
         if (scannedValue.length < minBarcodeLength) {
             return false;
@@ -93,13 +110,14 @@ export function createHardwareScannerHandler({
 
         clearFlushTimer();
         flushTimer = setTimeout(() => {
+            flushTimer = null;
+
             // Terminator-less gun: a completed burst with no suffix key.
-            // Only flush when the burst actually looked like a scan.
-            if (isBursting && fastStreak >= Math.max(2, minFastKeys) && buffer.length >= minBarcodeLength) {
+            if (looksLikeScan()) {
                 emit(buffer);
-            } else if (!isBursting) {
+            } else {
                 buffer = '';
-                fastStreak = 0;
+                gaps = [];
             }
         }, scanTimeoutMs);
     };
@@ -126,14 +144,14 @@ export function createHardwareScannerHandler({
                 return false;
             }
 
+            // Shift and other non-printing keys still mark the time, so a
+            // gun's Shift + letter counts as one quick gap.
             const now = Date.now();
             const timeDiff = now - lastKeyTime;
             lastKeyTime = now;
 
-            const isTerminator = terminators.includes(event.key);
-
-            if (isTerminator) {
-                if (isBursting && fastStreak >= minFastKeys && buffer.length >= minBarcodeLength) {
+            if (terminators.includes(event.key)) {
+                if (looksLikeScan()) {
                     if (preventFormSubmit) {
                         event.preventDefault();
                         event.stopPropagation();
@@ -142,26 +160,20 @@ export function createHardwareScannerHandler({
                     return emit(buffer);
                 }
 
-                buffer = '';
-                fastStreak = 0;
-                isBursting = false;
-                clearFlushTimer();
+                clearBuffer();
 
                 return false;
             }
 
             // Record standard printable characters only.
             if (event.key.length === 1) {
-                if (timeDiff <= burstThresholdMs && buffer.length > 0) {
-                    fastStreak += 1;
-                    isBursting = fastStreak >= 1;
-                } else if (timeDiff > burstThresholdMs * 3) {
+                if (buffer.length > 0 && timeDiff > burstThresholdMs * 3) {
+                    // A long pause: whatever came before was not this scan.
                     buffer = '';
-                    fastStreak = 0;
-                    isBursting = false;
+                    gaps = [];
+                } else if (buffer.length > 0) {
+                    gaps.push(timeDiff);
                 }
-                // Ambiguous middle zone (1x-3x threshold): keep buffering
-                // without growing the streak, so slow typists never qualify.
 
                 buffer += event.key;
                 scheduleFlush();
@@ -171,11 +183,8 @@ export function createHardwareScannerHandler({
         },
 
         reset() {
-            buffer = '';
-            fastStreak = 0;
-            isBursting = false;
+            clearBuffer();
             lastKeyTime = 0;
-            clearFlushTimer();
         },
 
         getBuffer() {

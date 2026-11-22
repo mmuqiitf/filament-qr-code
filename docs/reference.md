@@ -31,7 +31,7 @@ QrScanner::make('sku')
     ->preferRearCamera()
     ->cameraControls() // torch / zoom when the camera supports them; false hides them
     ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2)
-    ->minFastKeys(3) // consecutive fast keystrokes before a terminator counts
+    ->minFastKeys(3) // keystroke gaps (averaging burstThresholdMs or less) before a terminator counts
     ->beepFrequency(880)
     ->beepDuration(80)
     ->vibrateDuration(100)
@@ -48,7 +48,7 @@ QrScanner::make('sku')
 | `enabled`             | `true`             | master switch (components also gate individually)  |
 | `burst_threshold_ms`  | `50`               | max gap between keystrokes counted as one burst    |
 | `min_barcode_length`  | `2`                | shorter bursts are treated as typing               |
-| `min_fast_keys`       | `3`                | consecutive fast gaps required before a terminator counts; `3` rejects fast typists, `1` restores the 0.x behaviour |
+| `min_fast_keys`       | `3`                | keystroke gaps required before a terminator counts, averaging `burst_threshold_ms` or less; `3` rejects fast typists, `1` restores the 0.x behaviour |
 | `fallback_to_any_input` | `true`           | page-global listener may fill the first empty text, search, number or textarea in the form that contains it when no focused or registered field is free; other forms are left alone; `false` dispatches `qr-scan-unrouted` instead. `qr-code:doctor` warns while this stays on |
 | `scan_timeout_ms`     | `150`              | flush window for terminator-less guns (0 disables) |
 | `prevent_form_submit` | `true`             | swallow the terminator key during bursts           |
@@ -66,6 +66,8 @@ Every wedge consumer (`QrScanner`, `QrHardwareScannerListener`, `QrCollector`, `
 3. the first listening target on the page, in page order: page-scope `QrScanner` fields (`->hardwareInput(scope: HardwareInputScope::Page)`), collectors, sequences and each empty field registered with a listener (ranked by the field's own position);
 4. the listener's `fallback_to_any_input`;
 5. otherwise `qr-scan-unrouted`.
+
+Keys typed into a textarea or a contenteditable editor are left alone and never become a burst, unless the element sits inside a scan target.
 
 A field that can't take the burst (busy checking a scan, too short for its `min_barcode_length`) is skipped and the next target gets it. When the burst lands somewhere other than the focused input, the characters the gun typed into that input are removed again, unless the input (or an ancestor) has the `data-qr-ignore` attribute.
 

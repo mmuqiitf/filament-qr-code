@@ -494,14 +494,25 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
          * Enter in a field with server checks: send the typed value first, and
          * submit the form only if the server kept it. A value rejectWhen() or
          * gs1() rejects stays rejected, with its reason, instead of the submit
-         * burying it under required-field errors. Returns undefined when the
-         * native Enter is left alone, else whether the form was submitted.
+         * burying it under required-field errors. In continuous mode the typed
+         * code is handled as a manual scan and the form is not submitted.
+         * Returns undefined when the native Enter is left alone, else whether
+         * the form was submitted.
          */
         async submitTyped(event) {
             const typed = String(this.value ?? '').trim();
 
             if (event.defaultPrevented || event.isComposing || !typed) return undefined;
-            if (!this.options.serverCheck || this.isContinuous() || typeof this.$wire?.$commit !== 'function') return undefined;
+
+            // Continuous mode has no form to submit: the typed code is one more scan.
+            if (this.isContinuous()) {
+                event.preventDefault();
+                await this.handleScanResult(typed, 'manual');
+
+                return false;
+            }
+
+            if (!this.options.serverCheck || typeof this.$wire?.$commit !== 'function') return undefined;
 
             event.preventDefault();
 

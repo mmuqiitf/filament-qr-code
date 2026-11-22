@@ -80,7 +80,6 @@ describe('Enter on a typed scanner value', () => {
     it.each([
         ['an empty field', { value: '' }],
         ['a field without server checks', { serverCheck: false }],
-        ['continuous mode', { mode: 'continuous' }],
         ['an Enter a hardware burst already handled', { defaultPrevented: true }],
     ])('leaves the native Enter alone for %s', async (_, { value = 'X-1', defaultPrevented = false, ...options }) => {
         const { scanner, wire, form, input } = mountTyped(options);
@@ -91,6 +90,30 @@ describe('Enter on a typed scanner value', () => {
         expect(preventDefault).not.toHaveBeenCalled();
         expect(wire.$commit).not.toHaveBeenCalled();
         expect(form.requestSubmit).not.toHaveBeenCalled();
+    });
+});
+
+describe('Enter on a typed value in continuous mode', () => {
+    it.each([[true], [false]])('feeds the typed code as a manual scan and never submits (server checks: %s)', async (serverCheck) => {
+        const { scanner, wire, form, input } = mountTyped({ mode: 'continuous', serverCheck });
+        const handled = vi.spyOn(scanner, 'handleScanResult').mockResolvedValue({ passes: true, code: 'PRD-1001' });
+        scanner.value = ' PRD-1001 ';
+        const preventDefault = vi.fn();
+
+        expect(await scanner.submitTyped({ ...enterEvent(input), preventDefault })).toBe(false);
+        expect(preventDefault).toHaveBeenCalled();
+        expect(handled).toHaveBeenCalledWith('PRD-1001', 'manual');
+        expect(wire.$commit).not.toHaveBeenCalled();
+        expect(form.requestSubmit).not.toHaveBeenCalled();
+    });
+
+    it('leaves an empty continuous field alone', async () => {
+        const { scanner, input } = mountTyped({ mode: 'continuous' });
+        const handled = vi.spyOn(scanner, 'handleScanResult');
+        scanner.value = '';
+
+        expect(await scanner.submitTyped({ ...enterEvent(input), preventDefault: vi.fn() })).toBeUndefined();
+        expect(handled).not.toHaveBeenCalled();
     });
 });
 

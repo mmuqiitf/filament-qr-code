@@ -47,7 +47,7 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `keepCameraOpen(Closure\|bool $condition = true): static` | Continuous mode: keep the camera running between scans. |
 | `lookup(Closure\|string $model, Closure\|string $column = 'code', ?Closure $modifyQueryUsing = null): static` | Find a model by the scanned code; the scan is rejected when none matches. |
 | `lookupUsing(?Closure $resolver, bool $fallback = false): static` | Find the record yourself (an API, a composite key, a non-Eloquent store). Replaces lookup() on this field unless $fallback, when it runs only after the model lookup found nothing. Return null or false for "not found". |
-| `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `mode(ScanMode\|Closure $mode): static` | Single (default) or continuous scanning for this field. |
 | `nextField(Closure\|string\|null $fieldName): static` | Move focus to this field after a successful scan. |
 | `normalizeScannedCode(string $code): string` | The code every check sees: the normalizeWith() presets (or a trim), then the normalizeUsing() closure. |
@@ -90,7 +90,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `handleGs1Scan(string $code): array` | Check a gun burst as GS1 and fill the mapped fields; called by the listener JS, usable from tests. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `static make(Closure\|array $fields = []): static` | Create a Station Listener routing gun scans into these fields. |
-| `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
 | `scanTimeout(Closure\|int $milliseconds): static` | Flush window in milliseconds for guns that send no terminator; 0 disables (config `hardware_scanner.scan_timeout_ms`). |
 | `sound(Closure\|bool $condition = true): static` | Play the synthesized beep on a successful scan (config `feedback.sound`). |
@@ -132,7 +132,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `isStepFilled(ScanStep $step, array $values): bool` | A repeat step is filled with its count of codes, or one code when open-ended. |
 | `static make(Closure\|array $fields = []): static` | Create a sequence over these field keys (or ScanStep objects). |
 | `mergeSequenceState(array $formState): array` | Merge sequence values into a form state array so callers no longer hand-roll array_merge($this->data, $this->form->getState()). |
-| `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `normalizeStepUsing(?Closure $normalizer): static` | Live-step normalizer, applied by getSequenceState() and mergeSequenceState() (e.g. strtoupper(trim($value))). This is the live-scan counterpart to the programmatic-only scanFormat(). |
 | `normalizeWith(bool $trim = true, bool $uppercase = false, array\|string\|null $stripPrefix = null): static` | Clean every scanned code in the browser (before duplicate detection and step matching) and again on the server. |
 | `onCompleted(?Closure $callback): static` | Callback run with every step value once the whole sequence is complete. |
@@ -203,7 +203,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `fps(Closure\|int $fps): static` | Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `itemRules(Closure\|array $rules): static` | Laravel rules for one collected code. The browser asks before adding the code, and submit fails on the first code that does not pass. Calling this again replaces the rules. An empty list accepts every code. |
-| `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
@@ -228,7 +228,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `fps(Closure\|int $fps): static` | Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. |
 | `handleScan(string $code, mixed $livewire = null): mixed` | Invoke the registered onScan callback for a collected code. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
-| `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `onScan(?Closure $callback): static` | Callback run for each collected code. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
