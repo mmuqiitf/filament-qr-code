@@ -3,7 +3,7 @@
         <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             {{ __('filament-qr-code::ui.sequential_steps') }}
         </span>
-        <span class="text-xs font-medium text-primary-600 dark:text-primary-400">
+        <span class="text-xs font-medium text-primary-700 dark:text-primary-400">
             <span x-text="Object.keys(results).length"></span> / <span x-text="fields.length"></span> {{ __('filament-qr-code::ui.captured') }}
         </span>
     </div>
