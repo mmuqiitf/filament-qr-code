@@ -324,13 +324,33 @@ Gun bursts and typed input must converge, or quantities double-count:
 ```
 
 ```php
+use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
+use Mmuqiitf\FilamentQrCode\Enums\ScanInput;
+use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+
 public function scanProduct(string $code): void
 {
-    $product = Product::where('sku', trim($code))
-        ->orWhere('barcode', trim($code))->first();
+    $cleaned = HasHardwareScanner::sanitizeScannedValue($code);
 
-    if (! $product) {
+    if ($cleaned === '') {
+        return;
+    }
+
+    // runScanChecks() does not fire QrCodeScanned, so the till records the attempt.
+    event(new QrCodeScanned(code: $cleaned, source: 'cashier-pos', field: 'scanInput'));
+
+    $result = QrScanner::make('scanInput')
+        ->lookup(Product::class, 'sku')
+        ->lookupUsing(
+            fn (string $code): ?Product => Product::query()->where('barcode', $code)->first(),
+            fallback: true,
+        )
+        ->runScanChecks($cleaned, ScanInput::Hardware);
+
+    if (! $result->passes || ! $result->record instanceof Product) {
         Notification::make()->title('Product Not Found')->danger()->send();
+
         return;
     }
 

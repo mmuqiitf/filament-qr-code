@@ -182,7 +182,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [API map](docs/api.md) | every public class, method, enum and config key (generated) |
 | [FAQ](docs/faq.md) | iOS torch, secure context, offline use, guns, multiple panels |
 | [Upgrade guide](UPGRADE.md) | breaking changes between versions |
-| Recipes | [POS checkout](docs/recipes/pos.md) · [Goods receiving](docs/recipes/warehouse.md) · [Work-order station](docs/recipes/manufacturing.md) · [Label generator page](docs/recipes/generator-page.md) · [Custom inputs](docs/recipes/custom-input.md) · [Styling](docs/recipes/styling.md) · [ZXing decoder](docs/recipes/zxing-decoder.md). Each one runs in the [example app](https://github.com/mmuqiitf/filament-qr-code-example). |
+| Recipes | [POS checkout](docs/recipes/pos.md) · [Goods receiving](docs/recipes/warehouse.md) · [GS1 receiving](docs/recipes/gs1-receiving.md) · [Work-order station](docs/recipes/manufacturing.md) · [Label generator page](docs/recipes/generator-page.md) · [Custom inputs](docs/recipes/custom-input.md) · [Styling](docs/recipes/styling.md) · [ZXing decoder](docs/recipes/zxing-decoder.md). Each one runs in the [example app](https://github.com/mmuqiitf/filament-qr-code-example). |
 
 ### For AI agents and LLMs
 

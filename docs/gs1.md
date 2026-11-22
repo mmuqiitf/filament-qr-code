@@ -223,3 +223,5 @@ $components = [
 The listener sends `qr-hardware-scanned` with `{ value, field: null, gs1: true }` on success and `qr-scan-rejected` with `{ value, field: null, source: 'hardware', message }` on rejection, and fires `QrCodeScanned` with `source` `hardware` and the AIs in `context['gs1']`. A focused `QrScanner` still wins the burst. The listener needs a component key to be called; `gs1()` sets `qrGs1Listener` when there is none, so give each GS1 listener on one page its own `->key()`.
 
 `QrCollector` and `QrScanSequence` do not have `->gs1()` yet: parse in `validateUsing()` or `onScanned()` with `Gs1::parse()` there.
+
+A receiving page that fills a line from one label, rejects expired stock and an unknown GTIN, then saves the line is in [Receive a GS1 label](recipes/gs1-receiving.md).
