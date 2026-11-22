@@ -2,6 +2,7 @@
     id="{{ $id }}"
     type="text"
     x-model="value"
+    @keydown.enter="submitTyped($event)"
     {{ $isDisabled ? 'disabled' : '' }}
     {{ $applyStateBindingModifiers('wire:model') }}="{{ $statePath }}"
     placeholder="{{ $placeholder ?? __('filament-qr-code::ui.scan_placeholder') }}"

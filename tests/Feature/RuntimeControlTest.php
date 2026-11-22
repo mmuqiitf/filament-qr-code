@@ -355,3 +355,43 @@ it('tells the browser which counted repeat steps advance on their own', function
     expect(collect($test->instance()->sequence()->getStepsPayload())->pluck('advance', 'key')->all())
         ->toBe(['po' => false, 'sku' => false, 'lot' => false, 'serials' => true]);
 });
+
+it('shows step errors from a failed submit next to the sequence', function (): void {
+    $test = Livewire::test(RuntimeControlTestComponent::class)->set('quantity', 3);
+    controlScan($test, 'po', 'PO-1');
+    controlScan($test, 'sku', 'PRD-1');
+    controlScan($test, 'serials', 'SN-1');
+    controlScan($test, 'serials', 'SN-2');
+
+    $test->call('submit')->assertHasErrors(['data.receipt.serials']);
+
+    // The scanning UI is wire:ignore'd, so the list sits outside it where Livewire morphs.
+    expect($test->html())->toMatch('/data-qr-part="sequence\.errors"[^>]*role="alert"/')
+        ->and($test->html())->toContain('Serials')
+        ->and($test->html())->toContain(e(__('filament-qr-code::ui.repeat_needs_codes', ['count' => 3])));
+});
+
+it('clears a step error once that step accepts a scan', function (): void {
+    $test = Livewire::test(RuntimeControlTestComponent::class)->set('quantity', 3);
+    controlScan($test, 'po', 'PO-1');
+    controlScan($test, 'sku', 'PRD-1');
+    controlScan($test, 'serials', 'SN-1');
+    $test->call('submit')->assertHasErrors(['data.receipt.serials']);
+
+    controlScan($test, 'serials', 'SN-2');
+
+    $test->assertHasNoErrors(['data.receipt.serials']);
+    expect($test->html())->not->toContain('data-qr-part="sequence.errors"');
+});
+
+it('checks the live count of a repeat step that has no other checks', function (): void {
+    RuntimeControlTestComponent::$steps = fn (RuntimeControlTestComponent $page): array => [
+        ScanStep::make('sku'),
+        ScanStep::make('serials')->repeat(fn (): int => $page->quantity),
+    ];
+    $test = Livewire::test(RuntimeControlTestComponent::class)->set('quantity', 2);
+    controlScan($test, 'sku', 'PRD-1');
+    controlScan($test, 'serials', 'SN-1');
+
+    $test->call('submit')->assertHasErrors(['data.receipt.serials']);
+});

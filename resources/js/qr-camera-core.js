@@ -225,6 +225,21 @@ export function resolveQrboxFor(elementId, maxBox = 250, formats = []) {
  * callers keep only their empty-device policy (`requireDevices`) and
  * user-facing error strings.
  */
+/**
+ * Whether the page may already use the camera without a prompt. Listing
+ * devices calls getUserMedia, so components only list them up front when
+ * this is true and otherwise wait for Start; unsupported browsers say no.
+ */
+export async function cameraAccessGranted(nav = globalThis.navigator) {
+    try {
+        const status = await nav?.permissions?.query?.({ name: 'camera' });
+
+        return status?.state === 'granted';
+    } catch {
+        return false;
+    }
+}
+
 export async function loadCameraDevices(component, {
     Html5QrcodeClass,
     preferRearCamera = true,

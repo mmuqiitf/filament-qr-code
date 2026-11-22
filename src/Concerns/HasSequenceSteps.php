@@ -302,7 +302,8 @@ trait HasSequenceSteps
     public function dehydrateValidationRules(array &$rules): void
     {
         foreach ($this->getScanSteps() as $step) {
-            if ($step->hasChecks()) {
+            // Repeat steps too: submit re-reads their live count.
+            if ($step->hasChecks() || $step->isRepeating()) {
                 $rules[$this->getStepValuePath($step->getKey())][] = new SequenceStepRule($this, $step);
             }
         }
@@ -1031,6 +1032,7 @@ trait HasSequenceSteps
     /** @param  array<string, mixed>  $values */
     protected function dispatchAcceptedStep(ScanResult $result, string $step, array $values = []): void
     {
+        $this->forgetStepErrors([$step]);
         event(new ScanAccepted($result, $step, ...$this->stepEventContext($step, $values)));
         $this->runStepHook($this->onStepAcceptedCallback, $result, $step, $values);
         event(new QrCodeScanned(
@@ -1194,6 +1196,49 @@ trait HasSequenceSteps
         return $values;
     }
 
+    /**
+     * Messages a failed submit left on the steps, in step order. The sequence
+     * view lists them outside its wire:ignore'd scanning UI.
+     *
+     * @return list<array{step: string, label: string, message: string}>
+     */
+    public function getStepErrors(): array
+    {
+        try {
+            $bag = $this->getLivewire()->getErrorBag();
+        } catch (Throwable) {
+            return [];
+        }
+
+        $errors = [];
+
+        foreach ($this->getScanSteps() as $step) {
+            $message = $bag->first($this->getStepValuePath($step->getKey()));
+
+            if ($message !== '') {
+                $errors[] = ['step' => $step->getKey(), 'label' => self::plainAnnouncementText($step->getLabel()), 'message' => $message];
+            }
+        }
+
+        return $errors;
+    }
+
+    /** @param  list<string>|null  $steps  null forgets every step */
+    protected function forgetStepErrors(?array $steps = null): void
+    {
+        $steps ??= array_map(fn (ScanStep $step): string => $step->getKey(), $this->getScanSteps());
+
+        try {
+            $livewire = $this->getLivewire();
+        } catch (Throwable) {
+            return;
+        }
+
+        foreach ($steps as $step) {
+            $livewire->resetErrorBag($this->getStepValuePath($step));
+        }
+    }
+
     /** Move the browser to a step (page code). */
     public function goToStep(string $step): void
     {
@@ -1214,6 +1259,7 @@ trait HasSequenceSteps
         $values = [...$kept, ...$values];
 
         $this->writeSequenceValues($values);
+        $this->forgetStepErrors();
 
         $this->getLivewire()->dispatch('qr-sequence-reset', field: $this->getControlKey(), values: $values, fromServer: true);
     }

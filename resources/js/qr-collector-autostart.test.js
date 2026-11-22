@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import qrCollectorComponent from './qr-collector.js';
 import { mountComponent } from './alpine-test-harness.js';
 
-const camera = vi.hoisted(() => ({ cameras: [], start: null }));
+const camera = vi.hoisted(() => ({ cameras: [], start: null, getCameras: null }));
 
 vi.mock('./qr-camera-core.js', async (importOriginal) => ({
     ...(await importOriginal()),
     resolveDecoderModule: async () => ({
-        Html5Qrcode: { getCameras: async () => camera.cameras },
+        Html5Qrcode: { getCameras: async () => { camera.getCameras?.(); return camera.cameras; } },
         Html5QrcodeSupportedFormats: {},
     }),
     ensureScannerInstance: (component) => {
@@ -46,6 +46,18 @@ describe('qrCollector camera start (#35)', () => {
 
         expect(camera.start).not.toHaveBeenCalled();
         expect(collector.isScanning).toBe(false);
+    });
+
+    it('does not ask for the camera before Start when access is not granted yet', async () => {
+        Object.defineProperty(navigator, 'permissions', { configurable: true, value: { query: async () => ({ state: 'prompt' }) } });
+        camera.getCameras = vi.fn();
+        const collector = mount();
+        await flush();
+
+        expect(camera.getCameras).not.toHaveBeenCalled();
+        expect(collector.hasError).toBe(false);
+        Object.defineProperty(navigator, 'permissions', { configurable: true, value: undefined });
+        camera.getCameras = null;
     });
 
     it('loads cameras on demand when Start is pressed before devices resolved', async () => {
