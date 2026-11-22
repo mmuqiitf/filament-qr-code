@@ -59,9 +59,11 @@ it('reports which PNG backends are loaded', function () {
     $imagick = extension_loaded('imagick') ? 'yes' : 'no';
     $gd = extension_loaded('gd') ? 'yes' : 'no';
 
+    $backend = extension_loaded('gd') ? 'gd' : (extension_loaded('imagick') ? 'imagick' : 'none');
+
     $this->artisan('qr-code:doctor')
         ->assertSuccessful()
-        ->expectsOutputToContain("imagick: {$imagick}, gd: {$gd}");
+        ->expectsOutputToContain("PNG backend available ({$backend}; imagick: {$imagick}, gd: {$gd})");
 });
 
 it('fails when the Filament assets are not published', function () {

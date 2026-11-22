@@ -9,7 +9,7 @@ use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
  * (e.g. the shared barcode renderer) cannot change it silently.
  *
  * SVG output is backend independent and compared byte for byte.
- * PNG output depends on the raster backend (Imagick when loaded, else GD),
+ * PNG output depends on the raster backend (GD when loaded, else Imagick),
  * so PNG goldens are stored per backend as exact dimensions plus a
  * downsampled colour grid of the decoded pixels, compared with a small
  * per-cell tolerance. That catches flipped modules, colour, size, margin and
@@ -72,7 +72,7 @@ function goldenSlug(string $case): string
 
 function goldenBackend(): string
 {
-    return extension_loaded('imagick') ? 'imagick' : 'gd';
+    return extension_loaded('gd') ? 'gd' : 'imagick';
 }
 
 /**

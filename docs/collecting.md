@@ -48,3 +48,12 @@ Each scan notifies the server through exactly one channel: `$wire.handleCollecto
 Every `handleScan()` call also fires a `QrCodeScanned` event — see [Audit scans](customizing.md#audit-scans).
 
 Custom terminators and minimum lengths are configurable via `->hardwareScanner(terminators: [...], minBarcodeLength: 3)` and feedback pitch/duration via `->beepFrequency(660)`, `->beepDuration(120)`, `->vibrateDuration(200)`. Server-side, `->distinctItems()` rejects duplicate codes on submit to match `->allowDuplicates(false)` in the browser.
+
+`->itemRules()` runs Laravel validation rules on each code before the browser adds it, and again when the field is submitted. The first failing code fails the field. An empty list accepts every code. The collect action modal does not run these rules: it is not a schema field, so keep that check on `QrCollector`.
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+
+QrCollector::make('scanned_items')
+    ->itemRules(['regex:/^PRD-\d+$/']);
+```
