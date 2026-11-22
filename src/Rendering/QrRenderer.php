@@ -36,9 +36,10 @@ final class QrRenderer
             return $this->write(new ImageRenderer($this->style($options, $fill), new SvgImageBackEnd), $options);
         }
 
-        $png = extension_loaded('imagick')
-            ? $this->write(new ImageRenderer($this->style($options, $fill), new ImagickImageBackEnd), $options)
-            : $this->write(new GDLibRenderer($options->size, $options->margin, imageFormat: 'png', fill: $fill), $options);
+        // GD is preferred: Imagick's QR writer is much slower. Logos and captions still prefer Imagick.
+        $png = extension_loaded('gd')
+            ? $this->write(new GDLibRenderer($options->size, $options->margin, imageFormat: 'png', fill: $fill), $options)
+            : $this->write(new ImageRenderer($this->style($options, $fill), new ImagickImageBackEnd), $options);
 
         if ($options->hasLogoFile()) {
             $png = $this->logo->apply($png, (string) $options->logoPath, $options->logoSize);

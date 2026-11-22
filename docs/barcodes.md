@@ -55,7 +55,7 @@ BarcodeColumn::make('gtin')
 | `showText(bool)` | `true` | `false` |
 | `downloadable(bool)` | `true` | `false` |
 
-PNG output (`->format('png')`) uses Imagick when it is loaded, otherwise GD, exactly like QR codes.
+PNG output (`->format('png')`) uses Imagick when it is loaded, otherwise GD. QR codes are the other way around: they use GD when it is loaded.
 
 ### Invalid values
 

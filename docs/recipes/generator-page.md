@@ -79,7 +79,7 @@ The package's print stylesheet lays out `.filament-qr-label-sheet` / `.filament-
 
 ## Notes
 
-- PNG needs the `imagick` or `gd` extension (imagick is preferred when both are loaded); `php artisan qr-code:doctor` tells you which one is in use. SVG has no requirements.
+- PNG needs the `gd` or `imagick` extension. QR codes use GD when it is loaded, and Imagick only when GD is absent. Logos, captions and 1D barcode PNGs still prefer Imagick. `php artisan qr-code:doctor` prints the QR choice. SVG has no requirements.
 - Validate user-chosen colours and sizes before passing them on, as above.
 - Generated codes aren't stored; for many labels, cache `previewDataUri()` per code and style.
 - To print what a scanner reads, keep the label value identical to what your `lookup()` column holds (or what `normalizeWith()` produces).
