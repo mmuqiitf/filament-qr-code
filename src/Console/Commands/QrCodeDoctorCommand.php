@@ -54,8 +54,8 @@ class QrCodeDoctorCommand extends Command
             extension_loaded('gd') ? 'yes' : 'no',
         );
 
-        if (extension_loaded('imagick') || extension_loaded('gd')) {
-            $backend = extension_loaded('imagick') ? 'imagick' : 'gd';
+        if (extension_loaded('gd') || extension_loaded('imagick')) {
+            $backend = extension_loaded('gd') ? 'gd' : 'imagick';
             $this->line("  [PASS] PNG backend available ({$backend}; {$loaded}).");
 
             return 0;

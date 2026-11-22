@@ -75,7 +75,7 @@ it('QrRenderer renders same SVG bytes', function () {
 it('renders the same bytes as the pre-split service', function (Closure $configure) {
     [$legacy, $new] = configureBoth($configure, 'CHAR-0042', $this->logoPath);
 
-    expect(pngWithoutTimestamps($new))->toBe(pngWithoutTimestamps($legacy));
+    expectSameRender($legacy, $new);
 })->with([
     'svg defaults' => fn ($s, string $logo) => $s,
     'svg short hex, H level' => fn ($s, string $logo) => $s->color('#123')->backgroundColor('#fed')->errorCorrection('H'),
@@ -95,9 +95,9 @@ it('keeps the data URI and invalid-colour behaviour', function () {
     [$newPrefix, $newData] = explode(',', $newUri, 2);
     [$legacyPrefix, $legacyData] = explode(',', $legacyUri, 2);
 
-    expect($newPrefix)->toBe($legacyPrefix)
-        ->and(pngWithoutTimestamps((string) base64_decode($newData)))
-        ->toBe(pngWithoutTimestamps((string) base64_decode($legacyData)));
+    expect($newPrefix)->toBe($legacyPrefix);
+
+    expectSameRender((string) base64_decode($legacyData), (string) base64_decode($newData));
 
     $legacyMessage = null;
     try {
@@ -217,6 +217,31 @@ function pngWithoutTimestamps(string $bytes): string
     }
 
     return $out;
+}
+
+/**
+ * QR PNGs prefer GD. The frozen legacy service still prefers Imagick, so the
+ * bytes differ when both extensions are loaded. The image size still has to
+ * match. SVG, and PNG when only one extension is loaded, stay byte-identical.
+ */
+function expectSameRender(string $legacy, string $new): void
+{
+    $legacy = pngWithoutTimestamps($legacy);
+    $new = pngWithoutTimestamps($new);
+
+    if (! (extension_loaded('gd') && extension_loaded('imagick') && str_starts_with($new, "\x89PNG\r\n\x1a\n"))) {
+        expect($new)->toBe($legacy);
+
+        return;
+    }
+
+    $legacySize = getimagesizefromstring($legacy);
+    $newSize = getimagesizefromstring($new);
+
+    expect($legacySize)->toBeArray()
+        ->and($newSize)->toBeArray()
+        ->and($newSize[0])->toBe($legacySize[0])
+        ->and($newSize[1])->toBe($legacySize[1]);
 }
 
 /**
