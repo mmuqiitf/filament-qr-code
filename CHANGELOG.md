@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `QrCollector::itemRules()` checks each code with Laravel validation rules before the browser adds it, and again on submit. The first failing code fails the field. An empty list accepts every code. The collect action modal does not run these rules.
+
 - `qr-code.image_route.middleware`: a list of extra middleware class names or aliases for the signed QR and barcode image routes. They run after `signed` and the image throttle. The default is `[]`, and the routes stay off the `web` group. Non-strings are ignored at registration. `qr-code:doctor` fails the config when the list is not strings.
 
 - `Gs1::parse()` and `Gs1::build()` read and write GS1 element strings (bracketed, raw scan data with group separators, or an AIM symbology prefix). Length and character set follow the GS1 Barcode Syntax Dictionary (2026-01-27). Check digits are always enforced on SSCC, GTIN, GLN and the other `csum` fields, dates must be on the calendar (day `00` is the last day of the month where allowed), and unknown AIs are rejected. See [GS1 element strings](docs/gs1.md).

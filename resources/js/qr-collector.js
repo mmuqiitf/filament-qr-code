@@ -47,6 +47,7 @@ export default function qrCollectorComponent({
     cameraStorageKey = null,
     autoStart = false,
     wireScanHandler = false,
+    hasItemRules = false,
     announcements = true,
     customAnnouncements = false,
     componentKey = null,
@@ -245,17 +246,20 @@ export default function qrCollectorComponent({
             if (!allowDuplicates && this.scannedSet.has(trimmed)) {
                 // The code just added is usually still in view: not a new rejection.
                 if (trimmed !== this.lastAddedCode) {
-                    this.announceScan(announceOptions, {
-                        code: trimmed,
-                        accepted: false,
-                        reason: messages.duplicateMessage,
-                        fallback: formatMessage(messages.rejectedAnnouncement, { reason: messages.duplicateMessage }),
-                    });
+                    this.rejectCode(trimmed, messages.duplicateMessage);
                 }
 
                 return;
             }
 
+            if (hasItemRules) {
+                return this.acceptWhenItemRulesPass(trimmed);
+            }
+
+            this.acceptCode(trimmed);
+        },
+
+        acceptCode(trimmed) {
             this.isProcessing = true;
             this.scannedSet.add(trimmed);
             this.items.unshift({
@@ -296,6 +300,57 @@ export default function qrCollectorComponent({
             setTimeout(() => {
                 this.isProcessing = false;
             }, delayBetweenScansMs);
+        },
+
+        // Item rules are checked before the code is added. A missing key or a
+        // failed call rejects the code; it is not accepted unchecked.
+        async acceptWhenItemRulesPass(trimmed) {
+            this.isProcessing = true;
+
+            if (!componentKey || typeof this.$wire?.callSchemaComponentMethod !== 'function') {
+                this.releaseRejectedCode(trimmed, messages.scanFailedMessage);
+
+                return;
+            }
+
+            let result;
+
+            try {
+                result = await this.$wire.callSchemaComponentMethod(componentKey, 'checkCollectorItem', { code: trimmed });
+            } catch {
+                this.releaseRejectedCode(trimmed, messages.scanFailedMessage);
+
+                return;
+            }
+
+            if (!result || result.passes !== true) {
+                const reason = typeof result?.message === 'string' && result.message !== ''
+                    ? result.message
+                    : messages.scanFailedMessage;
+
+                this.releaseRejectedCode(trimmed, reason);
+
+                return;
+            }
+
+            this.acceptCode(trimmed);
+        },
+
+        releaseRejectedCode(trimmed, reason) {
+            this.rejectCode(trimmed, reason);
+
+            setTimeout(() => {
+                this.isProcessing = false;
+            }, delayBetweenScansMs);
+        },
+
+        rejectCode(trimmed, reason) {
+            this.announceScan(announceOptions, {
+                code: trimmed,
+                accepted: false,
+                reason,
+                fallback: formatMessage(messages.rejectedAnnouncement, { reason }),
+            });
         },
 
         removeItem(index) {
