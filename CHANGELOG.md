@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Render cache keys are `filament-qr-code:render:vN:` instead of an index of entries. `flushPersistentCache()` bumps that generation and clears the in-process map. Other keys in the store stay. Retired renders are not deleted: they expire with `generator.cache_ttl`, and a null TTL leaves them until that store is flushed. Octane clears the in-process map when a request, task, or tick starts.
 
+- QR PNGs use GD when `gd` is loaded, and Imagick only when GD is absent. Logos, captions and 1D barcode PNGs still prefer Imagick. Installs with both extensions can see different QR pixels.
+
 ### Added
 
 - `qr-code.image_route.middleware`: a list of extra middleware class names or aliases for the signed QR and barcode image routes. They run after `signed` and the image throttle. The default is `[]`, and the routes stay off the `web` group. Non-strings are ignored at registration. `qr-code:doctor` fails the config when the list is not strings.

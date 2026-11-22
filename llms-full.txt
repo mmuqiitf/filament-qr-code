@@ -382,7 +382,7 @@ php artisan vendor:publish --tag="filament-qr-code-config"
 php artisan qr-code:doctor
 ```
 
-The doctor reports which PNG backends are loaded (imagick and GD) and checks fonts, compiled assets, and that `php artisan filament:assets` has published the current build. It also checks the config, the signed image route and its `qr-code.image_route` values (`ttl`, `throttle`, `strict_colors`), and that every `generator.logo_base_paths` entry exists. It exits non-zero on any `[FAIL]`. The [Troubleshooting table](../README.md#troubleshooting) and the [FAQ](faq.md) cover the usual symptoms.
+The doctor reports which PNG backends are loaded (imagick and GD), names GD as the QR backend when it is loaded, and checks fonts, compiled assets, and that `php artisan filament:assets` has published the current build. It also checks the config, the signed image route and its `qr-code.image_route` values (`ttl`, `throttle`, `strict_colors`), and that every `generator.logo_base_paths` entry exists. It exits non-zero on any `[FAIL]`. The [Troubleshooting table](../README.md#troubleshooting) and the [FAQ](faq.md) cover the usual symptoms.
 
 ## Where next
 
@@ -1257,7 +1257,7 @@ BarcodeColumn::make('gtin')
 | `showText(bool)` | `true` | `false` |
 | `downloadable(bool)` | `true` | `false` |
 
-PNG output (`->format('png')`) uses Imagick when it is loaded, otherwise GD, exactly like QR codes.
+PNG output (`->format('png')`) uses Imagick when it is loaded, otherwise GD. QR codes are the other way around: they use GD when it is loaded.
 
 ### Invalid values
 
@@ -2513,7 +2513,7 @@ The package's print stylesheet lays out `.filament-qr-label-sheet` / `.filament-
 
 ## Notes
 
-- PNG needs the `imagick` or `gd` extension (imagick is preferred when both are loaded); `php artisan qr-code:doctor` tells you which one is in use. SVG has no requirements.
+- PNG needs the `gd` or `imagick` extension. QR codes use GD when it is loaded, and Imagick only when GD is absent. Logos, captions and 1D barcode PNGs still prefer Imagick. `php artisan qr-code:doctor` prints the QR choice. SVG has no requirements.
 - Validate user-chosen colours and sizes before passing them on, as above.
 - Generated codes aren't stored; for many labels, cache `previewDataUri()` per code and style.
 - To print what a scanner reads, keep the label value identical to what your `lookup()` column holds (or what `normalizeWith()` produces).
@@ -3905,6 +3905,8 @@ Run `php artisan filament:assets`: the scanner JavaScript changed.
 - **Scan rejections in the error bag.** A rejected scan on a single-mode `QrScanner` now adds its message to the form's error bag under the field, and the next accepted scan clears it. If your `onRejected()` already calls `resetErrorBag()` and `addError()` for the field, you can drop that; leaving it shows the message once, not twice. Tests that asserted `assertHasNoErrors()` after a rejected scan need `assertHasErrors()`.
 
 - **Render cache.** Keys now include a generation (`filament-qr-code:render:vN:`). The first render after upgrading misses. `flushPersistentCache()` bumps the generation and clears the in-process map. It no longer deletes entries, and the 1.1.2 `filament-qr-code:render-index` is unused. Retired entries expire with `generator.cache_ttl` (86400 seconds by default). A `cache_ttl` of `null` leaves them until you flush that store yourself. Octane clears the in-process map at the start of each request, task, and tick.
+
+- **QR PNG backend.** QR codes use GD when the `gd` extension is loaded, and Imagick only when GD is absent. They used to prefer Imagick, so a QR PNG can look slightly different on a machine that has both. Logos and captions still prefer Imagick. 1D barcode PNGs are unchanged and still prefer Imagick. `qr-code:doctor` names GD when it is loaded.
 
 ## From 1.1.1 to 1.1.2
 
