@@ -6,6 +6,8 @@ namespace Mmuqiitf\FilamentQrCode\Forms\Components;
 
 use Closure;
 use Filament\Forms\Components\Field;
+use Filament\Support\Components\Attributes\ExposedLivewireMethod;
+use Illuminate\Support\Facades\Validator;
 use Mmuqiitf\FilamentQrCode\Concerns\HasAnnouncements;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
@@ -13,6 +15,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
+use Mmuqiitf\FilamentQrCode\Validation\CollectorItemRules;
 use Mmuqiitf\FilamentQrCode\Validation\DistinctCodes;
 
 class QrCollector extends Field
@@ -29,6 +32,11 @@ class QrCollector extends Field
     protected bool|Closure $allowDuplicates = false;
 
     protected int|Closure $delayBetweenScansMs = 1200;
+
+    /** @var array<int, mixed>|Closure */
+    protected array|Closure $itemRules = [];
+
+    protected bool $hasRegisteredCollectorItemRule = false;
 
     /** Accept the same code more than once in the list (browser-side check). */
     public function allowDuplicates(bool|Closure $condition = true): static
@@ -58,6 +66,57 @@ class QrCollector extends Field
         return $this;
     }
 
+    /**
+     * Laravel rules for one collected code. The browser asks before adding
+     * the code, and submit fails on the first code that does not pass.
+     * Calling this again replaces the rules. An empty list accepts every code.
+     *
+     * @param  array<int, mixed>|Closure  $rules
+     */
+    public function itemRules(array|Closure $rules): static
+    {
+        $this->itemRules = $rules;
+        $this->registerCollectorItemRule();
+
+        return $this;
+    }
+
+    /**
+     * Live check used by the collector. Empty rules pass.
+     *
+     * @return array{passes: bool, message: ?string}
+     */
+    #[ExposedLivewireMethod]
+    public function checkCollectorItem(string $code): array
+    {
+        $rules = $this->resolveItemRules();
+
+        if ($rules === []) {
+            return ['passes' => true, 'message' => null];
+        }
+
+        $validator = Validator::make(
+            ['code' => $code],
+            ['code' => $rules],
+        );
+
+        if ($validator->passes()) {
+            return ['passes' => true, 'message' => null];
+        }
+
+        $message = (string) $validator->errors()->first('code');
+
+        return [
+            'passes' => false,
+            'message' => $message !== '' ? $message : (string) __('filament-qr-code::ui.scan_failed'),
+        ];
+    }
+
+    public function hasItemRules(): bool
+    {
+        return $this->resolveItemRules() !== [];
+    }
+
     public function isDuplicatesAllowed(): bool
     {
         return (bool) $this->evaluate($this->allowDuplicates);
@@ -76,9 +135,14 @@ class QrCollector extends Field
             'delayBetweenScansMs' => $this->getDelayBetweenScansMs(),
             // $wire proxies every name, so the browser cannot probe for the hook itself.
             'wireScanHandler' => $this->hostDefinesCollectorScanHandler(),
+            'hasItemRules' => $this->hasItemRules(),
             ...ScanMessages::forAnnouncements(),
             ...$this->getAnnouncementsScanPayload(),
             ...$this->getAnnouncementComponentKey(),
+            ...($this->hasItemRules() ? [
+                'scanFailedMessage' => ScanMessages::scanFailed(),
+                ...$this->componentKeyPayload(),
+            ] : []),
         ];
     }
 
@@ -93,6 +157,14 @@ class QrCollector extends Field
             return [];
         }
 
+        return $this->componentKeyPayload();
+    }
+
+    /**
+     * @return array{componentKey?: string}
+     */
+    protected function componentKeyPayload(): array
+    {
         try {
             $key = $this->getKey();
         } catch (\Throwable) {
@@ -100,6 +172,27 @@ class QrCollector extends Field
         }
 
         return filled($key) ? ['componentKey' => $key] : [];
+    }
+
+    protected function registerCollectorItemRule(): void
+    {
+        if ($this->hasRegisteredCollectorItemRule) {
+            return;
+        }
+
+        $this->hasRegisteredCollectorItemRule = true;
+
+        $this->rule(fn (): CollectorItemRules => new CollectorItemRules($this));
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    protected function resolveItemRules(): array
+    {
+        $rules = $this->evaluate($this->itemRules);
+
+        return is_array($rules) ? $rules : [];
     }
 
     /**

@@ -196,11 +196,13 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `beepDuration(Closure\|int $milliseconds): static` | Beep length in milliseconds (config `feedback.beep_duration_ms`). |
 | `beepFrequency(Closure\|int $hertz): static` | Beep pitch in hertz (config `feedback.beep_frequency`). |
 | `cameraControls(Closure\|bool $condition = true): static` | Torch and zoom controls appear when the running camera supports them; pass false to keep the viewfinder free of them. |
+| `checkCollectorItem(string $code): array` | Live check used by the collector. Empty rules pass. |
 | `delayBetweenScans(Closure\|int $ms): static` | Pause in milliseconds before the next camera scan is accepted. |
 | `distinctItems(Closure\|bool $condition = true): static` | Server-side duplicate guard to match the client-side allowDuplicates(false): identical codes fail submit-time validation. |
 | `formats(Closure\|array $formats): static` | Symbologies the camera decodes (BarcodeFormat cases or strings); filtering speeds decoding. |
 | `fps(Closure\|int $fps): static` | Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
+| `itemRules(Closure\|array $rules): static` | Laravel rules for one collected code. The browser asks before adding the code, and submit fails on the first code that does not pass. Calling this again replaces the rules. An empty list accepts every code. |
 | `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
@@ -210,7 +212,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrCollectAction`
 

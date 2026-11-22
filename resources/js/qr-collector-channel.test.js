@@ -85,6 +85,63 @@ describe('collector server-notify channel', () => {
         expect(withEvent.$wire.set).toHaveBeenCalledWith('data.codes', ['B-1']);
     });
 
+    it('asks item rules before adding a code, and skips a rejection', async () => {
+        const dispatched = stubWindow();
+        const accepted = makeCollector({
+            hasItemRules: true,
+            componentKey: 'form.codes',
+            wireScanHandler: true,
+            delayBetweenScansMs: 0,
+        });
+        const wire = {
+            handleCollectorScan: vi.fn(),
+            set: vi.fn(),
+            callSchemaComponentMethod: vi.fn().mockResolvedValue({ passes: true, message: null }),
+        };
+        accepted.$wire = wire;
+
+        await accepted.handleDetectedCode('PRD-1');
+
+        expect(wire.callSchemaComponentMethod).toHaveBeenCalledWith('form.codes', 'checkCollectorItem', { code: 'PRD-1' });
+        expect(wire.handleCollectorScan).toHaveBeenCalledTimes(1);
+        expect(wire.handleCollectorScan).toHaveBeenCalledWith('PRD-1');
+        expect(accepted.items).toHaveLength(1);
+        expect(dispatched).toEqual([]);
+
+        const rejected = makeCollector({
+            hasItemRules: true,
+            componentKey: 'form.codes',
+            wireScanHandler: true,
+            delayBetweenScansMs: 0,
+        });
+        const rejectWire = {
+            handleCollectorScan: vi.fn(),
+            set: vi.fn(),
+            callSchemaComponentMethod: vi.fn().mockResolvedValue({ passes: false, message: 'Unknown code' }),
+        };
+        rejected.$wire = rejectWire;
+
+        await rejected.handleDetectedCode('NOPE');
+
+        expect(rejectWire.handleCollectorScan).not.toHaveBeenCalled();
+        expect(rejected.items).toHaveLength(0);
+        expect(dispatched).toEqual([]);
+    });
+
+    it('rejects an item-rules scan that cannot reach the server', async () => {
+        const dispatched = stubWindow();
+        const collector = makeCollector({ hasItemRules: true, wireScanHandler: true, delayBetweenScansMs: 0 });
+        const wire = { handleCollectorScan: vi.fn(), set: vi.fn(), callSchemaComponentMethod: vi.fn() };
+        collector.$wire = wire;
+
+        await collector.handleDetectedCode('PRD-1');
+
+        expect(wire.callSchemaComponentMethod).not.toHaveBeenCalled();
+        expect(wire.handleCollectorScan).not.toHaveBeenCalled();
+        expect(collector.items).toHaveLength(0);
+        expect(dispatched).toEqual([]);
+    });
+
     it('throttles bursts so one scan yields one delivery', () => {
         stubWindow();
         const collector = makeCollector({ delayBetweenScansMs: 1200, wireScanHandler: true });
