@@ -36,6 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `InvalidGs1Exception` has `kind` (`InvalidGs1Exception::CHECK_DIGIT`, `::DATE`, `::UNKNOWN_AI`, …) and `ai`, so callers can word their own message.
 - Signed barcode images: `BarcodeColumn` loads `/filament-qr-code/barcode-image` (`filamentQrCode.barcode`) instead of embedding a data URI. `BarcodeDisplay` and `BarcodeEntry` still embed the image. The route shares the QR preview route's signature, `image_route` ttl, throttle and strict colours. Invalid input, and a value the symbology rejects, returns 422.
 
+### Fixed
+
+- Filament 5.12: an `afterStateUpdated()` hook added after `QrScanner::gs1()` or `rejectWhen()` no longer replaces the typed-value hook those methods put first. Filament 5.12 stores hooks under its own counter, and the package's prepended hook was renumbered into the slot the next hook took. Pasted GS1 labels then stayed raw and did not fill mapped fields, and a typed `rejectWhen()` value was not cleared. Each `rejectWhen()` keeps its own hook. `normalizeUsing()` also skips an empty value, so a `fn (string $code)` normalizer no longer gets `null` when a field is cleared or a typed value is rejected.
+
 ## [1.1.2] - 2026-11-04
 
 ### Fixed
