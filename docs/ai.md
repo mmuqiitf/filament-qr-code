@@ -157,4 +157,4 @@ $dataUri = FilamentQrCode::make()
 
 - Every public method: [api.md](api.md). Every config key: [reference.md](reference.md#configuration).
 - Browser and Laravel events: [events.md](events.md). Extension seams: [extending.md](extending.md).
-- Worked flows: [recipes](recipes/pos.md) (POS, goods receiving, work-order station, label page, custom inputs, styling, ZXing decoder).
+- Worked flows: [recipes](recipes/pos.md) (POS, goods receiving, [GS1 receiving](recipes/gs1-receiving.md), work-order station, label page, custom inputs, styling, ZXing decoder). GS1 parse and scan rules: [gs1.md](gs1.md).

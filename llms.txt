@@ -25,6 +25,7 @@ Scanned values write straight into the Livewire form state. Lookups and validati
 
 - [POS checkout](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/pos.md): POS checkout with continuous scanning
 - [Goods receiving](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/warehouse.md): goods receiving with a handheld scanner
+- [GS1 receiving](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/gs1-receiving.md): receive one GS1 label into a line
 - [Work-order station](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/manufacturing.md): a work-order scanning station
 - [Label generator page](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/generator-page.md): a page that generates QR labels
 - [Custom inputs](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/custom-input.md): custom inputs and reusable scan fields
