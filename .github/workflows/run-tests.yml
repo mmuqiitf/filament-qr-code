@@ -53,6 +53,10 @@ jobs:
             composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction
           fi
 
+      - name: Show resolved Filament version
+        # prefer-lowest runs the minimum (^5.8.3), prefer-stable the newest 5.x (5.12+ changed hook storage).
+        run: composer show filament/schemas | grep -E '^versions'
+
       - name: Execute tests
         run: vendor/bin/pest
 

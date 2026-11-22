@@ -62,6 +62,8 @@ class QrScanner extends Field
 
     protected bool $hasRegisteredGs1Hook = false;
 
+    protected int $rejectWhenHookCount = 0;
+
     /** Set while handleScan() writes an accepted scan, so the typed-value GS1 hook stays out of it. */
     protected bool $isAcceptingScan = false;
 
@@ -137,7 +139,7 @@ class QrScanner extends Field
         $this->hasRegisteredGs1Hook = true;
 
         // Typed or pasted values: first, so later hooks see the bracketed string.
-        array_unshift($this->afterStateUpdated, function (QrScanner $component, mixed $state, mixed $livewire): void {
+        $this->prependAfterStateUpdated('filament-qr-code.gs1', function (QrScanner $component, mixed $state, mixed $livewire): void {
             if ($component->isAcceptingScan || ! is_string($state) || blank($state)) {
                 return;
             }
@@ -318,7 +320,7 @@ class QrScanner extends Field
         };
 
         // First, so a typed value is cleared before hooks the caller registered.
-        array_unshift($this->afterStateUpdated, function ($component, $state, $livewire) use ($predicate, $message): void {
+        $this->prependAfterStateUpdated('filament-qr-code.reject-when.'.$this->rejectWhenHookCount++, function ($component, $state, $livewire) use ($predicate, $message): void {
             // A gs1() field already ran this check with the others on the typed value.
             if (blank($state) || $component->isGs1()) {
                 return;
@@ -355,6 +357,11 @@ class QrScanner extends Field
         $this->scanNormalizer = $normalizer;
 
         $this->afterStateUpdated(function ($component, $state) use ($normalizer): void {
+            // Nothing to normalize, e.g. a typed value rejectWhen() just cleared.
+            if (blank($state)) {
+                return;
+            }
+
             $normalized = $component->evaluate($normalizer, [
                 'code' => $state,
                 'rawValue' => $state,
@@ -372,6 +379,16 @@ class QrScanner extends Field
     public function isUploadAllowed(): bool
     {
         return (bool) $this->evaluate($this->allowUpload);
+    }
+
+    /**
+     * Put a hook before the afterStateUpdated() hooks the caller registered.
+     * A string key keeps it: Filament 5.12+ stores hooks under its own counter,
+     * so array_unshift() would renumber ours into a slot it reuses.
+     */
+    protected function prependAfterStateUpdated(string $key, Closure $hook): void
+    {
+        $this->afterStateUpdated = [$key => $hook] + $this->afterStateUpdated;
     }
 
     /** Run the scanFormat() closure on a value (programmatic only; live scans use normalizeUsing()). */
