@@ -16,6 +16,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasOptionsSync;
 use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
 use Mmuqiitf\FilamentQrCode\Concerns\HasSequenceSteps;
+use Mmuqiitf\FilamentQrCode\Enums\RepeatComplete;
 use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 use ReflectionFunction;
@@ -387,7 +388,8 @@ class QrScanSequence extends Component implements HasValidationRules
                 continue;
             }
 
-            if (blank($state[$step->getKey()] ?? null)) {
+            // A counted repeat step re-reads its live count, as the browser's k / n does.
+            if (blank($state[$step->getKey()] ?? null) || ($step->isRepeating() && ! $this->isStepFilled($step, $state))) {
                 $missing[] = $step->getKey();
             }
         }
@@ -438,7 +440,7 @@ class QrScanSequence extends Component implements HasValidationRules
         ];
     }
 
-    /** @return list<array{key: string, optional: bool, sticky: bool, repeating: bool, repeat: ?int, active: bool}> */
+    /** @return list<array{key: string, optional: bool, sticky: bool, repeating: bool, repeat: ?int, advance: bool, active: bool}> */
     public function getStepsPayload(): array
     {
         $values = $this->withoutInactiveSteps($this->getSequenceState());
@@ -449,6 +451,8 @@ class QrScanSequence extends Component implements HasValidationRules
             'sticky' => $step->isSticky(),
             'repeating' => $step->isRepeating(),
             'repeat' => $step->isRepeating() ? $this->getRepeatLimit($step, $values) : null,
+            // A full counted step moves on by itself, so the browser finishes it when a live count drops to its codes.
+            'advance' => $step->isRepeating() && $step->getRepeatTimesUsing() !== null && $this->getRepeatComplete($step) === RepeatComplete::Advance,
             'active' => $this->isStepActive($step, $values),
         ], $this->getScanSteps()));
     }

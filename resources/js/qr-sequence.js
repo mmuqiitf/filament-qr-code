@@ -244,6 +244,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             if (!changes) return;
 
+            const countWatch = this.watchCurrentRepeatCount();
             const { fields: nextFields, values: nextValues, editable: nextEditable, ...rest } = changes;
             const changed = changedKeys(this.options, rest);
             this.options = { ...this.options, ...rest };
@@ -259,6 +260,30 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             if (nextFields !== undefined) this.applyFields(nextFields);
             if (nextValues !== undefined && this.options.serverCheck) this.applyValues(nextValues);
+
+            countWatch();
+        },
+
+        /**
+         * A live repeat() count (say a quantity input) can drop to the codes
+         * already scanned. The k / n then reads full, so finish the step on the
+         * server, which re-reads the count, like the scan that filled it would.
+         */
+        watchCurrentRepeatCount() {
+            const key = this.isCompleted ? null : this.getCurrentField()?.key;
+
+            if (!key || !this.isRepeating(key) || this.isFilled(key)) return () => {};
+
+            const before = this.stepOptions(key)?.repeat;
+
+            return () => {
+                const options = this.stepOptions(key);
+
+                if (!options?.advance || !options.repeat || options.repeat === before) return;
+                if (!this.options.serverCheck || this.isCompleted || !this.isFilled(key)) return;
+
+                this.finishStep(key);
+            };
         },
 
         applyFields(nextFields) {

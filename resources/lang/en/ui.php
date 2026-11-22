@@ -67,6 +67,7 @@ return [
     'repeat_full' => 'This step already has :count codes.',
     'duplicate_in_step' => '":code" was already scanned in this step.',
     'repeat_needs_codes' => 'Scan at least :count code(s) before finishing this step.',
+    'repeat_too_many' => 'This step has more than :count code(s). Remove the extra ones before finishing.',
     'clear' => 'Clear',
     'remove_code' => 'Remove',
     'gs1_not_gs1' => 'Not a GS1 label',

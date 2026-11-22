@@ -27,6 +27,15 @@ final readonly class SequenceStepRule implements ValidationRule
 
         $state = $this->component->getSequenceState();
 
+        // The count is re-read from live state, so it matches the browser's k / n.
+        $limit = $this->step->isRepeating() ? $this->component->getRepeatLimit($this->step, $state) : null;
+
+        if ($limit !== null && count($codes) !== $limit) {
+            $fail(__(count($codes) > $limit ? 'filament-qr-code::ui.repeat_too_many' : 'filament-qr-code::ui.repeat_needs_codes', ['count' => $limit]));
+
+            return;
+        }
+
         foreach (array_values($codes) as $position => $code) {
             if (! is_scalar($code)) {
                 $fail(__('filament-qr-code::ui.scan_rejected'));

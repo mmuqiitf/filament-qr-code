@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `QrScanSequence`: a `repeat()` count that reads live state (a quantity input) is checked again on the Done button and on submit, not only on each scan, so the server agrees with the browser's `k / n` when the quantity changes mid-sequence. Submit fails a counted step with fewer codes than the live count ("Scan at least n code(s)") or more ("This step has more than n code(s)", new key `repeat_too_many`), and `getMissingSequenceKeys()` / `isSequenceComplete()` list a step that is short. When the count drops to the codes already scanned, an `'advance'` step finishes in the browser, so the sequence completes and auto-submits. The step payload gains `advance`.
+
 ### Changed
 
 - A live scan on an optional sequence step walks past later optional steps that also reject the code, and lands on the first later step that accepts it. `skipped` lists every optional step it walked past. A required step that rejects the code stops the walk. Typed corrections still do not skip.

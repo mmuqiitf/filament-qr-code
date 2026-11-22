@@ -603,6 +603,14 @@ trait HasSequenceSteps
         $needed = $limit ?? 1;
         $count = count($this->repeatCodes($values, $key));
 
+        if ($limit !== null && $count > $limit) {
+            // The live count dropped below the codes already in: remove some first.
+            $result = ScanResult::reject($code, $input, __('filament-qr-code::ui.repeat_too_many', ['count' => $limit]));
+            $this->rejectStep($result, $key, $values);
+
+            return new SequenceScanResult(scan: $result, step: $key, nextStep: $key, values: $values);
+        }
+
         if ($count < $needed && ! ($step->isOptional() && $count === 0)) {
             // A counted step finished early: the app's whole-set check explains what is missing.
             if ($limit !== null && ($failure = $this->findInvalidStep($values)) !== null) {

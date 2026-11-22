@@ -69,6 +69,47 @@ describe('QrScanSequence runtime options', () => {
         expect(sequence.stepProgress('serials')).toBe('1 / 5');
     });
 
+    it('finishes the current repeat step when a live count drops to its codes', async () => {
+        const values = { po: 'PO-1', sku: 'PRD-1', serials: ['SN-1', 'SN-2'] };
+        const { sequence, wire, rerender } = mountSequence({
+            respond: () => Promise.resolve(result({ step: 'serials', next_step: 'po', completed: true, finished: true, values })),
+            payload: basePayload({ steps: steps(3, { serials: { advance: true } }), values }),
+        });
+
+        expect(sequence.getCurrentField().key).toBe('serials');
+
+        rerender({ steps: steps(2, { serials: { advance: true } }), values });
+        await flush();
+
+        expect(sequence.stepProgress('serials')).toBe('2 / 2');
+        expect(wire.methodCalls).toEqual([['form.receipt', 'finishStep', { step: 'serials' }]]);
+    });
+
+    it('leaves a waiting repeat step for the operator to finish', async () => {
+        const values = { po: 'PO-1', sku: 'PRD-1', serials: ['SN-1', 'SN-2'] };
+        const { wire, rerender } = mountSequence({ payload: basePayload({ steps: steps(3, { serials: { advance: false } }), values }) });
+
+        rerender({ steps: steps(2, { serials: { advance: false } }), values });
+        await flush();
+
+        expect(wire.methodCalls).toEqual([]);
+    });
+
+    it('does not finish a repeat step again when the count is unchanged', async () => {
+        const values = { po: 'PO-1', sku: 'PRD-1', serials: ['SN-1', 'SN-2', 'SN-3'] };
+        const { wire, rerender } = mountSequence({
+            respond: () => Promise.resolve(result({ passes: false, step: 'serials', next_step: 'serials', message: 'Too many', values })),
+            payload: basePayload({ steps: steps(4, { serials: { advance: true } }), values }),
+        });
+
+        rerender({ steps: steps(2, { serials: { advance: true } }), values });
+        await flush();
+        rerender({ steps: steps(2, { serials: { advance: true } }), values, sound: true });
+        await flush();
+
+        expect(wire.methodCalls).toHaveLength(1);
+    });
+
     it('starts from the server values and follows them on re-render', async () => {
         const { sequence, rerender } = mountSequence({ payload: basePayload({ values: { po: 'PO-1' } }) });
 
