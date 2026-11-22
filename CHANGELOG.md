@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - QR PNGs use GD when `gd` is loaded, and Imagick only when GD is absent. Logos, captions and 1D barcode PNGs still prefer Imagick. Installs with both extensions can see different QR pixels.
 
+- Primary-coloured text in the package views (download links on `QrCodeDisplay`, `QrEntry`, `BarcodeDisplay` and `BarcodeEntry`, the scanner camera icon and upload label, and the sequence progress and "Ready to scan" labels) uses `text-primary-700` in light mode instead of `text-primary-600`, which fell below WCAG AA contrast on white with an amber primary. Dark mode keeps `primary-400`. Rebuild the panel theme to pick up the class.
+
 ### Added
 
 - `QrCollector::itemRules()` checks each code with Laravel validation rules before the browser adds it, and again on submit. The first failing code fails the field. An empty list accepts every code. The collect action modal does not run these rules.

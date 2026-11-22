@@ -4077,6 +4077,15 @@ Run `php artisan filament:assets`: the scanner JavaScript changed.
 
 - **QR PNG backend.** QR codes use GD when the `gd` extension is loaded, and Imagick only when GD is absent. They used to prefer Imagick, so a QR PNG can look slightly different on a machine that has both. Logos and captions still prefer Imagick. 1D barcode PNGs are unchanged and still prefer Imagick. `qr-code:doctor` names GD when it is loaded.
 
+- **`BarcodeColumn` images are signed URLs.** Each cell's `<img>` now loads `/filament-qr-code/barcode-image` (route `filamentQrCode.barcode`) instead of embedding a data URI. `BarcodeDisplay` and `BarcodeEntry` still embed the image. There is no per-column opt-out. The barcode route uses the QR preview route's `qr-code.image_route` settings, so check them:
+  - With a `ttl`, a table left open longer than the TTL shows broken images until the page reloads (403).
+  - `throttle` now also counts barcode cells, and both routes share one bucket. A long table can hit `429` where the data URIs never did. Raise the limit or paginate.
+  - A Content Security Policy with `img-src data:` but not `'self'` blocks the cells. Allow `'self'`, or the host serving the app.
+  - A test that asserted `data:image/svg+xml` in a table cell should look for the `filament-qr-code/barcode-image` URL instead.
+  - When signing the URL throws (no app key, say), the column falls back to a data URI.
+- **Image-route middleware.** A new key, `qr-code.image_route.middleware` (default `[]`), adds class names or aliases to both image routes, after `signed` and the throttle. Nothing changes until you set it. The routes stay off the `web` group, so middleware that needs a session (like `auth` with the session guard) has no session to read. Use a stateless check, such as a token guard or your own middleware. If you published `config/qr-code.php`, copy the key, and run `php artisan qr-code:doctor`, which fails when the list is not strings.
+- **Primary text contrast.** Download links, the camera icon, the sequence progress label and "Ready to scan" now use `text-primary-700` instead of `text-primary-600`. With an amber primary (Filament's default), `primary-600` small text fell below 4.5:1 on white. Dark mode is unchanged (`primary-400`). Rebuild your panel theme (`npm run build`) so Tailwind generates the new class from the package views.
+
 ## From 1.1.1 to 1.1.2
 
 Nothing to change in application code. No asset rebuild.
