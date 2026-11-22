@@ -48,6 +48,7 @@
             "sticky": false,
             "repeating": false,
             "repeat": null,
+            "advance": false,
             "active": true
         },
         {
@@ -56,6 +57,7 @@
             "sticky": false,
             "repeating": false,
             "repeat": null,
+            "advance": false,
             "active": true
         }
     ],

@@ -67,6 +67,7 @@ return [
     'repeat_full' => 'Langkah ini sudah berisi :count kode.',
     'duplicate_in_step' => '":code" sudah dipindai di langkah ini.',
     'repeat_needs_codes' => 'Pindai minimal :count kode sebelum menyelesaikan langkah ini.',
+    'repeat_too_many' => 'Langkah ini berisi lebih dari :count kode. Hapus kode yang berlebih sebelum menyelesaikan.',
     'clear' => 'Hapus',
     'remove_code' => 'Buang',
     'gs1_not_gs1' => 'Bukan label GS1',

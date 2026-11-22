@@ -73,6 +73,12 @@ class RuntimeControlTestComponent extends Component implements HasForms
         $this->sequence()->setRepeatCount($step, $count);
     }
 
+    /** @return array<string, mixed> */
+    public function submit(): array
+    {
+        return $this->form->getState();
+    }
+
     public function render(): string
     {
         return '<div>{{ $this->form }}</div>';
@@ -288,3 +294,64 @@ it('overrides a repeat count from page code across requests', function (): void 
 it('refuses a repeat count for a step that does not repeat', function (): void {
     Livewire::test(RuntimeControlTestComponent::class)->call('setRepeat', 'sku', 2);
 })->throws(InvalidArgumentException::class);
+
+it('checks a repeat step against the live count on submit when the quantity rises mid-sequence', function (): void {
+    $test = Livewire::test(RuntimeControlTestComponent::class);
+    controlScan($test, 'po', 'PO-1');
+    controlScan($test, 'sku', 'PRD-1');
+    controlScan($test, 'serials', 'SN-1');
+    expect(controlScan($test, 'serials', 'SN-2'))->toMatchArray(['completed' => true]);
+
+    // The browser now shows "2 / 3": the submit guard must say the same.
+    $test->set('quantity', 3);
+
+    expect($test->instance()->sequence()->getMissingSequenceKeys())->toContain('serials')
+        ->and($test->instance()->sequence()->isSequenceComplete())->toBeFalse();
+
+    $test->call('submit')->assertHasErrors(['data.receipt.serials']);
+    expect($test->errors()->first('data.receipt.serials'))->toBe(__('filament-qr-code::ui.repeat_needs_codes', ['count' => 3]));
+});
+
+it('refuses to finish a repeat step holding more codes than the live count', function (): void {
+    $test = Livewire::test(RuntimeControlTestComponent::class)->set('quantity', 3);
+    controlScan($test, 'po', 'PO-1');
+    controlScan($test, 'sku', 'PRD-1');
+    controlScan($test, 'serials', 'SN-1');
+    controlScan($test, 'serials', 'SN-2');
+
+    // Lowered to 1 with two codes in: "2 / 1" until one is removed.
+    $test->set('quantity', 1);
+
+    $test->call('callSchemaComponentMethod', 'form.receipt', 'finishStep', ['step' => 'serials']);
+    expect($test->effects['returns'][0])->toMatchArray([
+        'passes' => false,
+        'step' => 'serials',
+        'next_step' => 'serials',
+        'message' => __('filament-qr-code::ui.repeat_too_many', ['count' => 1]),
+    ]);
+
+    $test->call('submit')->assertHasErrors(['data.receipt.serials']);
+    expect($test->errors()->first('data.receipt.serials'))->toBe(__('filament-qr-code::ui.repeat_too_many', ['count' => 1]));
+});
+
+it('finishes a repeat step whose live count dropped to the codes already scanned', function (): void {
+    $test = Livewire::test(RuntimeControlTestComponent::class)->set('quantity', 3);
+    controlScan($test, 'po', 'PO-1');
+    controlScan($test, 'sku', 'PRD-1');
+    controlScan($test, 'serials', 'SN-1');
+    controlScan($test, 'serials', 'SN-2');
+
+    $test->set('quantity', 2);
+
+    $test->call('callSchemaComponentMethod', 'form.receipt', 'finishStep', ['step' => 'serials']);
+    expect($test->effects['returns'][0])->toMatchArray(['passes' => true, 'completed' => true]);
+
+    $test->call('submit')->assertHasNoErrors();
+});
+
+it('tells the browser which counted repeat steps advance on their own', function (): void {
+    $test = Livewire::test(RuntimeControlTestComponent::class);
+
+    expect(collect($test->instance()->sequence()->getStepsPayload())->pluck('advance', 'key')->all())
+        ->toBe(['po' => false, 'sku' => false, 'lot' => false, 'serials' => true]);
+});
