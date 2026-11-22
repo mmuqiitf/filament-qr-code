@@ -514,3 +514,48 @@ describe('input router: hold', () => {
         expect(unrouted).toEqual([{ value: 'PRD-1001' }]);
     });
 });
+
+describe('input router: free-text fields', () => {
+    function typeInto(element, code, gapMs = 10) {
+        for (const key of [...code, 'Enter']) {
+            const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+            element.dispatchEvent(event);
+            vi.advanceTimersByTime(gapMs);
+        }
+    }
+
+    it('leaves keys typed into a textarea alone, however fast', () => {
+        document.body.innerHTML = '<textarea id="notes"></textarea><div id="a"></div>';
+        const page = makeTarget({ scope: 'page', element: document.getElementById('a') });
+        router.register(page.target);
+        const notes = document.getElementById('notes');
+        notes.focus();
+
+        typeInto(notes, 'MIRROR SCRATCH');
+        vi.advanceTimersByTime(500);
+
+        expect(page.deliveries).toEqual([]);
+    });
+
+    it('leaves keys typed into a contenteditable element alone', () => {
+        document.body.innerHTML = '<div contenteditable="true" id="editor"><p id="line">x</p></div><div id="a"></div>';
+        const page = makeTarget({ scope: 'page', element: document.getElementById('a') });
+        router.register(page.target);
+
+        typeInto(document.getElementById('line'), 'PRD-1001');
+
+        expect(page.deliveries).toEqual([]);
+    });
+
+    it('still routes a burst from a textarea that a scan target owns', () => {
+        document.body.innerHTML = '<div id="field"><textarea id="codes"></textarea></div>';
+        const field = makeTarget({ element: document.getElementById('field') });
+        router.register(field.target);
+        const codes = document.getElementById('codes');
+        codes.focus();
+
+        typeInto(codes, 'PRD-1001');
+
+        expect(field.deliveries.map(({ code }) => code)).toEqual(['PRD-1001']);
+    });
+});

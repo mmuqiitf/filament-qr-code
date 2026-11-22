@@ -8,6 +8,7 @@ import { changedKeys, feedSource, listenForControlEvents, observeOptions, readOp
 import {
     emitScanFeedback,
     ensureScannerInstance,
+    cameraAccessGranted,
     loadCameraDevices,
     persistCameraId,
     resolveDecoderModule,
@@ -130,7 +131,10 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             (this.$root ?? this.$el).qrScanSequence = this.controlApi();
 
-            this.loadCameras();
+            // Listing devices asks for the camera: wait for Start unless access is already granted.
+            cameraAccessGranted().then((granted) => {
+                if (granted) this.loadCameras();
+            });
         },
 
         destroy() {

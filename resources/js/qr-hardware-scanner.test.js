@@ -175,3 +175,59 @@ describe('burst hardening (P0.2)', () => {
         expect(seen).toEqual(['AB']);
     });
 });
+
+describe('burst timing: scanner speed on average, not a few fast pairs', () => {
+    function typeTimed(handler, steps) {
+        // steps: [key, msBeforeKey][]
+        for (const [key, wait] of steps) {
+            vi.advanceTimersByTime(wait);
+            handler.handleKeyDown(keyEvent(key));
+        }
+    }
+
+    it('does not treat fast human typing with a few quick pairs as a scan', () => {
+        vi.useFakeTimers();
+        const seen = [];
+        const handler = createHardwareScannerHandler({ onScan: (value) => seen.push(value) });
+
+        // "mirror scratch": rollover pairs at 30 ms among 90-140 ms gaps.
+        const gaps = [0, 30, 120, 30, 110, 30, 140, 90, 30, 100, 30, 120, 90, 30];
+        typeTimed(handler, [...'mirror scratch'].map((key, index) => [key, gaps[index]]));
+        vi.advanceTimersByTime(300);
+        handler.handleKeyDown(keyEvent('Enter'));
+
+        expect(seen).toEqual([]);
+        vi.useRealTimers();
+    });
+
+    it('accepts a short shifted code with one slow gap, the way a Bluetooth gun sends DONE', () => {
+        vi.useFakeTimers();
+        const seen = [];
+        const handler = createHardwareScannerHandler({ onScan: (value) => seen.push(value) });
+
+        typeTimed(handler, [
+            ['Shift', 0], ['D', 4],
+            ['Shift', 20], ['O', 4],
+            ['Shift', 70], ['N', 4],
+            ['Shift', 20], ['E', 4],
+        ]);
+        vi.advanceTimersByTime(20);
+
+        expect(handler.handleKeyDown(keyEvent('Enter'))).toBe(true);
+        expect(seen).toEqual(['DONE']);
+        vi.useRealTimers();
+    });
+
+    it('accepts a short code whose gaps hover around the threshold', () => {
+        vi.useFakeTimers();
+        const seen = [];
+        const handler = createHardwareScannerHandler({ onScan: (value) => seen.push(value) });
+
+        typeTimed(handler, [['D', 0], ['O', 40], ['N', 65], ['E', 35]]);
+        vi.advanceTimersByTime(40);
+
+        expect(handler.handleKeyDown(keyEvent('Enter'))).toBe(true);
+        expect(seen).toEqual(['DONE']);
+        vi.useRealTimers();
+    });
+});

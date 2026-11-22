@@ -13,9 +13,9 @@ return [
     | - burst_threshold_ms: Max milliseconds between keystrokes to identify a burst.
     | - default_terminators: Suffix keys that finish a scan (Enter, Tab).
     | - prevent_form_submit: Whether to swallow Enter events during scanner bursts.
-    | - min_fast_keys: Consecutive fast keystroke gaps required before a
-    |   terminator counts as a scan. 3 (the 1.0 default) rejects fast human
-    |   typing; 1 restores the 0.x behaviour.
+    | - min_fast_keys: Keystroke gaps a burst needs before a terminator counts
+    |   as a scan; the gaps must average burst_threshold_ms or less. 3 (the
+    |   1.0 default) rejects fast human typing; 1 restores the 0.x behaviour.
     | - fallback_to_any_input: When the page-global listener finds no focused
     |   or registered empty field, write into the first empty input in the
     |   form that contains the listener. Inputs in other forms are left

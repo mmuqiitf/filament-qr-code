@@ -33,4 +33,5 @@
     @include('filament-qr-code::components.sequence.steps')
     {{ \Filament\Support\Facades\FilamentView::renderHook(\Mmuqiitf\FilamentQrCode\View\QrCodeRenderHook::SEQUENCE_END, scopes: $renderHookScopes) }}
 </div>
+@include('filament-qr-code::components.sequence.errors')
 </div>

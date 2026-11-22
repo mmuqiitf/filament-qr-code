@@ -20,8 +20,9 @@ The browser side has no external dependency. The scanner bundle and the camera d
 
 No, as long as the gun is in keyboard (HID / keyboard-wedge) mode. The Hardware Scanner Interceptor tells a gun from a person by timing:
 
-- the keystrokes arrive within `burst_threshold_ms` (50 ms) of each other;
-- there are at least `min_fast_keys` (3) fast gaps in a row;
+- there are at least `min_fast_keys` (3) gaps between keystrokes, and on average they are `burst_threshold_ms` (50 ms) or less, so one slow gap from a Bluetooth gun is fine but a few quick pairs while someone types are not;
+- no gap is longer than three times `burst_threshold_ms`;
+- the keys are not typed into a textarea or a contenteditable editor (unless a scan field owns it);
 - the code is at least `min_barcode_length` (2) characters long;
 - a terminator key (`Enter` or `Tab`) ends the scan, or, for guns without one, `scan_timeout_ms` passes.
 

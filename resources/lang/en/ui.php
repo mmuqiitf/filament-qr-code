@@ -19,7 +19,7 @@ return [
     'download_image' => 'Download Image',
     'download_qr_bulk' => 'Download QR Codes (ZIP)',
     'download_qr_code' => 'Download QR Code',
-    'empty_collector' => 'No items scanned yet. Position a QR code in front of the camera.',
+    'empty_collector' => 'No items scanned yet. Scan a code with the camera or a handheld scanner.',
     'items' => 'items',
     'no_data' => 'No QR code data available',
     'pause' => 'Pause',

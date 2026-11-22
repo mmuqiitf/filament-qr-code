@@ -50,3 +50,24 @@ test('collect action modal closed mid camera start releases the camera', async (
     await page.waitForTimeout(5000);
     expect(await liveTracks(page)).toBe(0);
 });
+
+for (const path of ['sequence-smoke', 'collector-smoke']) {
+    test(`/workbench/${path} does not ask for the camera before Start`, async ({ page }) => {
+        await page.addInitScript(() => {
+            window.__cameraRequests = 0;
+            const original = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
+            if (original) {
+                navigator.mediaDevices.getUserMedia = (...args) => {
+                    window.__cameraRequests++;
+
+                    return original(...args);
+                };
+            }
+        });
+        await page.goto(`/workbench/${path}`);
+        await page.waitForLoadState('networkidle');
+
+        expect(await page.evaluate(() => window.__cameraRequests)).toBe(0);
+        await expect(page.getByText('Camera access denied or unavailable.')).toBeHidden();
+    });
+}

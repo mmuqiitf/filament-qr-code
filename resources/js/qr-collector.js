@@ -6,6 +6,7 @@ import { messagesFrom } from './messages.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
+    cameraAccessGranted,
     loadCameraDevices,
     persistCameraId,
     resolveDecoderModule,
@@ -101,7 +102,15 @@ export default function qrCollectorComponent({
                 });
             }
 
-            this.loadCameras();
+            // Listing devices asks for the camera: wait for Start unless auto-start
+            // is on or access is already granted.
+            if (autoStart) {
+                this.loadCameras();
+            } else {
+                cameraAccessGranted().then((granted) => {
+                    if (granted) this.loadCameras({ start: false });
+                });
+            }
         },
 
         destroy() {

@@ -220,7 +220,7 @@ php artisan qr-code:doctor
 | Same burst handled twice                     | A custom key handler next to the package's wedge router                   | Register the handler with `FilamentQrCode.router.register()` so each burst has one owner ([Extension points](docs/extending.md#browser)).         |
 | Typed text becomes a "scan"                  | `minBarcodeLength` too low for a keyboard-heavy form                      | Raise `minBarcodeLength` to 4–6 on that component.                                                                                                |
 | Scan lands in the wrong input (e.g. search)  | Station Listener fell back to the first empty input in its own form       | `QrHardwareScannerListener::make([...])->fallbackToAnyInput(false)` (or `hardware_scanner.fallback_to_any_input => false`); listen for `qr-scan-unrouted`. |
-| A slow or Bluetooth gun's short codes are missed | `min_fast_keys` (default 3) needs three fast gaps in a row               | Lower it on that component with `->minFastKeys(1)` (or `hardware_scanner.min_fast_keys`).                                                         |
+| A slow or Bluetooth gun's short codes are missed | `min_fast_keys` (default 3) needs three gaps at scanner speed           | Lower it on that component with `->minFastKeys(1)` (or `hardware_scanner.min_fast_keys`).                                                         |
 | `nextField()` / listener misses a field      | Name does not match exactly                                               | Use the exact field name; nested paths like `items.0.sku` are supported, and `sku` never matches `parent_sku`.                                   |
 | Table page is slow with many QRs             | Eager modal data-URIs per row                                             | Keep `->lazyModal()` (default) and the persistent cache enabled; tune `generator.cache_ttl`.                                                      |
 
@@ -501,9 +501,9 @@ For GS1 pallet and case labels, `QrHardwareScannerListener::make()->gs1(fill: [.
 
 Fields are matched by their exact name — `data-field-name`, `name`, `id`, or a `wire:model` path equal to the name or ending in `.<name>` — so `sku` never matches `parent_sku`, and nested names such as `items.0.sku` work in `make([...])` and `nextField()`.
 
-The interceptor buffers keystrokes and treats gaps under `burstThresholdMs` (default 50) as a scanner burst. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), sanitizes, and routes the value — the delivery point (field, sequence, collector, or this listener) then plays the single confirmation beep, so one burst always yields one beep. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
+The interceptor buffers keystrokes and treats a run whose gaps average `burstThresholdMs` (default 50) or less as a scanner burst. Keys typed into a textarea or a contenteditable editor are never read as a scan, unless a scan field owns that element. On a terminator key with a long-enough buffer, it `preventDefault()`s (no accidental submit), sanitizes, and routes the value — the delivery point (field, sequence, collector, or this listener) then plays the single confirmation beep, so one burst always yields one beep. Tune `terminators` and `minBarcodeLength` to your gun's suffix.
 
-Held-down keys (keyboard auto-repeat) never count toward a burst, so holding a key and pressing Enter is not a scan. For keyboard-heavy forms, require more consecutive fast keystrokes before a terminator counts with `minFastKeys()` (default `3`, config `hardware_scanner.min_fast_keys`; `1` accepts a single fast gap like 0.x did):
+Held-down keys (keyboard auto-repeat) never count toward a burst, so holding a key and pressing Enter is not a scan. For keyboard-heavy forms, require more keystroke gaps (averaging `burstThresholdMs` or less) before a terminator counts with `minFastKeys()` (default `3`, config `hardware_scanner.min_fast_keys`; `1` accepts a single fast gap like 0.x did):
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
@@ -837,7 +837,8 @@ QrScanner::make('scan')
     ->dehydrated(false);
 ```
 
-- Each code is one server call (`handleScan`), even without rules or a lookup, because that is where `onScanned()` runs. Merging lines (same SKU twice = quantity 2) is your job in `onScanned()`.
+- Each code is one server call (`handleScan`), even without rules or a lookup, because that is where `onScanned()` runs.
+- A code typed into the field and sent with Enter is handled like a scan, with source `manual`, and the form is not submitted. Merging lines (same SKU twice = quantity 2) is your job in `onScanned()`.
 - After an accepted scan the server clears the field (`continuousDisplay(ContinuousDisplay::Empty)`, the default) or keeps the code (`LastCode`). A `$set()` on the field's own path inside `onScanned()` is overwritten by the clear.
 - A rejected scan shows its message under the field. By default scanning carries on. With `pauseOnReject()` the field stops taking scans until the operator presses **Resume scanning** (or Escape); `qr-scan-paused` and `qr-scan-resumed` fire.
 - The camera closes after each accepted scan by default; `keepCameraOpen()` keeps it running for the next code.
@@ -1985,7 +1986,7 @@ QrScanner::make('sku')
     ->preferRearCamera()
     ->cameraControls() // torch / zoom when the camera supports them; false hides them
     ->hardwareScanner(terminators: ['Enter', 'Tab'], minBarcodeLength: 2)
-    ->minFastKeys(3) // consecutive fast keystrokes before a terminator counts
+    ->minFastKeys(3) // keystroke gaps (averaging burstThresholdMs or less) before a terminator counts
     ->beepFrequency(880)
     ->beepDuration(80)
     ->vibrateDuration(100)
@@ -2002,7 +2003,7 @@ QrScanner::make('sku')
 | `enabled`             | `true`             | master switch (components also gate individually)  |
 | `burst_threshold_ms`  | `50`               | max gap between keystrokes counted as one burst    |
 | `min_barcode_length`  | `2`                | shorter bursts are treated as typing               |
-| `min_fast_keys`       | `3`                | consecutive fast gaps required before a terminator counts; `3` rejects fast typists, `1` restores the 0.x behaviour |
+| `min_fast_keys`       | `3`                | keystroke gaps required before a terminator counts, averaging `burst_threshold_ms` or less; `3` rejects fast typists, `1` restores the 0.x behaviour |
 | `fallback_to_any_input` | `true`           | page-global listener may fill the first empty text, search, number or textarea in the form that contains it when no focused or registered field is free; other forms are left alone; `false` dispatches `qr-scan-unrouted` instead. `qr-code:doctor` warns while this stays on |
 | `scan_timeout_ms`     | `150`              | flush window for terminator-less guns (0 disables) |
 | `prevent_form_submit` | `true`             | swallow the terminator key during bursts           |
@@ -2020,6 +2021,8 @@ Every wedge consumer (`QrScanner`, `QrHardwareScannerListener`, `QrCollector`, `
 3. the first listening target on the page, in page order: page-scope `QrScanner` fields (`->hardwareInput(scope: HardwareInputScope::Page)`), collectors, sequences and each empty field registered with a listener (ranked by the field's own position);
 4. the listener's `fallback_to_any_input`;
 5. otherwise `qr-scan-unrouted`.
+
+Keys typed into a textarea or a contenteditable editor are left alone and never become a burst, unless the element sits inside a scan target.
 
 A field that can't take the burst (busy checking a scan, too short for its `min_barcode_length`) is skipped and the next target gets it. When the burst lands somewhere other than the focused input, the characters the gun typed into that input are removed again, unless the input (or an ancestor) has the `data-qr-ignore` attribute.
 
@@ -2181,8 +2184,9 @@ The browser side has no external dependency. The scanner bundle and the camera d
 
 No, as long as the gun is in keyboard (HID / keyboard-wedge) mode. The Hardware Scanner Interceptor tells a gun from a person by timing:
 
-- the keystrokes arrive within `burst_threshold_ms` (50 ms) of each other;
-- there are at least `min_fast_keys` (3) fast gaps in a row;
+- there are at least `min_fast_keys` (3) gaps between keystrokes, and on average they are `burst_threshold_ms` (50 ms) or less, so one slow gap from a Bluetooth gun is fine but a few quick pairs while someone types are not;
+- no gap is longer than three times `burst_threshold_ms`;
+- the keys are not typed into a textarea or a contenteditable editor (unless a scan field owns it);
 - the code is at least `min_barcode_length` (2) characters long;
 - a terminator key (`Enter` or `Tab`) ends the scan, or, for guns without one, `scan_timeout_ms` passes.
 
@@ -3347,7 +3351,7 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `keepCameraOpen(Closure\|bool $condition = true): static` | Continuous mode: keep the camera running between scans. |
 | `lookup(Closure\|string $model, Closure\|string $column = 'code', ?Closure $modifyQueryUsing = null): static` | Find a model by the scanned code; the scan is rejected when none matches. |
 | `lookupUsing(?Closure $resolver, bool $fallback = false): static` | Find the record yourself (an API, a composite key, a non-Eloquent store). Replaces lookup() on this field unless $fallback, when it runs only after the model lookup found nothing. Return null or false for "not found". |
-| `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `mode(ScanMode\|Closure $mode): static` | Single (default) or continuous scanning for this field. |
 | `nextField(Closure\|string\|null $fieldName): static` | Move focus to this field after a successful scan. |
 | `normalizeScannedCode(string $code): string` | The code every check sees: the normalizeWith() presets (or a trim), then the normalizeUsing() closure. |
@@ -3390,7 +3394,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `handleGs1Scan(string $code): array` | Check a gun burst as GS1 and fill the mapped fields; called by the listener JS, usable from tests. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `static make(Closure\|array $fields = []): static` | Create a Station Listener routing gun scans into these fields. |
-| `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
 | `scanTimeout(Closure\|int $milliseconds): static` | Flush window in milliseconds for guns that send no terminator; 0 disables (config `hardware_scanner.scan_timeout_ms`). |
 | `sound(Closure\|bool $condition = true): static` | Play the synthesized beep on a successful scan (config `feedback.sound`). |
@@ -3432,7 +3436,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `isStepFilled(ScanStep $step, array $values): bool` | A repeat step is filled with its count of codes, or one code when open-ended. |
 | `static make(Closure\|array $fields = []): static` | Create a sequence over these field keys (or ScanStep objects). |
 | `mergeSequenceState(array $formState): array` | Merge sequence values into a form state array so callers no longer hand-roll array_merge($this->data, $this->form->getState()). |
-| `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `normalizeStepUsing(?Closure $normalizer): static` | Live-step normalizer, applied by getSequenceState() and mergeSequenceState() (e.g. strtoupper(trim($value))). This is the live-scan counterpart to the programmatic-only scanFormat(). |
 | `normalizeWith(bool $trim = true, bool $uppercase = false, array\|string\|null $stripPrefix = null): static` | Clean every scanned code in the browser (before duplicate detection and step matching) and again on the server. |
 | `onCompleted(?Closure $callback): static` | Callback run with every step value once the whole sequence is complete. |
@@ -3456,7 +3460,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, `getAutomaticKey()`, `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getComponentStatePath()`, `getControlKey()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFlatStatePrefix()`, `getFps()`, `getHardwareScannerScanPayload()`, `getInvalidSequenceBehavior()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanFields()`, `getScanPayload()`, `getScanSteps()`, `getScanTimeoutMs()`, `getSequenceState()`, `getStepsPayload()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerSequenceWork()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isEditable()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldAutoSubmit()`, `shouldPreventFormSubmit()`, `shouldResetAfterSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, `getAutomaticKey()`, `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getComponentStatePath()`, `getControlKey()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFlatStatePrefix()`, `getFps()`, `getHardwareScannerScanPayload()`, `getInvalidSequenceBehavior()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanFields()`, `getScanPayload()`, `getScanSteps()`, `getScanTimeoutMs()`, `getSequenceState()`, `getStepErrors()`, `getStepsPayload()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerSequenceWork()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isEditable()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldAutoSubmit()`, `shouldPreventFormSubmit()`, `shouldResetAfterSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `ScanStep`
 
@@ -3503,7 +3507,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `fps(Closure\|int $fps): static` | Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `itemRules(Closure\|array $rules): static` | Laravel rules for one collected code. The browser asks before adding the code, and submit fails on the first code that does not pass. Calling this again replaces the rules. An empty list accepts every code. |
-| `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
@@ -3528,7 +3532,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `fps(Closure\|int $fps): static` | Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. |
 | `handleScan(string $code, mixed $livewire = null): mixed` | Invoke the registered onScan callback for a collected code. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
-| `minFastKeys(Closure\|int $count): static` | Consecutive fast keystroke gaps required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `onScan(?Closure $callback): static` | Callback run for each collected code. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
