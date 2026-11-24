@@ -108,6 +108,33 @@ describe('collector server-notify channel', () => {
         expect(accepted.items).toHaveLength(1);
         expect(dispatched).toEqual([]);
 
+        const normalized = makeCollector({
+            hasItemRules: true,
+            componentKey: 'form.codes',
+            wireScanHandler: true,
+            delayBetweenScansMs: 0,
+        });
+        const normalizedWire = {
+            handleCollectorScan: vi.fn(),
+            set: vi.fn(),
+            callSchemaComponentMethod: vi.fn().mockResolvedValue({
+                passes: true,
+                message: null,
+                code: '(01)09506000134352(17)261231',
+            }),
+        };
+        normalized.$wire = normalizedWire;
+
+        await normalized.handleDetectedCode('010950600013435217261231');
+
+        expect(normalizedWire.callSchemaComponentMethod).toHaveBeenCalledWith(
+            'form.codes',
+            'checkCollectorItem',
+            { code: '010950600013435217261231' },
+        );
+        expect(normalizedWire.handleCollectorScan).toHaveBeenCalledWith('(01)09506000134352(17)261231');
+        expect(normalized.items[0].code).toBe('(01)09506000134352(17)261231');
+
         const rejected = makeCollector({
             hasItemRules: true,
             componentKey: 'form.codes',

@@ -161,7 +161,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
 - **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128, Data Matrix, GS1 DataMatrix, PDF417 and compact PDF417](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
-- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128` or `BarcodeType::Gs1DataMatrix`, and [scan GS1 labels](docs/gs1.md#scanning-gs1-labels) into a form with `QrScanner::gs1(fill: [...], require: [...])`. [GS1 Digital Link](docs/gs1.md#digital-link) URIs parse into the same model, and `QrCodeService::digitalLink()` encodes one as a QR.
+- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128` or `BarcodeType::Gs1DataMatrix`, and [scan GS1 labels](docs/gs1.md#scanning-gs1-labels) into a form with `QrScanner::gs1(fill: [...], require: [...])`, `QrCollector::gs1(require: [...])`, or `ScanStep::gs1(...)` / `QrScanSequence::gs1(...)`. [GS1 Digital Link](docs/gs1.md#digital-link) URIs parse into the same model, and `QrCodeService::digitalLink()` encodes one as a QR.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
 - **Every public method**: the generated [API map](docs/api.md).
 
@@ -174,7 +174,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [Batch collecting](docs/collecting.md) | continuous inventory scanning in repeaters and tables |
 | [Generating](docs/generating.md) | display components, download actions, ZIP export, facade, payloads |
 | [Barcodes](docs/barcodes.md) | 1D barcodes: types, components, invalid values, accessibility, PHP API |
-| [GS1 element strings](docs/gs1.md) | `Gs1::parse()` and `Gs1::build()` for application identifiers, scanning GS1 labels with `->gs1()`, and [Digital Link](docs/gs1.md#digital-link) URIs |
+| [GS1 element strings](docs/gs1.md) | `Gs1::parse()` and `Gs1::build()` for application identifiers, scanning GS1 labels with `->gs1()` on the scanner, collector and sequence, and [Digital Link](docs/gs1.md#digital-link) URIs |
 | [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, auditing, macros, styling, render hooks, views |
 | [Extension points](docs/extending.md) | every seam in one table: PHP closures, contracts, macros, render hooks, CSS variables, JS decoder, router, events |
 | [Events](docs/events.md) | every browser event fired or listened for, and every Laravel event with its properties |

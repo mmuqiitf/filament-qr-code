@@ -58,7 +58,7 @@ QrCollector::make('scanned_items')
     ->itemRules(['regex:/^PRD-\d+$/']);
 ```
 
-`->normalizeWith()` is the same as on a scanner or sequence: trim (on by default), optional uppercase, and optional prefix stripping run in the browser before duplicate detection and again on the server before `itemRules()`.
+`->normalizeWith()` is the same as on a scanner or sequence: trim (on by default), optional uppercase, and optional prefix stripping run in the browser before duplicate detection and again on the server before GS1 checks and `itemRules()`.
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
@@ -67,3 +67,5 @@ QrCollector::make('scanned_items')
     ->normalizeWith(uppercase: true, stripPrefix: [']C1', ']Q1'])
     ->itemRules(['regex:/^SKU-/']);
 ```
+
+`->gs1(require: ['01', '17'])` treats every item as a GS1 label: the list stores the normalized bracketed string, and an invalid or incomplete label is rejected before it is added. There is no `fill` — use `QrScanner` or a [sequence step](gs1.md#scanning-gs1-labels) to write AIs into sibling fields. `itemRules` run after the GS1 check and see the bracketed string. The collect action modal does not run `gs1()`. See [Scanning GS1 labels](gs1.md#scanning-gs1-labels).

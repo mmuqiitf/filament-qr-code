@@ -9,8 +9,9 @@ use Mmuqiitf\FilamentQrCode\Gs1\ElementString;
 use Mmuqiitf\FilamentQrCode\Support\Gs1ScanCheck;
 
 /**
- * Shared `->gs1()` configuration for the scanner field and the Station
- * Listener: which AIs fill which fields and which AIs a scan must carry.
+ * Shared `->gs1()` configuration for the scanner field, the Station
+ * Listener, the collector, and a scan sequence: which AIs fill which fields
+ * and which AIs a scan must carry.
  */
 trait HasGs1Scan
 {
@@ -68,11 +69,11 @@ trait HasGs1Scan
      * its field, so nothing from an earlier label is kept, unless
      * `keepMissing` is on.
      */
-    protected function fillGs1Fields(ElementString $elements, Gs1ScanCheck $check): void
+    protected function fillGs1Fields(ElementString $elements, Gs1ScanCheck $check, ?bool $keepMissing = null): void
     {
         $set = $this->makeSetUtility();
         $values = $check->fillValues($elements);
-        $keepMissing = $this->shouldKeepMissingGs1Fields();
+        $keepMissing ??= $this->shouldKeepMissingGs1Fields();
 
         foreach ($check->fill as $path) {
             if (array_key_exists($path, $values)) {

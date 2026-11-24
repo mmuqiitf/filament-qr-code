@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Tests\Types;
 
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 
 /**
  * Analysed by PHPStan (level 9, see phpstan.neon.dist), never run: an app
@@ -29,6 +32,29 @@ final class Gs1ApiTypes
             fill: ['01' => 'gtin', '10' => 'batch', '21' => 'serial'],
             require: ['01'],
             store: 'label',
+        );
+    }
+
+    public function collector(): QrCollector
+    {
+        return QrCollector::make('codes')->gs1(require: ['01', '17', 10]);
+    }
+
+    public function sequence(): QrScanSequence
+    {
+        return QrScanSequence::make()->gs1(
+            fill: ['01' => 'gtin', '10' => 'batch', '17' => 'expires_at', '3103' => 'net_weight_kg'],
+            require: ['01', '17', 10],
+            keepMissing: true,
+        );
+    }
+
+    public function step(): ScanStep
+    {
+        return ScanStep::make('label')->gs1(
+            fill: ['01' => 'gtin', '10' => 'batch', '17' => 'expires_at'],
+            require: ['01', 17],
+            keepMissing: true,
         );
     }
 }

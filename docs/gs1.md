@@ -272,6 +272,10 @@ $components = [
 
 The listener sends `qr-hardware-scanned` with `{ value, field: null, gs1: true }` on success and `qr-scan-rejected` with `{ value, field: null, source: 'hardware', message }` on rejection, and fires `QrCodeScanned` with `source` `hardware` and the AIs in `context['gs1']`. A focused `QrScanner` still wins the burst. The listener needs a component key to be called; `gs1()` sets `qrGs1Listener` when there is none, so give each GS1 listener on one page its own `->key()`.
 
-`QrCollector` and `QrScanSequence` do not have `->gs1()` yet: parse in `validateUsing()` or `onScanned()` with `Gs1::parse()` there.
+`QrCollector::gs1(require: ['01', '17'])` treats every collected item as a GS1 label: the list stores the bracketed string, and an invalid or incomplete label is rejected before it is added, with the same translated reason as the scanner. There is no `fill` — a collector is a list of labels, not a single row of fields. The collect action modal does not run `gs1()`, just as it does not run `itemRules()`: use `QrCollector`.
+
+`QrScanSequence` and `ScanStep` take the same `gs1(fill:, require:, keepMissing:)` as the scanner. Put `gs1()` on a step when each step expects a different label (a pallet SSCC, then a case GTIN). `QrScanSequence::gs1()` is the default for steps that do not set their own. The step stores the bracketed string, `fill` writes sibling fields relative to the sequence, later checks see the bracketed string, and a rejection writes nothing. Typed corrections go through the same server check.
+
+These helpers parse with `Gs1::parse()`, so an uncompressed Digital Link URI is accepted the same way.
 
 A receiving page that fills a line from one label, rejects expired stock and an unknown GTIN, then saves the line is in [Receive a GS1 label](recipes/gs1-receiving.md).
