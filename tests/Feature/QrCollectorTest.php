@@ -59,3 +59,15 @@ it('tells the browser whether the hosting Livewire component defines handleColle
 it('does not fail when its schema has no Livewire component', function () {
     expect(QrCollector::make('items')->container(Schema::make())->getScanPayload()['wireScanHandler'])->toBeFalse();
 });
+
+it('applies normalizeWith presets on the server and sends them to the browser', function (): void {
+    $collector = QrCollector::make('items')
+        ->normalizeWith(uppercase: true, stripPrefix: [']C1', ']Q1'])
+        ->itemRules(['regex:/^SKU-/']);
+
+    expect($collector->checkCollectorItem(' ]C1sku-1 ')['passes'])->toBeTrue()
+        ->and($collector->checkCollectorItem('NOPE')['passes'])->toBeFalse()
+        ->and($collector->getScanPayload()['normalize'])
+        ->toBe(['trim' => true, 'uppercase' => true, 'stripPrefixes' => [']C1', ']Q1']])
+        ->and(QrCollector::make('items')->getScanPayload())->not->toHaveKey('normalize');
+});

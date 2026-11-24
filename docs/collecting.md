@@ -57,3 +57,13 @@ use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 QrCollector::make('scanned_items')
     ->itemRules(['regex:/^PRD-\d+$/']);
 ```
+
+`->normalizeWith()` is the same as on a scanner or sequence: trim (on by default), optional uppercase, and optional prefix stripping run in the browser before duplicate detection and again on the server before `itemRules()`.
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+
+QrCollector::make('scanned_items')
+    ->normalizeWith(uppercase: true, stripPrefix: [']C1', ']Q1'])
+    ->itemRules(['regex:/^SKU-/']);
+```

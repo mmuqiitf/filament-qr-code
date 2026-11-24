@@ -155,3 +155,21 @@ describe('collector server-notify channel', () => {
         expect(collector.items).toHaveLength(1);
     });
 });
+
+describe('collector normalizeWith presets', () => {
+    it('applies the presets before duplicates are checked and the code is added', () => {
+        const dispatched = stubWindow();
+        const collector = makeCollector({
+            allowDuplicates: false,
+            normalize: { trim: true, uppercase: true, stripPrefixes: [']C1'] },
+        });
+
+        collector.handleDetectedCode(' ]C1sku-1 ');
+        collector.handleDetectedCode('sku-1');
+
+        expect(collector.items).toHaveLength(1);
+        expect(collector.items[0].code).toBe('SKU-1');
+        expect(dispatched).toHaveLength(1);
+        expect(dispatched[0].detail).toEqual({ code: 'SKU-1' });
+    });
+});

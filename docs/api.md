@@ -204,6 +204,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `itemRules(Closure\|array $rules): static` | Laravel rules for one collected code. The browser asks before adding the code, and submit fails on the first code that does not pass. Calling this again replaces the rules. An empty list accepts every code. |
 | `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `normalizeWith(bool $trim = true, bool $uppercase = false, array\|string\|null $stripPrefix = null): static` | Clean every scanned code in the browser (before duplicate detection and step matching) and again on the server. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
@@ -212,7 +213,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrCollectAction`
 
@@ -392,13 +393,14 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 | `color(Closure\|string $hexColor): static` | Bar and text colour as hex. |
 | `data(Closure\|string\|null $data): static` | Value to encode; a closure receives the record. Defaults to the state. |
 | `downloadable(Closure\|bool $condition = true): static` | Show a download link for the image. |
+| `embedded(Closure\|bool $condition = true): static` | Embed the barcode as a data URI instead of loading the signed filamentQrCode.barcode route. The signed URL stays the default. This is not Filament's Column::inline() layout flag (fi-inline). |
 | `format(QrFormat\|Closure\|string $format): static` | Render as SVG (default) or PNG. |
 | `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. |
 | `margin(Closure\|int\|null $modules): static` | Quiet zone on each side in modules; null uses the type's default. |
 | `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the bars. |
 | `type(BarcodeType\|Closure\|string $type): static` | Symbology to encode: a BarcodeType or its value, e.g. 'ean13'. |
 
-Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`
+Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`, `isEmbedded()`
 
 ## Services and helpers
 

@@ -117,3 +117,28 @@ it('shows a paused banner with a resume button on the scan sequence', function (
         ->and($paused)->toContain('@click="resume()"')
         ->and($paused)->toContain('Resume scanning');
 });
+
+it('does not put white text on bg-primary-600, which fails WCAG AA with an amber primary', function (): void {
+    $views = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+            dirname(__DIR__, 2).'/resources/views',
+            FilesystemIterator::SKIP_DOTS,
+        ),
+    );
+
+    $offenders = [];
+
+    foreach ($views as $file) {
+        if ($file->getExtension() !== 'php') {
+            continue;
+        }
+
+        $contents = (string) file_get_contents($file->getPathname());
+
+        if (preg_match('/bg-primary-600[^\'\"]*text-white|text-white[^\'\"]*bg-primary-600/', $contents) === 1) {
+            $offenders[] = $file->getFilename();
+        }
+    }
+
+    expect($offenders)->toBeEmpty();
+});

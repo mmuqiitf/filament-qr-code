@@ -108,3 +108,24 @@ it('throttles the barcode route with the shared image route limit', function () 
     $this->get($uri)->assertOk();
     $this->get($uri)->assertStatus(429);
 });
+
+it('embeds a data URI when embedded() opts out of the signed route', function (): void {
+    $column = BarcodeColumn::make('code')->data('SKU-TABLE-1')->embedded();
+    $render = $column->getBarcodeRender();
+
+    expect($render['uri'])->toStartWith('data:image/svg+xml;base64,')
+        ->and($render['uri'])->not->toContain('filament-qr-code/barcode-image')
+        ->and($render['alt'])->toBe('Code 128 barcode: SKU-TABLE-1')
+        ->and($render['error'])->toBeNull()
+        ->and(base64_decode(substr($render['uri'], strlen('data:image/svg+xml;base64,'))))
+        ->toBe($column->getBarcodeService()->getRaw());
+});
+
+it('keeps the signed image URL when embedded() is off', function (): void {
+    $on = BarcodeColumn::make('code')->data('SKU-TABLE-1')->embedded(false)->getBarcodeRender();
+    $default = BarcodeColumn::make('code')->data('SKU-TABLE-1')->getBarcodeRender();
+
+    expect($on['uri'])->toContain('filament-qr-code/barcode-image')
+        ->and($on['uri'])->not->toStartWith('data:')
+        ->and($default['uri'])->toContain('filament-qr-code/barcode-image');
+});

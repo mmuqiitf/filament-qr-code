@@ -45,6 +45,7 @@ QrScanner::make('sku')
 - `normalizeWith(trim: true, uppercase: false, stripPrefix: ...)` presets run in the browser too, so duplicate detection and step matching see the cleaned code. They run trim first, then strip the first matching prefix, then uppercase.
 - `normalizeUsing()` runs on the server after the presets, before rules, lookup, closures and stages.
 - On sequences, `normalizeWith()` applies to every step. Then `normalizeStepUsing()` runs, then the step's own `ScanStep::normalizeUsing(fn (string $code, array $values) => ...)`.
+- On collectors, `normalizeWith()` is the same preset API. It runs in the browser before duplicate detection and again on the server before `itemRules()`. `normalizeUsing()` is still a scanner and sequence API.
 
 ## Custom check stages: `pipe()`
 

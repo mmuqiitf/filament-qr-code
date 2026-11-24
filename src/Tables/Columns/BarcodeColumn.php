@@ -23,9 +23,29 @@ class BarcodeColumn extends Column
 
     protected string $view = 'filament-qr-code::components.barcode-column';
 
+    protected bool|\Closure $embedded = false;
+
+    /**
+     * Embed the barcode as a data URI instead of loading the signed
+     * filamentQrCode.barcode route. The signed URL stays the default.
+     * This is not Filament's Column::inline() layout flag (fi-inline).
+     */
+    public function embedded(bool|\Closure $condition = true): static
+    {
+        $this->embedded = $condition;
+
+        return $this;
+    }
+
+    public function isEmbedded(): bool
+    {
+        return (bool) $this->evaluate($this->embedded);
+    }
+
     /**
      * View data whose image is a signed URL. Falls back to a data URI when
-     * the route cannot be signed. Forms and infolists stay inline.
+     * the route cannot be signed, or when embedded() is on. Forms and
+     * infolists stay inline.
      *
      * @internal Used by the package views.
      *
@@ -44,6 +64,10 @@ class BarcodeColumn extends Column
             $text = $spec->encodedText($data);
         } catch (InvalidBarcodeException $e) {
             return $this->invalidBarcodeRender($e);
+        }
+
+        if ($this->isEmbedded()) {
+            return $this->renderInlineBarcode();
         }
 
         try {
