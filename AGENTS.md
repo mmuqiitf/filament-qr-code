@@ -1,33 +1,37 @@
 # AGENTS.md
 
-Filament v5 QR package (`mmuqiitf/filament-qr-code`): camera / hardware scanning + QR generation for Laravel 12–13, PHP `^8.2`.
+`mmuqiitf/filament-qr-code` adds camera and hardware scanning and QR and barcode generation to Filament v5 apps. See [composer.json](composer.json) for supported PHP and Laravel versions.
 
-## Commands
+## Architecture and coding
 
-- `composer test` — full suite (Pest + Testbench); single test: `vendor/bin/pest --filter="..."`.
-- `composer analyse` — PHPStan level 9 (`src/` + `config/`); `composer format` — Pint fix, `composer test-style` to check.
-- `composer docs` — regenerate `docs/api.md` and `llms-full.txt` after changing a public signature, docblock, config key or doc page (`tests/Docs/ApiMapTest.php` fails when they are stale).
-- `npm run build` after any `resources/js|css` change and commit `resources/dist/`; host apps then run `php artisan filament:assets`.
+- Reuse [existing extension points](docs/extending.md) before adding new ones. Preserve documented APIs across refactors and mark implementation-only public members `@internal` per the [public API policy](docs/reference.md#public-api-and-internal).
+- Use [project vocabulary](CONTEXT.md) in APIs and docs. Put UI strings under `filament-qr-code::ui.*`.
+- Keep PHP in `src/` and `config/` typed to PHPStan level 9 with `declare(strict_types=1)`.
+- Fall back to GD bitmap fonts when fonts are missing on PNG and text-overlay paths.
 
-## Pointers (read the branch you are working)
+## Verification and generated files
 
-- Scanning (camera field, station listener, sequence, focus handoff, POS tutorial) → `docs/scanning.md`.
-- Collecting (batch collector, collect action) → `docs/collecting.md`.
-- Generating (display/column/entry components, download actions, facade, payloads) → `docs/generating.md`.
-- Tuning (config keys) → `docs/reference.md`; how-to (normalizing, auditing, styling, hooks) → `docs/customizing.md`; seams → `docs/extending.md`; stuck users → `README.md` Troubleshooting.
-- Contributing (tests, style, frontend builds) → `CONTRIBUTING.md`.
-- Vocabulary (Station Listener, Scan Sequence Container, Batch Collector, …) → `CONTEXT.md`; use those names for APIs/docs, UI strings under `filament-qr-code::ui.*`.
+- Give each unit or integration test a clear failure it should catch. Use the simplest setup that exercises the behavior, assert observable outcomes, and cover the edge cases that could realistically change the result, such as rejected scans, duplicate input, or missing fonts.
+- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for test, analysis, and formatting commands, including frontend tests with `npm test`.
+- Run `composer docs` after changing public signatures, public docblocks, config keys, or user-facing docs, including `README.md` and `UPGRADE.md`. It regenerates `docs/api.md` and `llms-full.txt`. For new docs pages, update `llms.txt` and check whether the page needs an explicit entry in `llmsFullFiles()` in [the generator](bin/generate-api-docs.php).
+- After changes under `resources/js/` or `resources/css/`, regenerate `resources/dist/` with `npm run build` and include the generated changes with the source. Host apps refresh the assets with `php artisan filament:assets`.
 
-## For consumers
+## Task guides
 
-Agents building *with* the package (not on it) → `docs/ai.md`, plus the generated `docs/api.md`, `llms.txt` / `llms-full.txt` and the Laravel Boost guideline and skill in `resources/boost/`. Keep those in step with public API changes.
+- **Scanning** → [Camera field, Station Listener, scan sequences, and focus handoff](docs/scanning.md).
+- **Collecting** → [Batch Collector and Collect Action](docs/collecting.md).
+- **Generating** → [Display components, downloads, facade, and payloads](docs/generating.md).
+- **Config** → [Configuration reference](docs/reference.md#configuration).
+- **Customization** → [Normalization, auditing, styling, and hooks](docs/customizing.md).
+- **Events** → [Browser controls and Laravel events](docs/events.md).
+- **Troubleshooting** → [README](README.md#troubleshooting).
+- **Host app integration** → Start with the [AI guide](docs/ai.md). Review it and the [Laravel Boost guidance](resources/boost/) for examples affected by public API changes.
 
-## Invariants (survive refactors; CI handles the mechanical)
+## Scanning invariants
 
-- Keep camera DOM in `wire:ignore` islands: every `$wire.set` morphs and destroys `<video>`, so sync live toggles via window events, not re-renders.
-- Keep one scan funnel per surface: one `$wire` method per scan source; keyboard-wedge bursts reach handlers only through the input router (`FilamentQrCode.router`), which gives each burst one owner.
-- Treat `scanFormat()` / `onScan()` / `onStepScanned()` as programmatic-only (pair with `formatScannedValue()` / `triggerOnScan()`); normalize live values in `normalizeUsing()` / `normalizeStepUsing()` (or `afterStateUpdated()`) and document them that way.
-- Bind sequences through the schema's `statePath()` and read state via `mergeSequenceState()` / `isSequenceComplete()`, not hand-rolled merges.
-- Filter `formats()` on every camera component; `qrbox` is a responsive maximum and `fps` auto-degrades unless set explicitly.
-- Serve one visible scan rectangle (custom reticle; the decoder library overlay stays hidden) and never hand-edit `resources/dist/`.
-- Keep new PHP under `src/` + `config/` typed to level 9 with `declare(strict_types=1)`; PNG/text-overlay paths fall back to GD bitmap fonts on missing fonts instead of throwing.
+- Keep camera DOM inside `wire:ignore`. Let Livewire morph `data-qr-options` outside the ignored camera DOM and use the [documented window events](docs/events.md#browser-events-you-send) for imperative controls.
+- Keep one scan funnel per surface and one `$wire` method per scan source. Route keyboard-wedge bursts through `FilamentQrCode.router` so each burst has a single owner.
+- Keep `scanFormat()`, `onScan()`, and `onStepScanned()` programmatic. Call `formatScannedValue()` for formatting, `triggerOnScan()` for the field callback, and `triggerOnStep()` for sequence steps. Use `normalizeUsing()`, `normalizeStepUsing()`, or a field's `afterStateUpdated()` for live normalization.
+- Bind sequences through the schema's `statePath()`. Read sequence state with `mergeSequenceState()` and check completion with `isSequenceComplete()`.
+- Apply `formats()` filtering on every camera component. Treat `qrbox` as a responsive maximum and let `fps` auto-degrade unless explicitly set.
+- Show the custom reticle as the single scan rectangle and keep the decoder overlay hidden.
