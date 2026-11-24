@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- CI tests PHP 8.6. `composer.json` already allows `php: ^8.2`. Like the PHP 8.5 jobs, PHP 8.6 jobs use `--ignore-platform-req=php+` until dependencies declare 8.6 support.
+
 ## [1.2.0] - 2026-11-24
 
 ### Fixed
