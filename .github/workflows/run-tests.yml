@@ -25,6 +25,10 @@ jobs:
           # Laravel 13 (and Testbench 11) need PHP 8.3.
           - laravel: 13.*
             php: 8.2
+          # Laravel 12 is not PHP 8.6-ready (deprecated spl_object_hash(),
+          # and ArraySessionHandler missing create_sid() becomes an ErrorException).
+          - laravel: 12.*
+            php: 8.6
 
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }} - ${{ matrix.os }}
 

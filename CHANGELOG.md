@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- CI tests PHP 8.6. `composer.json` already allows `php: ^8.2`. Like the PHP 8.5 jobs, PHP 8.6 jobs use `--ignore-platform-req=php+` until dependencies declare 8.6 support.
+- CI tests PHP 8.6 on Laravel 13. `composer.json` already allows `php: ^8.2`. PHP 8.6 jobs use `--ignore-platform-req=php+`, like PHP 8.5, until dependencies declare 8.6 support. Laravel 12 is omitted from the PHP 8.6 matrix: it still uses deprecated `spl_object_hash()` and an `ArraySessionHandler` without `create_sid()`, which PHP 8.6 promotes to an error.
 
 ## [1.2.0] - 2026-11-24
 

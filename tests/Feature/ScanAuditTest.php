@@ -27,6 +27,10 @@ it('logs scans only when auditing is enabled', function () {
     $logged = [];
 
     Log::listen(function (MessageLogged $message) use (&$logged): void {
+        if ($message->message !== 'filament-qr-code.scan') {
+            return;
+        }
+
         $logged[] = [$message->level, $message->message, $message->context];
     });
 
