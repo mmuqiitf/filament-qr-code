@@ -41,9 +41,16 @@ it('renders the same markup as before the view split', function (): void {
 
     // Whitespace inside a tag is insignificant; the split moves some closing '>' onto their own line.
     // Filament's own field wrapper changed its x-data in 5.11; it is not part of our markup.
+    // Filament buttons used to set wire:loading.attr="disabled"; newer builds use
+    // aria-disabled plus wire:loading.class="fi-disabled". That is not our markup.
     $collapse = fn (string $markup): string => (string) preg_replace(
-        ['/\s+/', '/\s+>/', '/x-data="filamentSchemaComponent\([^"]*\)"/'],
-        [' ', '>', 'x-data="filamentSchemaComponent()"'],
+        [
+            '/\s+/',
+            '/\s+>/',
+            '/x-data="filamentSchemaComponent\([^"]*\)"/',
+            '/\s*wire:loading\.attr="(?:aria-)?disabled"(?:\s+wire:loading\.class="fi-disabled")?/',
+        ],
+        [' ', '>', 'x-data="filamentSchemaComponent()"', ''],
         $markup,
     );
 
