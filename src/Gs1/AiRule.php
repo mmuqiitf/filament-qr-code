@@ -31,6 +31,7 @@ final readonly class AiRule
 
     /**
      * @param  list<array{optional: bool, kind: string, min: int, max: int, linters: list<string>}>  $components
+     * @param  list<list<string>>|null  $digitalLinkQualifiers  null when this AI is not a Digital Link primary key; an empty list when it is a key with no qualifiers; otherwise alternative qualifier sequences in order
      */
     public function __construct(
         public string $ai,
@@ -40,6 +41,8 @@ final readonly class AiRule
         public array $components,
         public int $minLength,
         public int $maxLength,
+        public bool $digitalLinkAttribute = false,
+        public ?array $digitalLinkQualifiers = null,
     ) {}
 
     /**

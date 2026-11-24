@@ -74,6 +74,24 @@ it('fills mapped fields from a keyboard-wedge burst with group separators', func
         && $event->source === 'hardware');
 });
 
+it('fills mapped fields from a Digital Link URI', function (): void {
+    Event::fake([QrCodeScanned::class]);
+    $test = Livewire::test(ListenerGs1TestComponent::class);
+    $expected = '(01)09506000134352(10)LOT-7(17)261231(3922)01999';
+
+    listenerGs1Scan($test, 'https://id.gs1.org/01/09506000134352/10/LOT-7?17=261231&3922=01999')
+        ->assertReturned(fn (array $result): bool => $result['passes'] === true
+            && $result['code'] === $expected
+            && $result['message'] === null)
+        ->assertSet('data.gtin', '09506000134352')
+        ->assertSet('data.expires_at', '2026-12-31')
+        ->assertSet('data.batch', 'LOT-7')
+        ->assertSet('data.price', '19.99');
+
+    Event::assertDispatched(QrCodeScanned::class, fn (QrCodeScanned $event): bool => $event->code === $expected
+        && $event->source === 'hardware');
+});
+
 it('rejects an invalid or incomplete label without filling anything', function (string $code, string $message): void {
     $test = Livewire::test(ListenerGs1TestComponent::class);
 

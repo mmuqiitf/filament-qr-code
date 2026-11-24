@@ -111,8 +111,9 @@ class QrScanner extends Field
 
     /**
      * Read every scan as a GS1 element string (GS1-128, GS1 DataMatrix,
-     * GS1 QR, raw with group separators or bracketed). The field stores the
-     * normalized bracketed form, such as `(01)09506000134352(17)261231(10)ABC`.
+     * GS1 QR, raw with group separators or bracketed, or an uncompressed
+     * GS1 Digital Link URI). The field stores the normalized bracketed form,
+     * such as `(01)09506000134352(17)261231(10)ABC`.
      *
      * `$fill` maps AIs to sibling fields by relative path, like `$set`:
      * dates are written as `Y-m-d`, implied-decimal AIs (310n to 369n,

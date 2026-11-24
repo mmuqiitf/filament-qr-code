@@ -189,6 +189,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | GS1 Digital Link
+    |--------------------------------------------------------------------------
+    |
+    | Default domain (scheme + host, optional path prefix) used when
+    | DigitalLink::build() or QrCodeService::digitalLink() does not get a
+    | per-call override. Trailing slashes are stripped.
+    |
+    */
+    'gs1' => [
+        'digital_link' => [
+            'domain' => 'https://id.gs1.org',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Scan Audit
     |--------------------------------------------------------------------------
     |

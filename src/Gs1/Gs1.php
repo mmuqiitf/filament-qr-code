@@ -10,8 +10,9 @@ use Mmuqiitf\FilamentQrCode\Exceptions\InvalidGs1Exception;
  * Parse and build GS1 element strings. `Gs1::SEPARATOR` is the group separator (ASCII 29).
  *
  * Accepts the bracketed form `(01)09521101530001(10)LOT-1`, the unbracketed
- * form with group separators, and an optional AIM symbology identifier
- * (`]C1`, `]e0`, `]d2`, `]Q3`). Length and character set come from the GS1
+ * form with group separators, an optional AIM symbology identifier
+ * (`]C1`, `]e0`, `]d2`, `]Q3`), and an uncompressed GS1 Digital Link URI
+ * (see DigitalLink::parse()). Length and character set come from the GS1
  * Barcode Syntax Dictionary, as do check digits (GS1 mod-10 on `csum`
  * components) and calendar dates. Unknown AIs are rejected. ISO codes, times
  * and AI pairing rules are not applied.
@@ -22,7 +23,8 @@ final class Gs1
     public const SEPARATOR = "\x1D";
 
     /**
-     * Read an element string into application identifiers.
+     * Read an element string into application identifiers. An http or https
+     * GS1 Digital Link URI is parsed by DigitalLink::parse().
      *
      * @throws InvalidGs1Exception
      */
@@ -30,6 +32,10 @@ final class Gs1
     {
         $original = $input;
         $input = trim($input);
+
+        if (preg_match('#^https?://#i', $input) === 1) {
+            return DigitalLink::parse($original);
+        }
 
         if (preg_match('/^\][A-Za-z]\d/', $input) === 1) {
             $input = substr($input, 3);

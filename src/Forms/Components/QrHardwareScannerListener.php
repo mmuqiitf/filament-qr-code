@@ -64,10 +64,10 @@ class QrHardwareScannerListener extends Component
     }
 
     /**
-     * Read every gun burst as a GS1 label and fill the mapped fields on the
-     * server instead of typing the burst into an input. Same `$fill` and
-     * `$require` rules as QrScanner::gs1(); paths are relative to the
-     * listener's schema. A rejected label fills nothing and shows its reason
+     * Read every gun burst as a GS1 label (including an uncompressed Digital
+     * Link URI) and fill the mapped fields on the server instead of typing
+     * the burst into an input. Same `$fill` and `$require` rules as
+     * QrScanner::gs1(); paths are relative to the listener's schema. A rejected label fills nothing and shows its reason
      * under the listener. Give each GS1 listener on one page its own key().
      *
      * @param  array<int|string, string>|Closure  $fill  AI => field, e.g. `['01' => 'gtin', '17' => 'expires_at']` (PHP turns keys such as '17' into ints; both work)

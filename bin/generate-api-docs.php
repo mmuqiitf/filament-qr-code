@@ -56,6 +56,7 @@ function apiSections(): array
             'Services\\QrCodeService',
             'Services\\BarcodeService',
             'Gs1\\Gs1',
+            'Gs1\\DigitalLink',
             'Gs1\\CheckDigit',
             'Gs1\\ElementString',
             'Gs1\\Element',

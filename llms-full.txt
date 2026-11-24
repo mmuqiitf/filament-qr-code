@@ -170,7 +170,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
 - **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128, Data Matrix, GS1 DataMatrix, PDF417 and compact PDF417](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
-- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128` or `BarcodeType::Gs1DataMatrix`, and [scan GS1 labels](docs/gs1.md#scanning-gs1-labels) into a form with `QrScanner::gs1(fill: [...], require: [...])`.
+- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128` or `BarcodeType::Gs1DataMatrix`, and [scan GS1 labels](docs/gs1.md#scanning-gs1-labels) into a form with `QrScanner::gs1(fill: [...], require: [...])`. [GS1 Digital Link](docs/gs1.md#digital-link) URIs parse into the same model, and `QrCodeService::digitalLink()` encodes one as a QR.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
 - **Every public method**: the generated [API map](docs/api.md).
 
@@ -183,7 +183,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [Batch collecting](docs/collecting.md) | continuous inventory scanning in repeaters and tables |
 | [Generating](docs/generating.md) | display components, download actions, ZIP export, facade, payloads |
 | [Barcodes](docs/barcodes.md) | 1D barcodes: types, components, invalid values, accessibility, PHP API |
-| [GS1 element strings](docs/gs1.md) | `Gs1::parse()` and `Gs1::build()` for application identifiers, scanning GS1 labels with `->gs1()` |
+| [GS1 element strings](docs/gs1.md) | `Gs1::parse()` and `Gs1::build()` for application identifiers, scanning GS1 labels with `->gs1()`, and [Digital Link](docs/gs1.md#digital-link) URIs |
 | [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, auditing, macros, styling, render hooks, views |
 | [Extension points](docs/extending.md) | every seam in one table: PHP closures, contracts, macros, render hooks, CSS variables, JS decoder, router, events |
 | [Events](docs/events.md) | every browser event fired or listened for, and every Laravel event with its properties |
@@ -443,7 +443,7 @@ Option reference:
 - `scanFormat()` / `onScan()` — programmatic-only hooks; they do **not** run on live camera or hardware scans. Normalize live values with `normalizeUsing()` — see [Normalize live scans](customizing.md#normalize-live-scans).
 - `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning. Buffers are sanitized (STX/ETX/CR/LF stripped, mirroring `HasHardwareScanner::sanitizeScannedValue()`), IME compositions never count, and terminator-less guns flush after `scanTimeoutMs` (default 150).
 - `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify. Camera and gun scans are checked on the server before the field accepts them, so screen readers only hear the rejection. A typed or pasted value that matches is cleared before the field's other `afterStateUpdated()` hooks run, so those hooks do not see it.
-- `gs1(fill: ['01' => 'gtin', '17' => 'expires_at'], require: ['01', '17'])` — read scans as GS1 labels: the field stores the bracketed string, mapped AIs fill sibling fields, and an invalid label or a missing AI is rejected before any state is written. See [Scanning GS1 labels](gs1.md#scanning-gs1-labels).
+- `gs1(fill: ['01' => 'gtin', '17' => 'expires_at'], require: ['01', '17'])` — read scans as GS1 labels (raw, bracketed, AIM-prefixed, or an uncompressed Digital Link URI): the field stores the bracketed string, mapped AIs fill sibling fields, and an invalid label or a missing AI is rejected before any state is written. See [Scanning GS1 labels](gs1.md#scanning-gs1-labels) and [GS1 Digital Link](gs1.md#digital-link).
 - `hardwareInput(scope: HardwareInputScope::Page)` — also catch wedge scans when no scan field has focus (default `Focus`: only while focused; config `hardware_scanner.default_scope`). A focused scan field always wins.
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
 - `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a _maximum_: the actual decode box scales to the viewfinder and the green reticle follows it.
@@ -1195,6 +1195,11 @@ return FilamentQrCode::make()
     ->withText('BATCH #1024', 16, '#000000')
     ->generate('BATCH-1024')
     ->download('batch-1024'); // StreamedResponse download; stream() inlines
+
+// GS1 Digital Link QR (domain defaults to qr-code.gs1.digital_link.domain)
+return FilamentQrCode::make()
+    ->digitalLink(['01' => '09521101530001', '10' => 'LOT-1'], 'https://brand.example')
+    ->toDataUri();
 ```
 
 Rules that bite:
@@ -1380,7 +1385,7 @@ The column signs its own defaults (bar width 1, height 32, text off, margin reso
 
 > Back to [README](../README.md) · [Barcodes](barcodes.md) · [Reference](reference.md)
 
-`Gs1::parse()` and `Gs1::build()` read and write a GS1 element string: the application identifiers (AIs) inside a GS1-128, GS1 DataMatrix or GS1 QR symbol. Parsing does not draw a barcode: see [Drawing GS1-128](#drawing-gs1-128) and [Drawing GS1 DataMatrix](#drawing-gs1-datamatrix). To scan GS1 labels into a form, see [Scanning GS1 labels](#scanning-gs1-labels).
+`Gs1::parse()` and `Gs1::build()` read and write a GS1 element string: the application identifiers (AIs) inside a GS1-128, GS1 DataMatrix or GS1 QR symbol. `Gs1::parse()` also accepts an uncompressed [GS1 Digital Link](#digital-link) URI. Parsing does not draw a barcode: see [Drawing GS1-128](#drawing-gs1-128) and [Drawing GS1 DataMatrix](#drawing-gs1-datamatrix). To scan GS1 labels into a form, see [Scanning GS1 labels](#scanning-gs1-labels).
 
 Length and character set follow the [GS1 Barcode Syntax Dictionary](https://ref.gs1.org/tools/gs1-barcode-syntax-resource/syntax-dictionary/) release 2026-01-27, vendored at `resources/gs1/` under the Apache License 2.0. So do [check digits](#check-digit) and [dates](#dates): both are always enforced. Unknown AIs are rejected. Country and currency codes, times and "this AI requires that AI" rules are not applied yet.
 
@@ -1423,6 +1428,41 @@ $gs1->raw(); // "010952110153000110LOT-1\x1D17251231"
 ```
 
 Order is the order of the array. Write every key as a string. `'01'` and `'00'` keep their leading zero only as strings. PHP turns `'10'` and `'8003'` into integer keys on its own; `build()` casts those back.
+
+
+## Digital Link
+
+A [GS1 Digital Link](https://ref.gs1.org/standards/digital-link/) URI carries the same application identifiers as an element string, in a web URL. `DigitalLink::parse()` and `DigitalLink::build()` read and write the uncompressed form (path and query). URI compression and a resolver are not implemented.
+
+`Gs1::parse()` accepts an `http` or `https` Digital Link URI and returns the same `ElementString`. `Gs1::build()` still writes an element string; use `DigitalLink::build()` for a URI.
+
+```php
+use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
+use Mmuqiitf\FilamentQrCode\Gs1\DigitalLink;
+use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
+
+$gs1 = DigitalLink::parse('https://id.gs1.org/01/09521101530001/10/LOT-1?17=251231');
+$gs1->get('01');   // '09521101530001'
+$gs1->bracketed(); // '(01)09521101530001(10)LOT-1(17)251231'
+
+DigitalLink::build($gs1);
+// https://id.gs1.org/01/09521101530001/10/LOT-1?17=251231
+
+DigitalLink::build(['01' => '09521101530001', '10' => 'LOT-1'], 'https://brand.example/gtin');
+// https://brand.example/gtin/01/09521101530001/10/LOT-1
+
+FilamentQrCode::make()
+    ->digitalLink(['01' => '09521101530001', '17' => '251231'])
+    ->toDataUri();
+```
+
+The default domain is `https://id.gs1.org`, from `qr-code.gs1.digital_link.domain`. A per-call `$domain` wins; a trailing slash is stripped, and a path prefix is kept.
+
+**What goes in the URI.** One Digital Link primary key is required (for example AI 01, 00 or 414). Qualifiers follow the Syntax Dictionary `dlpkey` order in the path: for a GTIN, `22`, `10` and `21` in that order, or `235` instead. Other AIs the dictionary marks as Digital Link data attributes go in the query string, sorted by AI. AIs that are neither a qualifier nor a data attribute are rejected. Check digits and dates are enforced like `Gs1::parse()`. A GTIN of 8, 12 or 13 digits is padded to 14 before the check. Values are percent-encoded with `rawurlencode` (a space is `%20`). Query parameters that are not AIs, such as `linkType`, are ignored when parsing.
+
+A compressed-looking URI (an extra path segment that is not an AI) is rejected as not supported.
+
+`QrScanner::gs1()` and `QrHardwareScannerListener::gs1()` accept a Digital Link scan the same way they accept a raw element string: the field stores the bracketed form, and `fill` / `require` run on the identifiers. The stored AI order follows the URI (path, then query), so it can differ from a raw element string of the same AIs.
 
 ## Drawing GS1-128
 
@@ -2132,6 +2172,12 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 | `strict_colors` | `false` | require `#rrggbb` colours on the image route (default accepts `#rgb`, `#rrggbb` or bare hex); anything else gets 422 |
 | `middleware`    | `[]`    | extra middleware on both image routes, after `signed` and the throttle. Class names or aliases. The routes stay off the `web` group. Non-strings are ignored at registration; `qr-code:doctor` fails the config |
 
+### `gs1`
+
+| Key                    | Default                 | Meaning |
+| ---------------------- | ----------------------- | ------- |
+| `digital_link.domain`  | `https://id.gs1.org`    | Default domain (scheme + host, optional path prefix) for `DigitalLink::build()` and `QrCodeService::digitalLink()` when no per-call domain is given. Trailing slashes are stripped. See [GS1 Digital Link](gs1.md#digital-link) |
+
 ### `audit`
 
 | Key       | Default | Meaning |
@@ -2258,7 +2304,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | show a QR in a form / table / infolist | `QrCodeDisplay` / `QrColumn` / `QrEntry` | `…\Forms\Components`, `…\Tables\Columns`, `…\Infolists\Components` |
 | download one QR / many as a ZIP | `DownloadQrAction` / `DownloadQrBulkAction` | `Mmuqiitf\FilamentQrCode\Tables\Actions` |
 | generate an SVG/PNG in PHP | `FilamentQrCode` facade or `QrCodeService` | `…\Facades`, `…\Services` |
-| read or write GS1 application identifiers | `Gs1::parse()` / `Gs1::build()` | `Mmuqiitf\FilamentQrCode\Gs1` |
+| read or write GS1 application identifiers | `Gs1::parse()` / `Gs1::build()`; Digital Link URIs with `DigitalLink::parse()` / `DigitalLink::build()` or `FilamentQrCode::make()->digitalLink()` | `Mmuqiitf\FilamentQrCode\Gs1` |
 | scan a GS1 label into a form (GTIN, expiry, batch into fields) | `QrScanner::gs1(fill: [...], require: [...])`, or `QrHardwareScannerListener::gs1(..., store: 'label')` for a gun with no scanner field | `Mmuqiitf\FilamentQrCode\Forms\Components` |
 | a GS1 date or weight/price as a usable value | `ElementString::date()` (`CarbonImmutable`) / `ElementString::decimal()` (exact string) | `Mmuqiitf\FilamentQrCode\Gs1` |
 | draw a GS1-128 barcode | `BarcodeType::Gs1128` (`type('gs1-128')`) | `Mmuqiitf\FilamentQrCode\Enums` |
@@ -2272,7 +2318,7 @@ This guide is written for agents that build *with* the package. Agents working *
 - **Write out every import**, including enums (`BarcodeFormat`, `ScanMode`, …) and Filament classes (`Filament\Schemas\Schema`). Nothing is global.
 - **Set `->formats([...])`** whenever you know the symbology. It speeds up decoding and cuts false positives.
 - **Check on the server** with `lookup()`, `lookupUsing()`, `validateUsing()`, `rejectWhen()` or `pipe()`. Live scans write straight into the Livewire state, and the server checks are what reject bad codes.
-- **Scan GS1 labels with `->gs1()`**, not a hand-written `rejectWhen()` around `Gs1::parse()`. The field stores the bracketed string, `fill` keys are AIs as strings (`'01'`, `'17'`; PHP's int keys work too), mapped fields a label lacks are emptied unless `keepMissing: true`, a rejection lands in the field's error bag (no `addError()` needed), typed values are checked like scans, and checks after it (`lookupUsing()`, `rejectWhen()`) receive the bracketed string.
+- **Scan GS1 labels with `->gs1()`**, not a hand-written `rejectWhen()` around `Gs1::parse()`. The field stores the bracketed string, `fill` keys are AIs as strings (`'01'`, `'17'`; PHP's int keys work too), mapped fields a label lacks are emptied unless `keepMissing: true`, a rejection lands in the field's error bag (no `addError()` needed), typed values are checked like scans, and checks after it (`lookupUsing()`, `rejectWhen()`) receive the bracketed string. Uncompressed Digital Link URIs are accepted the same way.
 - **Normalize live scans** with `normalizeWith()` / `normalizeUsing()` (or `normalizeStepUsing()` on a sequence). `QrCollector` supports `normalizeWith()` too.
 - **Give a `QrScanSequence` a `->statePath()`** (or `->key()`), and read it on submit with `mergeSequenceState()` / `isSequenceComplete()`.
 - **Name fields exactly** in `nextField()` and `QrHardwareScannerListener::make([...])`. Dot paths like `items.0.sku` work, and `sku` never matches `parent_sku`.
@@ -3380,7 +3426,7 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `formatScannedValue(string $rawValue): mixed` | Run the scanFormat() closure on a value (programmatic only; live scans use normalizeUsing()). |
 | `formats(Closure\|array $formats): static` | Symbologies the camera decodes (BarcodeFormat cases or strings); filtering speeds decoding. |
 | `fps(Closure\|int $fps): static` | Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. |
-| `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false): static` | Read every scan as a GS1 element string (GS1-128, GS1 DataMatrix, GS1 QR, raw with group separators or bracketed). The field stores the normalized bracketed form, such as `(01)09506000134352(17)261231(10)ABC`. |
+| `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false): static` | Read every scan as a GS1 element string (GS1-128, GS1 DataMatrix, GS1 QR, raw with group separators or bracketed, or an uncompressed GS1 Digital Link URI). The field stores the normalized bracketed form, such as `(01)09506000134352(17)261231(10)ABC`. |
 | `handleScan(string $code, string $source): array` | Run the server checks for a scan; called by the field JS, usable from tests. |
 | `hardwareInput(HardwareInputScope\|Closure $scope = HardwareInputScope::Focus, Closure\|bool $enabled = true): static` | Focus: wedge scans reach this field only while it has focus (default). Page: the field also catches wedge scans when no scan field has focus. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
@@ -3426,7 +3472,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `beepFrequency(Closure\|int $hertz): static` | Beep pitch in hertz (config `feedback.beep_frequency`). |
 | `fallbackToAnyInput(Closure\|bool $condition = true): static` | Fill the first empty input in this listener's form when no registered field is free; false dispatches `qr-scan-unrouted` (config `hardware_scanner.fallback_to_any_input`). |
 | `fields(Closure\|array $fields): static` | Field names (dot paths allowed) the listener routes scans into. |
-| `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false, Closure\|string\|null $store = null): static` | Read every gun burst as a GS1 label and fill the mapped fields on the server instead of typing the burst into an input. Same `$fill` and `$require` rules as QrScanner::gs1(); paths are relative to the listener's schema. A rejected label fills nothing and shows its reason under the listener. Give each GS1 listener on one page its own key(). |
+| `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false, Closure\|string\|null $store = null): static` | Read every gun burst as a GS1 label (including an uncompressed Digital Link URI) and fill the mapped fields on the server instead of typing the burst into an input. Same `$fill` and `$require` rules as QrScanner::gs1(); paths are relative to the listener's schema. A rejected label fills nothing and shows its reason under the listener. Give each GS1 listener on one page its own key(). |
 | `handleGs1Scan(string $code): array` | Check a gun burst as GS1 and fill the mapped fields; called by the listener JS, usable from tests. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `static make(Closure\|array $fields = []): static` | Create a Station Listener routing gun scans into these fields. |
@@ -3761,6 +3807,7 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 | `static cacheStore(?string $store): void` | Laravel cache store for the persistent render cache; null uses the default store. |
 | `static cacheTtl(int\|false\|null $seconds): void` | Override generator.cache_ttl at runtime: seconds to keep persistent (L2) entries, false to turn the L2 cache off, null to clear the override and use the config again. |
 | `color(string $hexColor): QrCodeService` | Foreground colour as hex. |
+| `digitalLink(ElementString\|array $elements, ?string $domain = null): QrCodeService` | Encode a GS1 Digital Link URI as the QR payload, then render it. `$domain` overrides `qr-code.gs1.digital_link.domain`. |
 | `download(?string $fileName = null): StreamedResponse` | Render the QR as a download response. |
 | `static effectiveCacheTtl(): int\|false\|null` | The persistent (L2) cache TTL in effect: the cacheTtl() override, else generator.cache_ttl. An int is seconds, null means no expiry, and false means the L2 cache is off (the in-process cache still works). |
 | `errorCorrection(ErrorCorrectionLevel\|string $level): QrCodeService` | Error-correction level: L, M, Q or H. |
@@ -3815,7 +3862,16 @@ Getters (read the resolved option; used by the views): `getAccessibleName()`, `g
 | Method | Purpose |
 | --- | --- |
 | `static build(array $elements): ElementString` | Build an element string from application identifier => value, in order. Write keys as strings (`'01'`, `'10'`). PHP stores `'10'` as an int key; that is cast back. A leading zero (`'01'`, `'00'`) only survives as a string. |
-| `static parse(string $input): ElementString` | Read an element string into application identifiers. |
+| `static parse(string $input): ElementString` | Read an element string into application identifiers. An http or https GS1 Digital Link URI is parsed by DigitalLink::parse(). |
+
+### `DigitalLink`
+
+`Mmuqiitf\FilamentQrCode\Gs1\DigitalLink` — Parse and build uncompressed GS1 Digital Link URIs. Path and query application identifiers become the same ElementString model as Gs1::parse(); check digits and dates are enforced the same way.
+
+| Method | Purpose |
+| --- | --- |
+| `static build(ElementString\|array $elements, ?string $domain = null): string` | Write a Digital Link URI. Qualifiers follow the dictionary order in the path; other data attributes go in the query string. `$domain` overrides `qr-code.gs1.digital_link.domain` (default https://id.gs1.org). |
+| `static parse(string $uri): ElementString` | Read an uncompressed Digital Link URI (http or https, path and/or query). |
 
 ### `CheckDigit`
 
@@ -4098,6 +4154,7 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 | `image_route.throttle` | `null` |
 | `image_route.strict_colors` | `false` |
 | `image_route.middleware` | `[]` |
+| `gs1.digital_link.domain` | `'https://id.gs1.org'` |
 | `audit.enabled` | `false` |
 | `audit.channel` | `null` |
 
