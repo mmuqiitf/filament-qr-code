@@ -20,6 +20,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | scan a GS1 label into a form (GTIN, expiry, batch into fields) | `QrScanner::gs1(fill: [...], require: [...])`, or `QrHardwareScannerListener::gs1(..., store: 'label')` for a gun with no scanner field | `Mmuqiitf\FilamentQrCode\Forms\Components` |
 | a GS1 date or weight/price as a usable value | `ElementString::date()` (`CarbonImmutable`) / `ElementString::decimal()` (exact string) | `Mmuqiitf\FilamentQrCode\Gs1` |
 | draw a GS1-128 barcode | `BarcodeType::Gs1128` (`type('gs1-128')`) | `Mmuqiitf\FilamentQrCode\Enums` |
+| draw a Data Matrix, GS1 DataMatrix or PDF417 | `BarcodeType::DataMatrix` / `Gs1DataMatrix` / `Pdf417` / `Pdf417Compact` | `Mmuqiitf\FilamentQrCode\Enums` |
 | show a 1D barcode in a table | `BarcodeColumn` (signed `filamentQrCode.barcode` image; `->embedded()` for a data URI) | `…\Tables\Columns` |
 | check a GTIN, SSCC, GLN or EAN check digit | `CheckDigit` / `ValidCheckDigit` | `…\Gs1`, `…\Validation` |
 | a Wi-Fi, vCard, mailto, SMS or geo payload | `QrPayload` | `Mmuqiitf\FilamentQrCode\Support` |

@@ -49,17 +49,24 @@ final readonly class BarcodeSymbol
             $array['bars'],
         ));
 
-        return new self($bars, (int) $array['ncols'], (int) $array['nrows'], self::text($type, $model->getExtendedCode()));
+        $text = $type === BarcodeType::Gs1DataMatrix
+            ? Gs1::parse($value)->bracketed()
+            : self::text($type, $model->getExtendedCode());
+
+        return new self($bars, (int) $array['ncols'], (int) $array['nrows'], $text);
     }
 
     /**
-     * Value handed to tc-lib-barcode. GS1-128 is the bracketed element string.
+     * Value handed to tc-lib-barcode. GS1-128 is the bracketed element
+     * string; GS1 DataMatrix is the unbracketed raw string (group
+     * separators between variable-length AIs). The library then adds
+     * the leading FNC1.
      *
      * @throws InvalidBarcodeException
      */
     private static function payload(BarcodeType $type, string $value): string
     {
-        if ($type !== BarcodeType::Gs1128) {
+        if ($type !== BarcodeType::Gs1128 && $type !== BarcodeType::Gs1DataMatrix) {
             self::validate($type, $value);
 
             return $value;
@@ -77,7 +84,7 @@ final readonly class BarcodeSymbol
             }
         }
 
-        return $parsed->bracketed();
+        return $type === BarcodeType::Gs1128 ? $parsed->bracketed() : $parsed->raw();
     }
 
     private static function validate(BarcodeType $type, string $value): void
@@ -122,6 +129,10 @@ final readonly class BarcodeSymbol
             BarcodeType::Code39 => 'C39',
             BarcodeType::Itf14 => 'ITF14',
             BarcodeType::Gs1128 => 'GS1128',
+            BarcodeType::DataMatrix => 'DATAMATRIX,S',
+            BarcodeType::Gs1DataMatrix => 'DATAMATRIX,S,GS1',
+            BarcodeType::Pdf417 => 'PDF417',
+            BarcodeType::Pdf417Compact => 'PDF417C',
         };
     }
 

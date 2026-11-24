@@ -160,8 +160,8 @@ The full walkthrough, with config publishing, symbologies and a first server che
 - **Scanning**: [QR Scanner Field](docs/scanning.md#qr-scanner-field-qrscanner), [Station Listener](docs/scanning.md#station-listener-qrhardwarescannerlistener) for hands-free guns, [Scan Sequence Container](docs/scanning.md#scan-sequence-container-qrscansequence), [server-side checks](docs/scanning.md#server-side-checks) and the [cashier POS tutorial](docs/scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
-- **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14 and GS1-128](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
-- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128`, and [scan GS1 labels](docs/gs1.md#scanning-gs1-labels) into a form with `QrScanner::gs1(fill: [...], require: [...])`.
+- **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128, Data Matrix, GS1 DataMatrix, PDF417 and compact PDF417](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
+- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128` or `BarcodeType::Gs1DataMatrix`, and [scan GS1 labels](docs/gs1.md#scanning-gs1-labels) into a form with `QrScanner::gs1(fill: [...], require: [...])`.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
 - **Every public method**: the generated [API map](docs/api.md).
 

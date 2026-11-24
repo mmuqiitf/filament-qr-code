@@ -36,6 +36,9 @@ class BarcodeSmoke extends Page implements HasForms
             'code39' => 'HELLO-1',
             'itf14' => '00012345678905',
             'gs1128' => '(01)09521101530001(17)251231(10)LOT-1',
+            'datamatrix' => 'HELLO-DM',
+            'gs1datamatrix' => '(01)09521101530001(17)251231(10)LOT-1',
+            'pdf417' => 'PDF417-HELLO',
             'invalid' => '4006381333932',
         ]);
     }
@@ -50,6 +53,9 @@ class BarcodeSmoke extends Page implements HasForms
             BarcodeDisplay::make('code39')->label('Code 39')->type(BarcodeType::Code39),
             BarcodeDisplay::make('itf14')->label('ITF-14')->type(BarcodeType::Itf14),
             BarcodeDisplay::make('gs1128')->label('GS1-128')->type(BarcodeType::Gs1128),
+            BarcodeDisplay::make('datamatrix')->label('Data Matrix')->type(BarcodeType::DataMatrix),
+            BarcodeDisplay::make('gs1datamatrix')->label('GS1 DataMatrix')->type(BarcodeType::Gs1DataMatrix),
+            BarcodeDisplay::make('pdf417')->label('PDF417')->type(BarcodeType::Pdf417),
             BarcodeDisplay::make('invalid')->label('Invalid EAN-13')->type(BarcodeType::Ean13),
             BarcodeEntry::make('entry')->label('Entry')->type(BarcodeType::Code128)->data('ENTRY-1'),
         ]);

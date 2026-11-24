@@ -356,9 +356,9 @@ Getters (read the resolved option; used by the views): `getCaption()`, `getDownl
 | `data(Closure\|string\|null $data): static` | Value to encode; a closure receives the record. Defaults to the state. |
 | `downloadable(Closure\|bool $condition = true): static` | Show a download link for the image. |
 | `format(QrFormat\|Closure\|string $format): static` | Render as SVG (default) or PNG. |
-| `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. |
-| `margin(Closure\|int\|null $modules): static` | Quiet zone on each side in modules; null uses the type's default. |
-| `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the bars. |
+| `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. Ignored for 2D types. |
+| `margin(Closure\|int\|null $modules): static` | Quiet zone in modules; null uses the type's default. 2D types apply it on all four sides. |
+| `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the symbol. Defaults to on for 1D types and off for 2D. |
 | `type(BarcodeType\|Closure\|string $type): static` | Symbology to encode: a BarcodeType or its value, e.g. 'ean13'. |
 
 Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`
@@ -375,9 +375,9 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 | `data(Closure\|string\|null $data): static` | Value to encode; a closure receives the record. Defaults to the state. |
 | `downloadable(Closure\|bool $condition = true): static` | Show a download link for the image. |
 | `format(QrFormat\|Closure\|string $format): static` | Render as SVG (default) or PNG. |
-| `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. |
-| `margin(Closure\|int\|null $modules): static` | Quiet zone on each side in modules; null uses the type's default. |
-| `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the bars. |
+| `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. Ignored for 2D types. |
+| `margin(Closure\|int\|null $modules): static` | Quiet zone in modules; null uses the type's default. 2D types apply it on all four sides. |
+| `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the symbol. Defaults to on for 1D types and off for 2D. |
 | `type(BarcodeType\|Closure\|string $type): static` | Symbology to encode: a BarcodeType or its value, e.g. 'ean13'. |
 
 Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`
@@ -395,9 +395,9 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 | `downloadable(Closure\|bool $condition = true): static` | Show a download link for the image. |
 | `embedded(Closure\|bool $condition = true): static` | Embed the barcode as a data URI instead of loading the signed filamentQrCode.barcode route. The signed URL stays the default. This is not Filament's Column::inline() layout flag (fi-inline). |
 | `format(QrFormat\|Closure\|string $format): static` | Render as SVG (default) or PNG. |
-| `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. |
-| `margin(Closure\|int\|null $modules): static` | Quiet zone on each side in modules; null uses the type's default. |
-| `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the bars. |
+| `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. Ignored for 2D types. |
+| `margin(Closure\|int\|null $modules): static` | Quiet zone in modules; null uses the type's default. 2D types apply it on all four sides. |
+| `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the symbol. Defaults to on for 1D types and off for 2D. |
 | `type(BarcodeType\|Closure\|string $type): static` | Symbology to encode: a BarcodeType or its value, e.g. 'ean13'. |
 
 Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`, `isEmbedded()`
@@ -443,12 +443,12 @@ Getters (read the resolved option; used by the views): `getRaw()`
 
 ### `BarcodeService`
 
-`Mmuqiitf\FilamentQrCode\Services\BarcodeService` — Fluent builder for linear barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128), the barcode counterpart of QrCodeService.
+`Mmuqiitf\FilamentQrCode\Services\BarcodeService` — Fluent builder for barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128, Data Matrix, GS1 DataMatrix, PDF417 and compact PDF417), the barcode counterpart of QrCodeService.
 
 | Method | Purpose |
 | --- | --- |
 | `backgroundColor(string $hexColor): BarcodeService` | Background colour as hex. |
-| `barWidth(int $pixels): BarcodeService` | Width in pixels of the narrowest bar (one module). |
+| `barWidth(int $pixels): BarcodeService` | Width in pixels of the narrowest bar (one module). For 2D types this is the module size. |
 | `color(string $hexColor): BarcodeService` | Bar and text colour as hex. |
 | `download(?string $fileName = null): StreamedResponse` | Render the barcode as a download response. |
 | `fileName(string $fileName): BarcodeService` | File name used by download() and stream(). |
@@ -457,10 +457,10 @@ Getters (read the resolved option; used by the views): `getRaw()`
 | `fontSize(int $pixels): BarcodeService` | Font size in pixels of the human-readable text. |
 | `format(QrFormat\|string $format): BarcodeService` | Output SVG (default) or PNG. |
 | `generate(string $data): BarcodeService` | Encode and render the value. |
-| `height(int $pixels): BarcodeService` | Bar height in pixels, not counting the text line. |
+| `height(int $pixels): BarcodeService` | Bar height in pixels, not counting the text line. Ignored for 2D types, which size themselves from barWidth() and the symbol rows. |
 | `static make(): BarcodeService` | Start a fresh barcode render. |
-| `margin(?int $modules): BarcodeService` | Quiet zone in modules on each side; null uses the type default (10, or 0 for ITF-14). |
-| `showText(bool $condition = true): BarcodeService` | Print the human-readable value under the bars (on by default). |
+| `margin(?int $modules): BarcodeService` | Quiet zone in modules; null uses the type default. 2D types apply it on all four sides. |
+| `showText(bool $condition = true): BarcodeService` | Print the human-readable value under the symbol. On by default for 1D types, off for 2D. |
 | `stream(?string $fileName = null): StreamedResponse` | Render the barcode as an inline image response. |
 | `toDataUri(): string` | Render the barcode as a `data:` URI for `<img src>`. |
 | `type(BarcodeType\|string $type): BarcodeService` | Symbology to draw; Code 128 by default. |
@@ -630,11 +630,16 @@ Getters (read the resolved option; used by the views): `getLabel()`
 
 ### `BarcodeType`
 
-`Mmuqiitf\FilamentQrCode\Enums\BarcodeType` — Linear symbologies the barcode generator can draw.
+`Mmuqiitf\FilamentQrCode\Enums\BarcodeType` — Symbologies the barcode generator can draw, including 2D Data Matrix and PDF417. Not to be confused with BarcodeFormat, which lists what the scanner reads.
 
-Cases: `Code128` (`code128`), `Ean13` (`ean13`), `Ean8` (`ean8`), `UpcA` (`upca`), `Code39` (`code39`), `Itf14` (`itf14`), `Gs1128` (`gs1-128`)
+Cases: `Code128` (`code128`), `Ean13` (`ean13`), `Ean8` (`ean8`), `UpcA` (`upca`), `Code39` (`code39`), `Itf14` (`itf14`), `Gs1128` (`gs1-128`), `DataMatrix` (`datamatrix`), `Gs1DataMatrix` (`gs1-datamatrix`), `Pdf417` (`pdf417`), `Pdf417Compact` (`pdf417-compact`)
 
-Getters (read the resolved option; used by the views): `getDefaultMargin()`, `getDigitLengths()`, `getLabel()`
+| Method | Purpose |
+| --- | --- |
+| `rowAspect(): int` | Vertical size of one matrix row, in modules. Data Matrix modules are square; PDF417 rows are 3X tall (ISO 15438 recommended minimum). |
+| `showsTextByDefault(): bool` | Human-readable text is on by default for 1D types and off for 2D. |
+
+Getters (read the resolved option; used by the views): `getDefaultMargin()`, `getDigitLengths()`, `getLabel()`, `isTwoDimensional()`
 
 ### `ContinuousDisplay`
 

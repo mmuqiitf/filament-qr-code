@@ -125,4 +125,4 @@ public function receive(): void
 }
 ```
 
-Redraw a saved label with `BarcodeColumn::make('label')->type(BarcodeType::Gs1128)`.
+Redraw a saved label with `BarcodeColumn::make('label')->type(BarcodeType::Gs1128)` or `->type(BarcodeType::Gs1DataMatrix)`.

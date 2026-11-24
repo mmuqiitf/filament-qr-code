@@ -12,6 +12,10 @@ test('barcode components render every type with alt text and an inline error', a
         'UPC-A barcode: 036000291452',
         'Code 39 barcode: HELLO-1',
         'ITF-14 barcode: 00012345678905',
+        'GS1-128 barcode: (01)09521101530001(17)251231(10)LOT-1',
+        'Data Matrix barcode: HELLO-DM',
+        'GS1 DataMatrix barcode: (01)09521101530001(17)251231(10)LOT-1',
+        'PDF417 barcode: PDF417-HELLO',
         'Code 128 barcode: ENTRY-1',
     ]) {
         const image = page.getByRole('img', { name, exact: true });
