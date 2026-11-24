@@ -4065,7 +4065,7 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 
 # Upgrade guide
 
-## Unreleased
+## From 1.1.2 to 1.2.0
 
 Run `php artisan filament:assets`: the scanner JavaScript changed.
 
@@ -4089,6 +4089,14 @@ Run `php artisan filament:assets`: the scanner JavaScript changed.
   - When signing the URL throws (no app key, say), the column falls back to a data URI.
 - **Image-route middleware.** A new key, `qr-code.image_route.middleware` (default `[]`), adds class names or aliases to both image routes, after `signed` and the throttle. Nothing changes until you set it. The routes stay off the `web` group, so middleware that needs a session (like `auth` with the session guard) has no session to read. Use a stateless check, such as a token guard or your own middleware. If you published `config/qr-code.php`, copy the key, and run `php artisan qr-code:doctor`, which fails when the list is not strings.
 - **Primary text contrast.** Download links, the camera icon, the sequence progress label and "Ready to scan" now use `text-primary-700` instead of `text-primary-600`. With an amber primary (Filament's default), `primary-600` small text fell below 4.5:1 on white. Dark mode is unchanged (`primary-400`). Rebuild your panel theme (`npm run build`) so Tailwind generates the new class from the package views.
+
+- **Hardware bursts.** A burst is `min_fast_keys` gaps (3 by default) whose average is `burst_threshold_ms` or less, and no gap may be longer than three times that threshold. The old counter tallied quick pairs, so a few fast pairs in human typing could pass and one slow gap in a short code such as `DONE` from a Bluetooth gun could drop the scan. Keys typed into a textarea or a contenteditable editor stay there, unless a scan target owns that element. `minFastKeys(1)` still accepts a single fast gap.
+- **Camera on load.** `QrScanSequence` and `QrCollector` without `autoStart()` no longer read the camera list when the page loads. The browser asks for the camera when Start is pressed, unless permission was already granted, so "Camera access denied or unavailable." no longer appears before Start.
+- **Enter on a checked field.** On a `QrScanner` that uses `gs1()`, `rejectWhen()` or `rules()`, Enter sends the typed or pasted value first. The form submits on that same Enter only when the value is accepted. A rejected value keeps its reason.
+- **Continuous mode.** Typing a code into a continuous `QrScanner` and pressing Enter is a scan (source `manual`). It used to be ignored.
+- **Sequence errors.** A failed submit shows the message under the sequence (`data-qr-part="sequence.errors"`). A published sequence view that omits `filament-qr-code::components.sequence.errors` still hides it. The message clears when that step accepts a scan and when the sequence resets.
+- **Empty values.** `normalizeUsing()` skips an empty value, so a `fn (string $code)` normalizer no longer receives `null` when the field is cleared or a typed value is rejected.
+- **Filament 5.12.** An `afterStateUpdated()` hook added after `QrScanner::gs1()` or `rejectWhen()` no longer replaces the typed-value hook those methods put first. On 5.12 that next hook used to take its slot, so a pasted GS1 label stayed raw and a typed `rejectWhen()` value was not cleared.
 
 ## From 1.1.1 to 1.1.2
 

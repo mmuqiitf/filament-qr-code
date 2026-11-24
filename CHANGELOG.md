@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-24
+
 ### Fixed
 
 - `QrScanSequence`: a `repeat()` count that reads live state (a quantity input) is checked again on the Done button and on submit, not only on each scan, so the server agrees with the browser's `k / n` when the quantity changes mid-sequence. Submit fails a counted step with fewer codes than the live count ("Scan at least n code(s)") or more ("This step has more than n code(s)", new key `repeat_too_many`), and `getMissingSequenceKeys()` / `isSequenceComplete()` list a step that is short. When the count drops to the codes already scanned, an `'advance'` step finishes in the browser, so the sequence completes and auto-submits. The step payload gains `advance`.
@@ -513,7 +515,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.0.3...v1.1.0
