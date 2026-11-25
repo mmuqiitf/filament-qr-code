@@ -405,6 +405,102 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 
 Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`, `isEmbedded()`
 
+## Label printing
+
+### `PrintLabelsAction`
+
+`Mmuqiitf\FilamentQrCode\Tables\Actions\PrintLabelsAction`
+
+| Method | Purpose |
+| --- | --- |
+| `barcodeData(Closure\|string $data, BarcodeType\|string $type = BarcodeType::Code128): static` | Value and symbology for the barcode beside the QR; a closure receives the record. |
+| `caption(Closure\|string $caption): static` | Caption under the symbols; a closure receives the record. |
+| `copies(Closure\|int $copies): static` | Print each record this many times (default 1). |
+| `digitalLink(Closure\|array $elements): static` | Encode a GS1 Digital Link URI as the QR payload. A closure receives the record. |
+| `format(QrFormat\|Closure $format): static` | Symbol format; use PNG when a PDF engine cannot paint SVG. |
+| `heading(Closure\|string $heading): static` | Heading above the symbols; a closure receives the record. |
+| `labelForRecord(mixed $record): ?Label` | One label for a record, or null when it has no QR or barcode data. |
+| `labelUsing(Closure $callback): static` | Build the label yourself; the closure receives the record and must return a Label. |
+| `labelsForRecords(iterable $records): array` | Build a label for every record that has data, repeating each one `copies` times. |
+| `offset(Closure\|int $cells): static` | Skip this many cells on the first page, for a partly used Avery sheet. |
+| `qrData(Closure\|string $data): static` | Value encoded in the QR; a closure receives the record. |
+| `sheet(LabelSheet\|Closure $sheet): static` | The Avery or custom sheet laid out in the print page. |
+| `storePrint(iterable $records): ?string` | Render the sheet, store it behind a short-lived token, and return the print URL. |
+
+Getters (read the resolved option; used by the views): `getSheet()`
+
+### `PrintLabelsBulkAction`
+
+`Mmuqiitf\FilamentQrCode\Tables\Actions\PrintLabelsBulkAction`
+
+| Method | Purpose |
+| --- | --- |
+| `barcodeData(Closure\|string $data, BarcodeType\|string $type = BarcodeType::Code128): static` | Value and symbology for the barcode beside the QR; a closure receives the record. |
+| `caption(Closure\|string $caption): static` | Caption under the symbols; a closure receives the record. |
+| `copies(Closure\|int $copies): static` | Print each record this many times (default 1). |
+| `digitalLink(Closure\|array $elements): static` | Encode a GS1 Digital Link URI as the QR payload. A closure receives the record. |
+| `format(QrFormat\|Closure $format): static` | Symbol format; use PNG when a PDF engine cannot paint SVG. |
+| `heading(Closure\|string $heading): static` | Heading above the symbols; a closure receives the record. |
+| `labelForRecord(mixed $record): ?Label` | One label for a record, or null when it has no QR or barcode data. |
+| `labelUsing(Closure $callback): static` | Build the label yourself; the closure receives the record and must return a Label. |
+| `labelsForRecords(iterable $records): array` | Build a label for every record that has data, repeating each one `copies` times. |
+| `offset(Closure\|int $cells): static` | Skip this many cells on the first page, for a partly used Avery sheet. |
+| `qrData(Closure\|string $data): static` | Value encoded in the QR; a closure receives the record. |
+| `sheet(LabelSheet\|Closure $sheet): static` | The Avery or custom sheet laid out in the print page. |
+| `storePrint(iterable $records): ?string` | Render the sheet, store it behind a short-lived token, and return the print URL. |
+
+Getters (read the resolved option; used by the views): `getSheet()`
+
+### `LabelSheet`
+
+`Mmuqiitf\FilamentQrCode\Printing\LabelSheet` — A printable label grid: Avery presets or a custom row/column layout.
+
+| Method | Purpose |
+| --- | --- |
+| `__construct(int $columns, ?int $rows, string $labelWidth, string $labelHeight, ?string $pageSize = null, string $pageWidth = '', string $pageHeight = '', string $marginTop = '0', string $marginRight = '0', string $marginBottom = '0', string $marginLeft = '0', string $columnGap = '0', string $rowGap = '0')` | Custom sheet dimensions; prefer a preset or `make()` in app code. |
+| `static avery5160(): LabelSheet` | Avery 5160 / 8160: 30 labels on US Letter, 2.625 in × 1 in. |
+| `static avery5163(): LabelSheet` | Avery 5163 / 8163: 10 labels on US Letter, 4 in × 2 in. |
+| `cssStyle(): string` | `toCssVariables()` as an inline `style` attribute value. |
+| `static l7160(): LabelSheet` | Avery L7160: 21 labels on A4, 63.5 mm × 38.1 mm. |
+| `labelsPerPage(): ?int` | Labels that fit on one page, or null for a flowing sheet. |
+| `static make(int $columns, ?int $rows, string $labelWidth, string $labelHeight, ?string $pageSize = null, string $pageWidth = '', string $pageHeight = '', string $marginTop = '0', string $marginRight = '0', string $marginBottom = '0', string $marginLeft = '0', string $columnGap = '0', string $rowGap = '0'): LabelSheet` | A custom sheet; pass CSS lengths for size, margins and gaps. |
+| `static threeAcross(): LabelSheet` | A flowing three-column sheet that matches the existing `.filament-qr-label-sheet` print grid (no fixed page size). |
+| `toCssVariables(): array` | CSS custom properties applied to the sheet element. |
+
+### `Label`
+
+`Mmuqiitf\FilamentQrCode\Printing\Label` — One cell on a label sheet: an optional QR, an optional barcode, and text.
+
+| Method | Purpose |
+| --- | --- |
+| `barcode(?string $data, BarcodeType\|string $type = BarcodeType::Code128): Label` | Draw a barcode of this symbology, including 2D types. |
+| `barcodeDataUri(?QrFormat $format = null): ?string` | Data URI for the barcode `<img>`, or null when there is no barcode. |
+| `caption(?string $text): Label` | Text under the symbols. |
+| `digitalLink(ElementString\|array $elements, ?string $domain = null): Label` | Encode an uncompressed GS1 Digital Link URI as the QR payload. |
+| `heading(?string $text): Label` | Text above the symbols. |
+| `static make(): Label` | Start a blank label. |
+| `qr(?string $data): Label` | Encode this string as a QR code. |
+| `qrDataUri(?QrFormat $format = null): ?string` | Data URI for the QR `<img>`, or null when there is no QR. |
+| `qrPayload(): ?string` | The string encoded in the QR, including a Digital Link URI. |
+| `qrSize(int $pixels): Label` | QR module size in pixels (default 80). |
+
+Getters (read the resolved option; used by the views): `getCaption()`, `getHeading()`, `isEmpty()`
+
+### `LabelSheetRenderer`
+
+`Mmuqiitf\FilamentQrCode\Printing\LabelSheetRenderer` — Turn a list of labels into paged HTML the print stylesheet and the documented PDF recipe both consume.
+
+| Method | Purpose |
+| --- | --- |
+| `__construct(LabelSheet $sheet)` | Bind this renderer to a sheet layout. |
+| `format(QrFormat $format): LabelSheetRenderer` | Rasterize symbols as PNG when the consumer cannot paint SVG (dompdf). |
+| `static make(LabelSheet $sheet): LabelSheetRenderer` | Start a renderer for this sheet. |
+| `offset(int $cells): LabelSheetRenderer` | Skip this many cells on the first page, for a partly used Avery sheet. |
+| `pages(array $labels): array` | Split labels into pages, honouring `offset` and padding the last Avery page. |
+| `printCss(): string` | The published package CSS, inlined into `toDocument()`. |
+| `toDocument(array $labels, ?string $title = null): string` | A standalone HTML document with the package print CSS inlined, suitable for a print window or a PDF engine. |
+| `toHtml(array $labels): string` | The paged sheet markup only, without a surrounding HTML document. |
+
 ## Services and helpers
 
 ### `FilamentQrCode`

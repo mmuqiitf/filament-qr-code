@@ -13,6 +13,7 @@ Scanned values write straight into the Livewire form state. Lookups and validati
 - [Scanning](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/scanning.md): QR Scanner Field, Station Listener, Scan Sequence Container, server checks, continuous mode, runtime control
 - [Batch collecting](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/collecting.md): `QrCollector` and `QrCollectAction`
 - [Generating](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/generating.md): display components, download actions, ZIP export, facade, payload builders
+- [Label printing](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/printing.md): table print actions, Avery-style HTML sheets, Digital Link and 2D barcodes
 - [Barcodes](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/barcodes.md): Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128, Data Matrix, GS1 DataMatrix, PDF417 and compact PDF417 in forms, infolists, tables and PHP. Table cells use the signed `filamentQrCode.barcode` route
 - [GS1 element strings](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/gs1.md): `Gs1::parse()` and `Gs1::build()` for application identifiers, uncompressed [GS1 Digital Link](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/gs1.md#digital-link) URIs, and `->gs1()` on the scanner, collector and sequence
 - [Customizing](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/customizing.md): lookups, normalization, check stages, hooks, auditing, macros, styling, views
@@ -28,6 +29,7 @@ Scanned values write straight into the Livewire form state. Lookups and validati
 - [GS1 receiving](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/gs1-receiving.md): receive one GS1 label into a line
 - [Work-order station](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/manufacturing.md): a work-order scanning station
 - [Label generator page](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/generator-page.md): a page that generates QR labels
+- [Print to PDF](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/print-pdf.md): render a label sheet with dompdf
 - [Custom inputs](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/custom-input.md): custom inputs and reusable scan fields
 - [Styling](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/styling.md): styling a scanner or sequence
 - [ZXing decoder](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/recipes/zxing-decoder.md): use ZXing as the camera decoder

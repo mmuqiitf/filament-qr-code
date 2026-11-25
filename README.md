@@ -153,13 +153,15 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | Two fields, hand focus from one to the next         | [`QrScanner::nextField()`](docs/scanning.md#sequential-field-scanning-nextfield)                                                                                                                                              | A sequence is overkill without a shared checklist.                                 |
 | Many scans into one list (stocktake, receiving)     | [`QrCollector` / `QrCollectAction`](docs/collecting.md#batch-collector-scanning-qrcollector-qrcollectaction)                                                                                                                     | Sequences map one scan to one field; collectors append.                            |
 | Show a QR (form, table, infolist, download)         | [`QrCodeDisplay`](docs/generating.md#in-form-schemas) / [`QrColumn`](docs/generating.md#in-table-columns) / [`QrEntry`](docs/generating.md#in-infolists) / [`DownloadQrAction`](docs/generating.md#as-a-download-action) | Scanner components capture; these only render.                                     |
-| Many QRs out at once (labels, handover)             | [`DownloadQrBulkAction`](docs/generating.md#as-a-bulk-zip-export) + print sheet                                                                                                                                          | Single downloads don't scale past a handful of rows.                               |
+| Many QRs out at once as files                       | [`DownloadQrBulkAction`](docs/generating.md#as-a-bulk-zip-export)                                                                                                                                                        | Single downloads don't scale past a handful of rows.                               |
+| Print shelf labels from table rows                  | [`PrintLabelsAction` / `PrintLabelsBulkAction`](docs/printing.md)                                                                                                                                                      | ZIP export is for files; these open an Avery-style HTML print sheet (QR + barcode). |
 
 ### Next steps
 
 - **Scanning**: [QR Scanner Field](docs/scanning.md#qr-scanner-field-qrscanner), [Station Listener](docs/scanning.md#station-listener-qrhardwarescannerlistener) for hands-free guns, [Scan Sequence Container](docs/scanning.md#scan-sequence-container-qrscansequence), [server-side checks](docs/scanning.md#server-side-checks) and the [cashier POS tutorial](docs/scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
+- **Label printing**: [printable HTML sheets, Avery-style layouts, Digital Link and 2D barcodes](docs/printing.md), and a [dompdf recipe](docs/recipes/print-pdf.md).
 - **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128, Data Matrix, GS1 DataMatrix, PDF417 and compact PDF417](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
 - **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128` or `BarcodeType::Gs1DataMatrix`, and [scan GS1 labels](docs/gs1.md#scanning-gs1-labels) into a form with `QrScanner::gs1(fill: [...], require: [...])`, `QrCollector::gs1(require: [...])`, or `ScanStep::gs1(...)` / `QrScanSequence::gs1(...)`. [GS1 Digital Link](docs/gs1.md#digital-link) URIs parse into the same model, and `QrCodeService::digitalLink()` encodes one as a QR.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
@@ -173,6 +175,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [Scanning](docs/scanning.md) | QR Scanner Field, Station Listener, Scan Sequence Container, focus handoff, server checks, continuous mode, runtime control, POS tutorial |
 | [Batch collecting](docs/collecting.md) | continuous inventory scanning in repeaters and tables |
 | [Generating](docs/generating.md) | display components, download actions, ZIP export, facade, payloads |
+| [Label printing](docs/printing.md) | table print actions, Avery-style sheets, Digital Link and 2D barcodes on a label |
 | [Barcodes](docs/barcodes.md) | 1D barcodes: types, components, invalid values, accessibility, PHP API |
 | [GS1 element strings](docs/gs1.md) | `Gs1::parse()` and `Gs1::build()` for application identifiers, scanning GS1 labels with `->gs1()` on the scanner, collector and sequence, and [Digital Link](docs/gs1.md#digital-link) URIs |
 | [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, auditing, macros, styling, render hooks, views |
@@ -182,7 +185,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [API map](docs/api.md) | every public class, method, enum and config key (generated) |
 | [FAQ](docs/faq.md) | iOS torch, secure context, offline use, guns, multiple panels |
 | [Upgrade guide](UPGRADE.md) | breaking changes between versions |
-| Recipes | [POS checkout](docs/recipes/pos.md) · [Goods receiving](docs/recipes/warehouse.md) · [GS1 receiving](docs/recipes/gs1-receiving.md) · [Work-order station](docs/recipes/manufacturing.md) · [Label generator page](docs/recipes/generator-page.md) · [Custom inputs](docs/recipes/custom-input.md) · [Styling](docs/recipes/styling.md) · [ZXing decoder](docs/recipes/zxing-decoder.md). Each one runs in the [example app](https://github.com/mmuqiitf/filament-qr-code-example). |
+| Recipes | [POS checkout](docs/recipes/pos.md) · [Goods receiving](docs/recipes/warehouse.md) · [GS1 receiving](docs/recipes/gs1-receiving.md) · [Work-order station](docs/recipes/manufacturing.md) · [Label generator page](docs/recipes/generator-page.md) · [Print to PDF](docs/recipes/print-pdf.md) · [Custom inputs](docs/recipes/custom-input.md) · [Styling](docs/recipes/styling.md) · [ZXing decoder](docs/recipes/zxing-decoder.md). Each one runs in the [example app](https://github.com/mmuqiitf/filament-qr-code-example). |
 
 ### For AI agents and LLMs
 

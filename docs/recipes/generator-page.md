@@ -75,7 +75,7 @@ protected function validColor(): string
 <x-filament::button class="filament-qr-no-print" x-on:click="window.print()">Print</x-filament::button>
 ```
 
-The package's print stylesheet lays out `.filament-qr-label-sheet` / `.filament-qr-label` as a grid and hides `.filament-qr-no-print` when printing.
+The package's print stylesheet lays out `.filament-qr-label-sheet` / `.filament-qr-label` as a grid and hides `.filament-qr-no-print` when printing. For table-driven Avery sheets, QR + barcode labels, and a PDF recipe, see [Label printing](../printing.md).
 
 ## Notes
 

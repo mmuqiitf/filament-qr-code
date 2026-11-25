@@ -80,4 +80,10 @@ return [
     'gs1_invalid_check_digit' => 'Digit pemeriksa AI (:ai) tidak valid',
     'gs1_invalid_date' => 'Tanggal AI (:ai) tidak valid',
     'gs1_missing_ai' => 'AI (:ai) :title tidak ada',
+    'print_labels' => 'Cetak label',
+    'print_labels_bulk' => 'Cetak label',
+    'print_sheet' => 'Cetak',
+    'no_labels' => 'Tidak ada label untuk dicetak',
+    'print_qr_alt' => 'Kode QR',
+    'print_barcode_alt' => 'Barcode',
 ];

@@ -15,6 +15,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | many scans appended to one list (stocktake, receiving) | Batch Collector Scanning: `QrCollector` (form) or `QrCollectAction` (table/repeater action) | `…\Forms\Components`, `…\Tables\Actions` |
 | show a QR in a form / table / infolist | `QrCodeDisplay` / `QrColumn` / `QrEntry` | `…\Forms\Components`, `…\Tables\Columns`, `…\Infolists\Components` |
 | download one QR / many as a ZIP | `DownloadQrAction` / `DownloadQrBulkAction` | `Mmuqiitf\FilamentQrCode\Tables\Actions` |
+| print shelf labels from table rows | `PrintLabelsAction` / `PrintLabelsBulkAction` with `LabelSheet` (Avery presets, Digital Link QR, 2D barcodes) | `…\Tables\Actions`, `…\Printing` |
 | generate an SVG/PNG in PHP | `FilamentQrCode` facade or `QrCodeService` | `…\Facades`, `…\Services` |
 | read or write GS1 application identifiers | `Gs1::parse()` / `Gs1::build()`; Digital Link URIs with `DigitalLink::parse()` / `DigitalLink::build()` or `FilamentQrCode::make()->digitalLink()` | `Mmuqiitf\FilamentQrCode\Gs1` |
 | scan a GS1 label into a form (GTIN, expiry, batch into fields) | `QrScanner::gs1(fill: [...], require: [...])`, or `QrHardwareScannerListener::gs1(..., store: 'label')` for a gun with no scanner field | `Mmuqiitf\FilamentQrCode\Forms\Components` |
@@ -158,4 +159,4 @@ $dataUri = FilamentQrCode::make()
 
 - Every public method: [api.md](api.md). Every config key: [reference.md](reference.md#configuration).
 - Browser and Laravel events: [events.md](events.md). Extension seams: [extending.md](extending.md).
-- Worked flows: [recipes](recipes/pos.md) (POS, goods receiving, [GS1 receiving](recipes/gs1-receiving.md), work-order station, label page, custom inputs, styling, ZXing decoder). GS1 parse and scan rules: [gs1.md](gs1.md).
+- Worked flows: [recipes](recipes/pos.md) (POS, goods receiving, [GS1 receiving](recipes/gs1-receiving.md), work-order station, label page, [print to PDF](recipes/print-pdf.md), custom inputs, styling, ZXing decoder). GS1 parse and scan rules: [gs1.md](gs1.md). Label printing: [printing.md](printing.md).

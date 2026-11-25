@@ -51,6 +51,13 @@ function apiSections(): array
             'Infolists\\Components\\BarcodeEntry',
             'Tables\\Columns\\BarcodeColumn',
         ],
+        'Label printing' => [
+            'Tables\\Actions\\PrintLabelsAction',
+            'Tables\\Actions\\PrintLabelsBulkAction',
+            'Printing\\LabelSheet',
+            'Printing\\Label',
+            'Printing\\LabelSheetRenderer',
+        ],
         'Services and helpers' => [
             'Facades\\FilamentQrCode',
             'Services\\QrCodeService',
@@ -107,6 +114,7 @@ function llmsFullFiles(): array
         'docs/scanning.md',
         'docs/collecting.md',
         'docs/generating.md',
+        'docs/printing.md',
         'docs/barcodes.md',
         'docs/gs1.md',
         'docs/customizing.md',
