@@ -6,7 +6,9 @@
         'p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm' => ! $compact,
         'py-1' => $compact,
     ]) data-qr-part="barcode">
-        <img src="{{ $render['uri'] }}" alt="{{ $render['alt'] }}" class="max-w-full h-auto" data-qr-part="barcode.image" />
+        <div class="fi-qr-quiet-zone bg-white p-1 rounded">
+            <img src="{{ $render['uri'] }}" alt="{{ $render['alt'] }}" class="max-w-full h-auto" data-qr-part="barcode.image" />
+        </div>
 
         @if ($downloadable)
             <a
@@ -27,7 +29,7 @@
         {{ $render['error'] }}
     </div>
 @elseif ($compact)
-    <span class="text-gray-500 text-xs italic">-</span>
+    <span class="text-gray-500 dark:text-gray-400 text-xs italic">-</span>
 @else
     <div class="text-xs text-gray-500 dark:text-gray-400 italic">
         {{ __('filament-qr-code::ui.barcode_no_data') }}

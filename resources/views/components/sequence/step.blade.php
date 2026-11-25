@@ -4,7 +4,7 @@
     :style="isActive(f.key) ? '' : 'opacity: 0.5'"
     class="fi-qr-sequence-step p-3 rounded-xl border transition cursor-pointer flex items-center justify-between text-sm"
     :class="isStepCurrent(idx)
-        ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/30 text-primary-900 dark:text-primary-100 ring-1 ring-primary-500'
+        ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/30 text-primary-900 dark:text-primary-100 ring-1 ring-primary-500 dark:border-primary-400 dark:ring-primary-400'
         : (results[f.key] ? 'border-success-300 dark:border-success-800 bg-success-50/30 dark:bg-success-950/10' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900')"
 >
     <div class="flex items-center gap-2.5">

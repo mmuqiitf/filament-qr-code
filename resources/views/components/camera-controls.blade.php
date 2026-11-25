@@ -3,7 +3,7 @@
     data-qr-part="camera.controls"
     x-show="isScanning && (cameraCaps.torch || cameraCaps.zoom)"
     x-cloak
-    class="fi-qr-camera-controls absolute bottom-2 inset-x-2 z-10 flex items-center gap-2 rounded-md bg-gray-950/60 px-2 py-1 text-white"
+    class="fi-qr-camera-controls fi-qr-overlay absolute bottom-2 inset-x-2 z-10 flex items-center gap-2 rounded-md bg-gray-950/60 px-2 py-1 text-white"
 >
     <button
         type="button"
@@ -13,7 +13,7 @@
         aria-label="{{ __('filament-qr-code::ui.torch') }}"
         title="{{ __('filament-qr-code::ui.torch') }}"
         class="fi-qr-camera-torch rounded p-1 hover:bg-white/10"
-        :class="torchOn ? 'text-warning-400' : 'text-white'"
+        :class="torchOn ? 'fi-qr-overlay text-warning-400' : 'fi-qr-overlay text-white'"
     >
         <svg class="h-5 w-5" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />

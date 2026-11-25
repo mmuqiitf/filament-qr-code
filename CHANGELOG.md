@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Dark mode: Start, Pause and Stop on the collector, sequence and collect-action modal use Filament's `<x-filament::button>`, so their contrast follows the panel palette. Unpaired hover and placeholder colors, idle status dots, focus rings and the QR column close control gain `dark:` variants. QR and barcode images keep a light quiet-zone pad (`fi-qr-quiet-zone`) so they stay scannable on a dark panel. Print sheets stay light; the on-screen print toolbar follows `prefers-color-scheme`. The sequence title is a styled paragraph instead of an `h4`, which skipped a heading level on Filament pages.
+
 ## [1.3.0] - 2026-11-25
 
 ### Print & GS1 Digital Link

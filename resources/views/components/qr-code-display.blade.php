@@ -11,7 +11,9 @@
 >
     @if ($qrDataUri)
         <div class="inline-flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm space-y-2">
-            <img src="{{ $qrDataUri }}" alt="QR Code" class="rounded-lg max-w-full h-auto" />
+            <div class="fi-qr-quiet-zone bg-white p-1 rounded-lg">
+                <img src="{{ $qrDataUri }}" alt="QR Code" class="rounded-lg max-w-full h-auto" />
+            </div>
 
             @if ($caption = $getCaption())
                 <p class="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">{{ $caption }}</p>
@@ -31,7 +33,7 @@
             @endif
         </div>
     @else
-        <div class="text-xs text-gray-400 italic">
+        <div class="text-xs text-gray-500 dark:text-gray-400 italic">
             {{ __('filament-qr-code::ui.no_data') }}
         </div>
     @endif

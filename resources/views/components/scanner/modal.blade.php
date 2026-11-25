@@ -33,7 +33,7 @@
                     type="button"
                     @click="closeScannerModal()"
                     aria-label="{{ __('filament-qr-code::ui.close_scanner') }}"
-                    class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg"
+                    class="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg"
                 >
                     <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

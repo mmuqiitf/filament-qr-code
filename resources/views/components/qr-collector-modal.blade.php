@@ -40,22 +40,26 @@
     </div>
 
     <div class="flex items-center gap-2">
-        <button
-            x-show="!isScanning"
+        <x-filament::button
             type="button"
+            size="sm"
+            color="success"
+            class="w-full"
+            x-show="!isScanning"
             @click="startCollector()"
-            class="px-4 py-2 bg-success-600 hover:bg-success-700 text-white rounded-lg text-sm font-semibold shadow-sm w-full"
         >
             {{ __('filament-qr-code::ui.start_camera_scanner') }}
-        </button>
-        <button
-            x-show="isScanning"
+        </x-filament::button>
+        <x-filament::button
             type="button"
+            size="sm"
+            color="danger"
+            class="w-full"
+            x-show="isScanning"
             @click="stopCollector()"
-            class="px-4 py-2 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold shadow-sm w-full"
         >
             {{ __('filament-qr-code::ui.pause_scanner') }}
-        </button>
+        </x-filament::button>
     </div>
 
     <div class="space-y-2">
@@ -67,7 +71,7 @@
                 x-show="items.length > 0"
                 type="button"
                 @click="clearAll()"
-                class="text-xs text-danger-600 hover:underline"
+                class="text-xs text-danger-600 dark:text-danger-400 hover:underline"
             >
                 {{ __('filament-qr-code::ui.clear_all') }}
             </button>
@@ -75,9 +79,9 @@
 
         <div class="max-h-48 overflow-y-auto space-y-1">
             <template x-for="(item, index) in items" :key="index">
-                <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-xs font-mono">
+                <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-xs font-mono border border-gray-100 dark:border-gray-700">
                     <span class="font-bold text-gray-900 dark:text-white truncate" x-text="item.code"></span>
-                    <button type="button" @click="removeItem(index)" class="text-gray-400 hover:text-danger-600 ml-2" aria-label="{{ __('filament-qr-code::ui.remove_code') }}">
+                    <button type="button" @click="removeItem(index)" class="text-gray-400 hover:text-danger-600 dark:text-gray-300 dark:hover:text-danger-400 ml-2" aria-label="{{ __('filament-qr-code::ui.remove_code') }}">
                         &times;
                     </button>
                 </div>

@@ -197,6 +197,9 @@ For table-driven Avery-style sheets (QR + barcode, Digital Link, presets), see [
   | `--fi-qr-flash-success` | `rgb(34 197 94)` |
   | `--fi-qr-flash-danger` | `rgb(239 68 68)` |
 
+- **Dark mode**: package views follow the Filament panel theme (`dark` on `<html>`). Start, pause, retry and resume actions use `<x-filament::button>` so their contrast follows the panel palette. Camera overlays (loading, error, torch and zoom) stay dark on the viewfinder; they use `fi-qr-overlay` and do not flip with the theme.
+- **Quiet zone**: QR and barcode images keep a light pad (`fi-qr-quiet-zone bg-white`) even in dark mode, so the symbol remains scannable against a dark panel or table. Do not add `dark:bg-gray-*` to that pad. The surrounding card or modal chrome can still be dark.
+
 ## Render hooks
 
 ```php

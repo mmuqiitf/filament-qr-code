@@ -10,10 +10,16 @@
         @page { size: {{ $pageWidth }} {{ $pageHeight }}; margin: 0; }
         @endif
         body { margin: 0; background: #fff; color: #111; }
+        @media screen and (prefers-color-scheme: dark) {
+            body { background: #111827; color: #f9fafb; }
+        }
+        @media print {
+            body { background: #fff; color: #111; }
+        }
     </style>
 </head>
 <body>
-    <div class="filament-qr-no-print" style="padding: 1rem; text-align: center;">
+    <div class="filament-qr-no-print">
         <button type="button" onclick="window.print()">{{ __('filament-qr-code::ui.print_sheet') }}</button>
     </div>
     {!! $sheetHtml !!}
