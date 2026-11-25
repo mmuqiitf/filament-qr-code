@@ -13,7 +13,7 @@
             src="{{ $thumbUri }}"
             alt="QR Code"
             style="width: {{ $thumbSize }}px; height: {{ $thumbSize }}px;"
-            class="rounded-md border border-gray-200 dark:border-gray-700 bg-white p-0.5 {{ $isPreviewable ? 'cursor-pointer hover:opacity-80 transition' : '' }}"
+            class="fi-qr-quiet-zone rounded-md border border-gray-200 dark:border-gray-700 bg-white p-0.5 {{ $isPreviewable ? 'cursor-pointer hover:opacity-80 transition' : '' }}"
             @if ($isPreviewable)
                 @click="isModalOpen = true"
             @endif
@@ -33,12 +33,12 @@
                 <div class="relative bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl border border-gray-200 dark:border-gray-800 text-center space-y-4 max-w-xs w-full">
                     <div class="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-800">
                         <span class="font-semibold text-sm text-gray-900 dark:text-white">{{ __('filament-qr-code::ui.qr_preview') }}</span>
-                        <button type="button" @click="isModalOpen = false" class="text-gray-400 hover:text-gray-600">
+                        <button type="button" @click="isModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">
                             &times;
                         </button>
                     </div>
 
-                    <div class="flex justify-center p-2 bg-white rounded-xl">
+                    <div class="fi-qr-quiet-zone flex justify-center p-2 bg-white rounded-xl">
                         @if ($isLazyModal)
                             <img src="{{ $modalUri }}" alt="QR Code Large" class="rounded-lg shadow-sm" loading="lazy" />
                         @else
@@ -64,5 +64,5 @@
         @endif
     </div>
 @else
-    <span class="text-gray-400 text-xs italic">-</span>
+    <span class="text-gray-500 dark:text-gray-400 text-xs italic">-</span>
 @endif

@@ -21,7 +21,7 @@
                     <button
                         type="button"
                         @click.stop="removeCode(f.key, codeIndex)"
-                        class="rounded px-1 text-gray-400 hover:text-danger-600"
+                        class="rounded px-1 text-gray-400 hover:text-danger-600 dark:text-gray-300 dark:hover:text-danger-400"
                         :aria-label="'{{ __('filament-qr-code::ui.remove_code') }} ' + code"
                     >&times;</button>
                 </span>

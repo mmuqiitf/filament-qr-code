@@ -16,19 +16,19 @@
             <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-xs font-mono border border-gray-100 dark:border-gray-700">
                 <div class="truncate mr-2">
                     <span class="font-bold text-gray-900 dark:text-white" x-text="item.code"></span>
-                    <span class="text-[10px] text-gray-400 block" x-text="item.scanned_at"></span>
+                    <span class="text-[10px] text-gray-500 dark:text-gray-400 block" x-text="item.scanned_at"></span>
                 </div>
                 <button
                     type="button"
                     @click="removeItem(index)"
-                    class="text-gray-400 hover:text-danger-600 p-1"
+                    class="text-gray-400 hover:text-danger-600 dark:text-gray-300 dark:hover:text-danger-400 p-1"
                     aria-label="{{ __('filament-qr-code::ui.remove_code') }}"
                 >
                     &times;
                 </button>
             </div>
         </template>
-        <div x-show="items.length === 0" class="text-center py-6 text-xs text-gray-400">
+        <div x-show="items.length === 0" class="text-center py-6 text-xs text-gray-500 dark:text-gray-400">
             {{ __('filament-qr-code::ui.empty_collector') }}
         </div>
     </div>

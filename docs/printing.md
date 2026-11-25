@@ -35,7 +35,7 @@ $table
     ]);
 ```
 
-The action opens a print-ready page in a new tab. Use the browser Print dialog (or the Print button on that page) and choose the matching paper size (US Letter for Avery 5160 / 5163, A4 for L7160).
+The action opens a print-ready page in a new tab. Use the browser Print dialog (or the Print button on that page) and choose the matching paper size (US Letter for Avery 5160 / 5163, A4 for L7160). The label sheet itself stays light so codes remain scannable; the on-screen Print toolbar follows `prefers-color-scheme`.
 
 Rows with no QR or barcode data are skipped. If every selected row is empty, a warning notification is shown and no tab opens.
 

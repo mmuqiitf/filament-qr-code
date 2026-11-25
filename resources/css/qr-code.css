@@ -208,6 +208,30 @@
     font-weight: 600;
 }
 
+/* On-screen print toolbar. The sheet itself stays light for scannability. */
+.filament-qr-no-print {
+    padding: 1rem;
+    text-align: center;
+}
+
+.filament-qr-no-print button {
+    font: inherit;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    color: #111827;
+}
+
+@media screen and (prefers-color-scheme: dark) {
+    .filament-qr-no-print button {
+        border-color: #4b5563;
+        background: #374151;
+        color: #f9fafb;
+    }
+}
+
 @media screen {
     .filament-qr-label-sheet[data-fq-sheet] {
         border: 1px solid #d1d5db;

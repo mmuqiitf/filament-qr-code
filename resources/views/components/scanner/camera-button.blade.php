@@ -2,7 +2,7 @@
     type="button"
     @click="openScannerModal()"
     {{ $isDisabled ? 'disabled' : '' }}
-    class="fi-qr-scanner-camera-button inline-flex items-center gap-x-1.5 rounded-e-lg border border-s-0 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3.5 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+    class="fi-qr-scanner-camera-button inline-flex items-center gap-x-1.5 rounded-e-lg border border-s-0 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3.5 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 disabled:opacity-50"
     title="{{ __('filament-qr-code::ui.scan_qr_with_camera') }}"
 >
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-primary-700 dark:text-primary-400">
