@@ -10,6 +10,7 @@ use Filament\Support\Components\Attributes\ExposedLivewireMethod;
 use Illuminate\Support\Facades\Validator;
 use Mmuqiitf\FilamentQrCode\Concerns\HasAnnouncements;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
+use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
@@ -22,6 +23,7 @@ class QrCollector extends Field
 {
     use HasAnnouncements;
     use HasCameraScanning;
+    use HasCodeNormalization;
     use HasFeedback;
     use HasHardwareScanner;
     use HasRenderHookScopes;
@@ -89,6 +91,7 @@ class QrCollector extends Field
     #[ExposedLivewireMethod]
     public function checkCollectorItem(string $code): array
     {
+        $code = $this->applyCodeNormalizer($code);
         $rules = $this->resolveItemRules();
 
         if ($rules === []) {

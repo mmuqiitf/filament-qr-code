@@ -54,6 +54,7 @@ BarcodeColumn::make('gtin')
 | `color()` / `backgroundColor()` | `#000000` / `#ffffff` | same |
 | `showText(bool)` | `true` | `false` |
 | `downloadable(bool)` | `true` | `false` |
+| `embedded(bool)` | — (always a data URI) | `false` (signed URL) |
 
 PNG output (`->format('png')`) uses Imagick when it is loaded, otherwise GD. QR codes are the other way around: they use GD when it is loaded.
 
@@ -102,7 +103,9 @@ Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`). `Ba
 
 ## Signed column images
 
-`BarcodeColumn` does not embed the image. The cell `<img>` loads `filamentQrCode.barcode` (`/filament-qr-code/barcode-image`), a signed URL of the value and the draw options (type, format, bar width, height, margin, colours, text). `BarcodeDisplay` and `BarcodeEntry` still embed a data URI. One table page then sends a short URL per row instead of a base64 SVG.
+By default, `BarcodeColumn` does not embed the image. The cell `<img>` loads `filamentQrCode.barcode` (`/filament-qr-code/barcode-image`), a signed URL of the value and the draw options (type, format, bar width, height, margin, colours, text). `BarcodeDisplay` and `BarcodeEntry` still embed a data URI. One table page then sends a short URL per row instead of a base64 SVG.
+
+Call `->embedded()` to keep a data URI on that column instead of the signed route, for example when the table is exported or printed and the image must travel with the HTML. This is not Filament's `Column::inline()` layout flag (`fi-inline`). If the route cannot be signed, the column still falls back to a data URI.
 
 The route is outside the `web` middleware group, same as the QR preview route, so a preview does not start a session. Responses send `Cache-Control: private` and `X-Content-Type-Options: nosniff`. `qr-code.image_route` `ttl`, `throttle` and `strict_colors` apply to both routes, and they share one throttle bucket. A missing or expired signature is 403. A value the symbology rejects, or a query outside the limits below, is 422.
 

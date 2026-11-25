@@ -14,7 +14,13 @@
     x-cloak
 >
     <span>{{ __('filament-qr-code::ui.scanning_paused') }}</span>
-    <button type="button" @click="resume()" class="shrink-0 rounded-md bg-primary-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-primary-500">
+    <x-filament::button
+        type="button"
+        size="sm"
+        color="primary"
+        class="shrink-0"
+        @click="resume()"
+    >
         {{ __('filament-qr-code::ui.resume_scanning') }}
-    </button>
+    </x-filament::button>
 </div>

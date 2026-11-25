@@ -16,7 +16,7 @@ Run `php artisan filament:assets`: the scanner JavaScript changed.
 
 - **QR PNG backend.** QR codes use GD when the `gd` extension is loaded, and Imagick only when GD is absent. They used to prefer Imagick, so a QR PNG can look slightly different on a machine that has both. Logos and captions still prefer Imagick. 1D barcode PNGs are unchanged and still prefer Imagick. `qr-code:doctor` names GD when it is loaded.
 
-- **`BarcodeColumn` images are signed URLs.** Each cell's `<img>` now loads `/filament-qr-code/barcode-image` (route `filamentQrCode.barcode`) instead of embedding a data URI. `BarcodeDisplay` and `BarcodeEntry` still embed the image. There is no per-column opt-out. The barcode route uses the QR preview route's `qr-code.image_route` settings, so check them:
+- **`BarcodeColumn` images are signed URLs.** Each cell's `<img>` now loads `/filament-qr-code/barcode-image` (route `filamentQrCode.barcode`) instead of embedding a data URI. `BarcodeDisplay` and `BarcodeEntry` still embed the image. Call `->embedded()` on a column to keep a data URI instead. That is not Filament's `Column::inline()` layout flag (`fi-inline`). The barcode route uses the QR preview route's `qr-code.image_route` settings, so check them:
   - With a `ttl`, a table left open longer than the TTL shows broken images until the page reloads (403).
   - `throttle` now also counts barcode cells, and both routes share one bucket. A long table can hit `429` where the data URIs never did. Raise the limit or paginate.
   - A Content Security Policy with `img-src data:` but not `'self'` blocks the cells. Allow `'self'`, or the host serving the app.

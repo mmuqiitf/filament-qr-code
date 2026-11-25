@@ -1034,6 +1034,16 @@ QrCollector::make('scanned_items')
     ->itemRules(['regex:/^PRD-\d+$/']);
 ```
 
+`->normalizeWith()` is the same as on a scanner or sequence: trim (on by default), optional uppercase, and optional prefix stripping run in the browser before duplicate detection and again on the server before `itemRules()`.
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+
+QrCollector::make('scanned_items')
+    ->normalizeWith(uppercase: true, stripPrefix: [']C1', ']Q1'])
+    ->itemRules(['regex:/^SKU-/']);
+```
+
 
 ---
 
@@ -1287,6 +1297,7 @@ BarcodeColumn::make('gtin')
 | `color()` / `backgroundColor()` | `#000000` / `#ffffff` | same |
 | `showText(bool)` | `true` | `false` |
 | `downloadable(bool)` | `true` | `false` |
+| `embedded(bool)` | — (always a data URI) | `false` (signed URL) |
 
 PNG output (`->format('png')`) uses Imagick when it is loaded, otherwise GD. QR codes are the other way around: they use GD when it is loaded.
 
@@ -1335,7 +1346,9 @@ Rendered barcodes share the QR render cache (`qr-code.generator.cache_ttl`). `Ba
 
 ## Signed column images
 
-`BarcodeColumn` does not embed the image. The cell `<img>` loads `filamentQrCode.barcode` (`/filament-qr-code/barcode-image`), a signed URL of the value and the draw options (type, format, bar width, height, margin, colours, text). `BarcodeDisplay` and `BarcodeEntry` still embed a data URI. One table page then sends a short URL per row instead of a base64 SVG.
+By default, `BarcodeColumn` does not embed the image. The cell `<img>` loads `filamentQrCode.barcode` (`/filament-qr-code/barcode-image`), a signed URL of the value and the draw options (type, format, bar width, height, margin, colours, text). `BarcodeDisplay` and `BarcodeEntry` still embed a data URI. One table page then sends a short URL per row instead of a base64 SVG.
+
+Call `->embedded()` to keep a data URI on that column instead of the signed route, for example when the table is exported or printed and the image must travel with the HTML. This is not Filament's `Column::inline()` layout flag (`fi-inline`). If the route cannot be signed, the column still falls back to a data URI.
 
 The route is outside the `web` middleware group, same as the QR preview route, so a preview does not start a session. Responses send `Cache-Control: private` and `X-Content-Type-Options: nosniff`. `qr-code.image_route` `ttl`, `throttle` and `strict_colors` apply to both routes, and they share one throttle bucket. A missing or expired signature is 403. A value the symbology rejects, or a query outside the limits below, is 422.
 
@@ -1637,6 +1650,7 @@ QrScanner::make('sku')
 - `normalizeWith(trim: true, uppercase: false, stripPrefix: ...)` presets run in the browser too, so duplicate detection and step matching see the cleaned code. They run trim first, then strip the first matching prefix, then uppercase.
 - `normalizeUsing()` runs on the server after the presets, before rules, lookup, closures and stages.
 - On sequences, `normalizeWith()` applies to every step. Then `normalizeStepUsing()` runs, then the step's own `ScanStep::normalizeUsing(fn (string $code, array $values) => ...)`.
+- On collectors, `normalizeWith()` is the same preset API. It runs in the browser before duplicate detection and again on the server before `itemRules()`. `normalizeUsing()` is still a scanner and sequence API.
 
 ## Custom check stages: `pipe()`
 
@@ -2227,7 +2241,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | scan a GS1 label into a form (GTIN, expiry, batch into fields) | `QrScanner::gs1(fill: [...], require: [...])`, or `QrHardwareScannerListener::gs1(..., store: 'label')` for a gun with no scanner field | `Mmuqiitf\FilamentQrCode\Forms\Components` |
 | a GS1 date or weight/price as a usable value | `ElementString::date()` (`CarbonImmutable`) / `ElementString::decimal()` (exact string) | `Mmuqiitf\FilamentQrCode\Gs1` |
 | draw a GS1-128 barcode | `BarcodeType::Gs1128` (`type('gs1-128')`) | `Mmuqiitf\FilamentQrCode\Enums` |
-| show a 1D barcode in a table | `BarcodeColumn` (signed `filamentQrCode.barcode` image) | `…\Tables\Columns` |
+| show a 1D barcode in a table | `BarcodeColumn` (signed `filamentQrCode.barcode` image; `->embedded()` for a data URI) | `…\Tables\Columns` |
 | check a GTIN, SSCC, GLN or EAN check digit | `CheckDigit` / `ValidCheckDigit` | `…\Gs1`, `…\Validation` |
 | a Wi-Fi, vCard, mailto, SMS or geo payload | `QrPayload` | `Mmuqiitf\FilamentQrCode\Support` |
 
@@ -2237,7 +2251,7 @@ This guide is written for agents that build *with* the package. Agents working *
 - **Set `->formats([...])`** whenever you know the symbology. It speeds up decoding and cuts false positives.
 - **Check on the server** with `lookup()`, `lookupUsing()`, `validateUsing()`, `rejectWhen()` or `pipe()`. Live scans write straight into the Livewire state, and the server checks are what reject bad codes.
 - **Scan GS1 labels with `->gs1()`**, not a hand-written `rejectWhen()` around `Gs1::parse()`. The field stores the bracketed string, `fill` keys are AIs as strings (`'01'`, `'17'`; PHP's int keys work too), mapped fields a label lacks are emptied unless `keepMissing: true`, a rejection lands in the field's error bag (no `addError()` needed), typed values are checked like scans, and checks after it (`lookupUsing()`, `rejectWhen()`) receive the bracketed string.
-- **Normalize live scans** with `normalizeWith()` / `normalizeUsing()` (or `normalizeStepUsing()` on a sequence).
+- **Normalize live scans** with `normalizeWith()` / `normalizeUsing()` (or `normalizeStepUsing()` on a sequence). `QrCollector` supports `normalizeWith()` too.
 - **Give a `QrScanSequence` a `->statePath()`** (or `->key()`), and read it on submit with `mergeSequenceState()` / `isSequenceComplete()`.
 - **Name fields exactly** in `nextField()` and `QrHardwareScannerListener::make([...])`. Dot paths like `items.0.sku` work, and `sku` never matches `parent_sku`.
 - **Add the `@source` line** for the package views to the panel theme, and run `php artisan filament:assets` after installing or updating.
@@ -3508,6 +3522,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `itemRules(Closure\|array $rules): static` | Laravel rules for one collected code. The browser asks before adding the code, and submit fails on the first code that does not pass. Calling this again replaces the rules. An empty list accepts every code. |
 | `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
+| `normalizeWith(bool $trim = true, bool $uppercase = false, array\|string\|null $stripPrefix = null): static` | Clean every scanned code in the browser (before duplicate detection and step matching) and again on the server. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
@@ -3516,7 +3531,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrCollectAction`
 
@@ -3696,13 +3711,14 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 | `color(Closure\|string $hexColor): static` | Bar and text colour as hex. |
 | `data(Closure\|string\|null $data): static` | Value to encode; a closure receives the record. Defaults to the state. |
 | `downloadable(Closure\|bool $condition = true): static` | Show a download link for the image. |
+| `embedded(Closure\|bool $condition = true): static` | Embed the barcode as a data URI instead of loading the signed filamentQrCode.barcode route. The signed URL stays the default. This is not Filament's Column::inline() layout flag (fi-inline). |
 | `format(QrFormat\|Closure\|string $format): static` | Render as SVG (default) or PNG. |
 | `height(Closure\|int $pixels): static` | Height in pixels of the bars, not counting the text line. |
 | `margin(Closure\|int\|null $modules): static` | Quiet zone on each side in modules; null uses the type's default. |
 | `showText(Closure\|bool $condition = true): static` | Show the human-readable value under the bars. |
 | `type(BarcodeType\|Closure\|string $type): static` | Symbology to encode: a BarcodeType or its value, e.g. 'ean13'. |
 
-Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`
+Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`, `isEmbedded()`
 
 ## Services and helpers
 
@@ -4081,7 +4097,7 @@ Run `php artisan filament:assets`: the scanner JavaScript changed.
 
 - **QR PNG backend.** QR codes use GD when the `gd` extension is loaded, and Imagick only when GD is absent. They used to prefer Imagick, so a QR PNG can look slightly different on a machine that has both. Logos and captions still prefer Imagick. 1D barcode PNGs are unchanged and still prefer Imagick. `qr-code:doctor` names GD when it is loaded.
 
-- **`BarcodeColumn` images are signed URLs.** Each cell's `<img>` now loads `/filament-qr-code/barcode-image` (route `filamentQrCode.barcode`) instead of embedding a data URI. `BarcodeDisplay` and `BarcodeEntry` still embed the image. There is no per-column opt-out. The barcode route uses the QR preview route's `qr-code.image_route` settings, so check them:
+- **`BarcodeColumn` images are signed URLs.** Each cell's `<img>` now loads `/filament-qr-code/barcode-image` (route `filamentQrCode.barcode`) instead of embedding a data URI. `BarcodeDisplay` and `BarcodeEntry` still embed the image. Call `->embedded()` on a column to keep a data URI instead. That is not Filament's `Column::inline()` layout flag (`fi-inline`). The barcode route uses the QR preview route's `qr-code.image_route` settings, so check them:
   - With a `ttl`, a table left open longer than the TTL shows broken images until the page reloads (403).
   - `throttle` now also counts barcode cells, and both routes share one bucket. A long table can hit `429` where the data URIs never did. Raise the limit or paginate.
   - A Content Security Policy with `img-src data:` but not `'self'` blocks the cells. Allow `'self'`, or the host serving the app.

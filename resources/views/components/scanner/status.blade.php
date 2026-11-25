@@ -12,12 +12,14 @@
         <span x-show="isPaused" class="font-medium">{{ __('filament-qr-code::ui.scanning_paused') }}</span>
     </span>
 
-    <button
+    <x-filament::button
         type="button"
+        size="sm"
+        color="primary"
+        class="shrink-0"
         x-show="isPaused"
         @click="resumeScanning()"
-        class="shrink-0 rounded-md bg-primary-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-primary-500"
     >
         {{ __('filament-qr-code::ui.resume_scanning') }}
-    </button>
+    </x-filament::button>
 </div>

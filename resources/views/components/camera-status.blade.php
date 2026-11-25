@@ -13,13 +13,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <p class="text-xs font-medium" role="alert" x-text="errorMessage"></p>
-            <button
+            <x-filament::button
                 type="button"
+                size="sm"
+                color="primary"
                 @click="{{ $retry }}"
-                class="px-3 py-1.5 text-xs font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-md"
             >
                 {{ __('filament-qr-code::ui.retry') }}
-            </button>
+            </x-filament::button>
         </div>
     </div>
 </div>

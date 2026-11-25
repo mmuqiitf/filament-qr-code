@@ -1,5 +1,6 @@
 import { qrFeedback } from './audio-feedback.js';
 import { sanitizeScannedValue } from './qr-hardware-scanner.js';
+import { normalizeCode } from './scan-pipeline.js';
 import { inputRouter } from './input-router.js';
 import { announcerMixin, formatMessage } from './announcer.js';
 import { messagesFrom } from './messages.js';
@@ -49,6 +50,7 @@ export default function qrCollectorComponent({
     autoStart = false,
     wireScanHandler = false,
     hasItemRules = false,
+    normalize = null,
     announcements = true,
     customAnnouncements = false,
     componentKey = null,
@@ -249,7 +251,7 @@ export default function qrCollectorComponent({
         },
 
         handleDetectedCode(code) {
-            const trimmed = sanitizeScannedValue(code);
+            const trimmed = normalizeCode(sanitizeScannedValue(code), normalize);
             if (!trimmed || this.isProcessing) return;
 
             if (!allowDuplicates && this.scannedSet.has(trimmed)) {

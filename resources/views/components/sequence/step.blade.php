@@ -24,14 +24,15 @@
         >
             {{ __('filament-qr-code::ui.clear') }}
         </button>
-        <button
-            x-show="isRepeating(f.key) && isStepCurrent(idx) && stepProgress(f.key) !== null"
+        <x-filament::button
             type="button"
+            size="xs"
+            color="primary"
+            x-show="isRepeating(f.key) && isStepCurrent(idx) && stepProgress(f.key) !== null"
             @click.stop="finishStep(f.key)"
-            class="rounded-md bg-primary-600 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-primary-700"
         >
             {{ __('filament-qr-code::ui.done') }}
-        </button>
+        </x-filament::button>
     </div>
 
     @include('filament-qr-code::components.sequence.step-value')

@@ -47,16 +47,17 @@
                     </div>
 
                     @if ($isDownloadable)
-                        <a
-                            href="{{ $modalUri }}"
+                        <x-filament::button
+                            tag="a"
+                            :href="$modalUri"
+                            size="sm"
+                            color="primary"
+                            icon="heroicon-o-arrow-down-tray"
+                            class="w-full"
                             download="qrcode.{{ $getModalExtension() }}"
-                            class="inline-flex items-center justify-center gap-1.5 w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold shadow-sm transition"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                            </svg>
                             {{ __('filament-qr-code::ui.download_image') }}
-                        </a>
+                        </x-filament::button>
                     @endif
                 </div>
             </div>

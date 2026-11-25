@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - CI tests PHP 8.6 on Laravel 13. `composer.json` already allows `php: ^8.2`. PHP 8.6 jobs use `--ignore-platform-req=php+`, like PHP 8.5, until dependencies declare 8.6 support. Laravel 12 is omitted from the PHP 8.6 matrix: it still uses deprecated `spl_object_hash()` and an `ArraySessionHandler` without `create_sid()`, which PHP 8.6 promotes to an error.
+- `BarcodeColumn::embedded()` opts a column out of the signed `filamentQrCode.barcode` route and embeds a data URI, matching `BarcodeDisplay` and `BarcodeEntry`. The signed URL stays the default. This is not Filament's `Column::inline()` layout flag (`fi-inline`). Signing still falls back to a data URI when the route cannot be signed.
+- `QrCollector::normalizeWith()` uses the same presets as the scanner and sequence (`trim`, `uppercase`, `stripPrefix`). They run in the browser before duplicate detection and again on the server before `itemRules()`. A collector with no presets sends no `normalize` payload.
+
+### Fixed
+
+- Primary actions (camera Retry, scanner and sequence Resume, sequence Done, and the QR column Download link) use Filament's `<x-filament::button>`, so the label contrast follows the panel palette. White text on `bg-primary-600` failed WCAG AA with Filament's default amber primary. The current-step number chip uses the same tinted primary pair as the collector badge (`bg-primary-100 text-primary-700`, and in dark mode `primary-950` / `primary-300`) instead of a solid `bg-primary-600 text-white` disc.
 
 ## [1.2.0] - 2026-11-24
 
