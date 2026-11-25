@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Route;
 use Mmuqiitf\FilamentQrCode\Console\Commands;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Http\Controllers\BarcodeImageController;
+use Mmuqiitf\FilamentQrCode\Http\Controllers\LabelSheetController;
 use Mmuqiitf\FilamentQrCode\Http\Controllers\QrImageController;
 use Mmuqiitf\FilamentQrCode\Http\Middleware\ThrottleQrImage;
 use Mmuqiitf\FilamentQrCode\Listeners\LogQrCodeScanListener;
@@ -120,6 +121,12 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
                 ->name('filamentQrCode.image');
             Route::get('filament-qr-code/barcode-image', BarcodeImageController::class)
                 ->name('filamentQrCode.barcode');
+        });
+
+        Route::middleware('web')->group(function (): void {
+            Route::get('filament-qr-code/labels/{token}', LabelSheetController::class)
+                ->where('token', '[A-Za-z0-9]+')
+                ->name('filamentQrCode.labels');
         });
     }
 

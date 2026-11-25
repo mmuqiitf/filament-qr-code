@@ -80,4 +80,10 @@ return [
     'gs1_invalid_check_digit' => 'Invalid check digit in AI (:ai)',
     'gs1_invalid_date' => 'Invalid date in AI (:ai)',
     'gs1_missing_ai' => 'Missing AI (:ai) :title',
+    'print_labels' => 'Print labels',
+    'print_labels_bulk' => 'Print labels',
+    'print_sheet' => 'Print',
+    'no_labels' => 'No labels to print',
+    'print_qr_alt' => 'QR code',
+    'print_barcode_alt' => 'Barcode',
 ];

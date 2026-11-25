@@ -2,6 +2,8 @@
 
 ## Unreleased (from 1.2.0)
 
+- **Print stylesheet.** Run `php artisan filament:assets` so the Avery-style label sheet CSS is published. If you published the `ui` translations, copy the new `print_labels`, `print_labels_bulk`, `print_sheet`, `no_labels`, `print_qr_alt` and `print_barcode_alt` keys. Existing `.filament-qr-label-sheet` / `.filament-qr-label` / `.filament-qr-no-print` markup still works.
+
 - **New barcode types.** `BarcodeType` gains `DataMatrix`, `Gs1DataMatrix`, `Pdf417` and `Pdf417Compact`. Code that covers every case with a fixed lookup breaks on them, the same way `Gs1128` did in 1.2: a `match ($type)` without `default` throws `UnhandledMatchError`, and an array keyed by `$type->value` has no `'datamatrix'`, `'gs1-datamatrix'`, `'pdf417'` or `'pdf417-compact'` entry. Add the cases, or skip the new ones with `array_filter()`.
 
 ## From 1.1.2 to 1.2.0

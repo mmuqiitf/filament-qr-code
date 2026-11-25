@@ -162,13 +162,15 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | Two fields, hand focus from one to the next         | [`QrScanner::nextField()`](docs/scanning.md#sequential-field-scanning-nextfield)                                                                                                                                              | A sequence is overkill without a shared checklist.                                 |
 | Many scans into one list (stocktake, receiving)     | [`QrCollector` / `QrCollectAction`](docs/collecting.md#batch-collector-scanning-qrcollector-qrcollectaction)                                                                                                                     | Sequences map one scan to one field; collectors append.                            |
 | Show a QR (form, table, infolist, download)         | [`QrCodeDisplay`](docs/generating.md#in-form-schemas) / [`QrColumn`](docs/generating.md#in-table-columns) / [`QrEntry`](docs/generating.md#in-infolists) / [`DownloadQrAction`](docs/generating.md#as-a-download-action) | Scanner components capture; these only render.                                     |
-| Many QRs out at once (labels, handover)             | [`DownloadQrBulkAction`](docs/generating.md#as-a-bulk-zip-export) + print sheet                                                                                                                                          | Single downloads don't scale past a handful of rows.                               |
+| Many QRs out at once as files                       | [`DownloadQrBulkAction`](docs/generating.md#as-a-bulk-zip-export)                                                                                                                                                        | Single downloads don't scale past a handful of rows.                               |
+| Print shelf labels from table rows                  | [`PrintLabelsAction` / `PrintLabelsBulkAction`](docs/printing.md)                                                                                                                                                      | ZIP export is for files; these open an Avery-style HTML print sheet (QR + barcode). |
 
 ### Next steps
 
 - **Scanning**: [QR Scanner Field](docs/scanning.md#qr-scanner-field-qrscanner), [Station Listener](docs/scanning.md#station-listener-qrhardwarescannerlistener) for hands-free guns, [Scan Sequence Container](docs/scanning.md#scan-sequence-container-qrscansequence), [server-side checks](docs/scanning.md#server-side-checks) and the [cashier POS tutorial](docs/scanning.md#tutorial-cashier-pos-with-a-handheld-scanner).
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
+- **Label printing**: [printable HTML sheets, Avery-style layouts, Digital Link and 2D barcodes](docs/printing.md), and a [dompdf recipe](docs/recipes/print-pdf.md).
 - **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128, Data Matrix, GS1 DataMatrix, PDF417 and compact PDF417](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
 - **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128` or `BarcodeType::Gs1DataMatrix`, and [scan GS1 labels](docs/gs1.md#scanning-gs1-labels) into a form with `QrScanner::gs1(fill: [...], require: [...])`, `QrCollector::gs1(require: [...])`, or `ScanStep::gs1(...)` / `QrScanSequence::gs1(...)`. [GS1 Digital Link](docs/gs1.md#digital-link) URIs parse into the same model, and `QrCodeService::digitalLink()` encodes one as a QR.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
@@ -182,6 +184,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [Scanning](docs/scanning.md) | QR Scanner Field, Station Listener, Scan Sequence Container, focus handoff, server checks, continuous mode, runtime control, POS tutorial |
 | [Batch collecting](docs/collecting.md) | continuous inventory scanning in repeaters and tables |
 | [Generating](docs/generating.md) | display components, download actions, ZIP export, facade, payloads |
+| [Label printing](docs/printing.md) | table print actions, Avery-style sheets, Digital Link and 2D barcodes on a label |
 | [Barcodes](docs/barcodes.md) | 1D barcodes: types, components, invalid values, accessibility, PHP API |
 | [GS1 element strings](docs/gs1.md) | `Gs1::parse()` and `Gs1::build()` for application identifiers, scanning GS1 labels with `->gs1()` on the scanner, collector and sequence, and [Digital Link](docs/gs1.md#digital-link) URIs |
 | [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, auditing, macros, styling, render hooks, views |
@@ -191,7 +194,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [API map](docs/api.md) | every public class, method, enum and config key (generated) |
 | [FAQ](docs/faq.md) | iOS torch, secure context, offline use, guns, multiple panels |
 | [Upgrade guide](UPGRADE.md) | breaking changes between versions |
-| Recipes | [POS checkout](docs/recipes/pos.md) · [Goods receiving](docs/recipes/warehouse.md) · [GS1 receiving](docs/recipes/gs1-receiving.md) · [Work-order station](docs/recipes/manufacturing.md) · [Label generator page](docs/recipes/generator-page.md) · [Custom inputs](docs/recipes/custom-input.md) · [Styling](docs/recipes/styling.md) · [ZXing decoder](docs/recipes/zxing-decoder.md). Each one runs in the [example app](https://github.com/mmuqiitf/filament-qr-code-example). |
+| Recipes | [POS checkout](docs/recipes/pos.md) · [Goods receiving](docs/recipes/warehouse.md) · [GS1 receiving](docs/recipes/gs1-receiving.md) · [Work-order station](docs/recipes/manufacturing.md) · [Label generator page](docs/recipes/generator-page.md) · [Print to PDF](docs/recipes/print-pdf.md) · [Custom inputs](docs/recipes/custom-input.md) · [Styling](docs/recipes/styling.md) · [ZXing decoder](docs/recipes/zxing-decoder.md). Each one runs in the [example app](https://github.com/mmuqiitf/filament-qr-code-example). |
 
 ### For AI agents and LLMs
 
@@ -1171,7 +1174,7 @@ $table->bulkActions([
 ]);
 ```
 
-Rows without data are skipped; the archive downloads as one ZIP (needs the PHP `zip` extension). For printed shelf labels, wrap any QR images in `.filament-qr-label-sheet` / `.filament-qr-label` — the print stylesheet hides camera UI and tiles three labels per row.
+Rows without data are skipped; the archive downloads as one ZIP (needs the PHP `zip` extension). For printed shelf labels from a table, use [`PrintLabelsAction` / `PrintLabelsBulkAction`](printing.md). The CSS classes `.filament-qr-label-sheet` / `.filament-qr-label` still tile a hand-built page three labels per row and hide camera UI in print.
 
 To test the export or reuse the renders elsewhere, `recordsToFiles(Collection $records): array` returns the same files without zipping: file name with extension => raw image bytes.
 
@@ -1242,6 +1245,90 @@ QrPayload::mailto('ops@example.com', 'Stock alert', '...');   // mailto with sub
 QrPayload::sms('+621234567', 'Arrived');                     // SMSTO
 QrPayload::geo(-6.2, 106.8, 'Warehouse 7');                   // geo with query
 ```
+
+
+---
+
+<!-- file: docs/printing.md -->
+
+# Label printing
+
+Print a grid of labels from a Filament table with `PrintLabelsAction` (one row) or `PrintLabelsBulkAction` (the selected rows). The package renders HTML and a CSS print stylesheet. There is no required PDF library; a [dompdf recipe](recipes/print-pdf.md) shows how to turn the same HTML into a PDF if you need a file.
+
+Each label can carry a QR code, a barcode, or both. The QR can be a GS1 Digital Link URI; the barcode can be any [supported type](barcodes.md), including Data Matrix, GS1 DataMatrix and PDF417.
+
+Run `php artisan filament:assets` after upgrading so the print stylesheet is published.
+
+## Table actions
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
+use Mmuqiitf\FilamentQrCode\Printing\LabelSheet;
+use Mmuqiitf\FilamentQrCode\Tables\Actions\PrintLabelsAction;
+use Mmuqiitf\FilamentQrCode\Tables\Actions\PrintLabelsBulkAction;
+
+$table
+    ->recordActions([
+        PrintLabelsAction::make()
+            ->sheet(LabelSheet::avery5160())
+            ->digitalLink(fn ($record) => ['01' => $record->gtin, '10' => $record->lot])
+            ->barcodeData(fn ($record) => $record->element_string, BarcodeType::Gs1DataMatrix)
+            ->heading(fn ($record) => $record->sku)
+            ->caption(fn ($record) => $record->name),
+    ])
+    ->toolbarActions([
+        PrintLabelsBulkAction::make()
+            ->sheet(LabelSheet::avery5160())
+            ->digitalLink(fn ($record) => ['01' => $record->gtin, '10' => $record->lot])
+            ->barcodeData(fn ($record) => $record->element_string, BarcodeType::Gs1DataMatrix)
+            ->heading(fn ($record) => $record->sku)
+            ->caption(fn ($record) => $record->name)
+            ->copies(1)
+            ->offset(0),
+    ]);
+```
+
+The action opens a print-ready page in a new tab. Use the browser Print dialog (or the Print button on that page) and choose the matching paper size (US Letter for Avery 5160 / 5163, A4 for L7160).
+
+Rows with no QR or barcode data are skipped. If every selected row is empty, a warning notification is shown and no tab opens.
+
+If you do not call `digitalLink()` or `qrData()`, the QR payload is taken from the record's `qr_code`, `code` or `sku` attribute, matching `DownloadQrAction`. `barcodeData()` is only added when you set it.
+
+## Sheets
+
+| Preset | Paper | Layout | Label size |
+| --- | --- | --- | --- |
+| `LabelSheet::avery5160()` (the action default) | US Letter | 3 × 10 | 2.625 in × 1 in |
+| `LabelSheet::avery5163()` | US Letter | 2 × 5 | 4 in × 2 in |
+| `LabelSheet::l7160()` | A4 | 3 × 7 | 63.5 mm × 38.1 mm |
+| `LabelSheet::threeAcross()` | any | flowing 3 columns | auto, same grid as the older `.filament-qr-label-sheet` CSS |
+
+A custom sheet is `LabelSheet::make(columns: 2, rows: 4, labelWidth: '80mm', labelHeight: '40mm', pageSize: 'A4', marginTop: '10mm', ...)`. Dimensions are CSS lengths.
+
+`->offset(3)` skips the first three cells on the first page, so a partly used Avery sheet can be finished. `->copies(2)` prints each record twice.
+
+## Per-record layout
+
+`labelUsing()` replaces the default QR / barcode / caption builders when a record needs a one-off layout:
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
+use Mmuqiitf\FilamentQrCode\Printing\Label;
+use Mmuqiitf\FilamentQrCode\Tables\Actions\PrintLabelsAction;
+
+PrintLabelsAction::make()
+    ->labelUsing(fn ($record) => Label::make()
+        ->digitalLink(['01' => $record->gtin, '10' => $record->lot])
+        ->barcode($record->gtin, BarcodeType::DataMatrix)
+        ->heading($record->sku)
+        ->caption($record->name));
+```
+
+You can also build HTML yourself with `LabelSheetRenderer::make($sheet)->toHtml($labels)` or `toDocument($labels)` (a complete page with the print CSS inlined). The print route keeps that document in the cache for 30 minutes behind an unguessable token.
+
+## Hand-built pages
+
+The CSS classes `.filament-qr-label-sheet`, `.filament-qr-label` and `.filament-qr-no-print` still work on a custom Filament page: in print, camera UI is hidden and a sheet without `data-fq-sheet` tiles three labels per row. See the [label generator recipe](recipes/generator-page.md).
 
 
 ---
@@ -1851,7 +1938,7 @@ This creates `app/Filament/Forms/Components/{Name}.php` with a `setUp()` stub. I
 
 ## Print sheets
 
-Wrap QR images in `.filament-qr-label-sheet` / `.filament-qr-label` for a three-per-row shelf-label print sheet (the camera UI hides itself in print). Generator look (`size()`, `margin()`, `color()`, `backgroundColor()`, `errorCorrection()`, `caption()`, `withText()`, `logo()`) is in [generating.md](generating.md#qr-generator-components); `withText()` / `logo()` force PNG output.
+For table-driven Avery-style sheets (QR + barcode, Digital Link, presets), see [Label printing](printing.md). The CSS classes `.filament-qr-label-sheet` / `.filament-qr-label` still layout a hand-built three-per-row sheet, and `.filament-qr-no-print` plus the camera UI hide themselves in print. Generator look (`size()`, `margin()`, `color()`, `backgroundColor()`, `errorCorrection()`, `caption()`, `withText()`, `logo()`) is in [generating.md](generating.md#qr-generator-components); `withText()` / `logo()` force PNG output.
 
 ## Styling
 
@@ -2038,7 +2125,7 @@ With `audit.enabled`, the package's own `Listeners\LogQrCodeScanListener` logs e
 
 > Back to [README](../README.md) · [Scanning](scanning.md) · [Batch collecting](collecting.md) · [Generating](generating.md) · [Customizing](customizing.md)
 
-Recipes: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/warehouse.md) · [Work-order station](recipes/manufacturing.md) · [Label generator page](recipes/generator-page.md) · [Custom inputs](recipes/custom-input.md) · [Styling](recipes/styling.md). Upgrading from an earlier release: [UPGRADE.md](../UPGRADE.md).
+Recipes: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/warehouse.md) · [Work-order station](recipes/manufacturing.md) · [Label generator page](recipes/generator-page.md) · [Print to PDF](recipes/print-pdf.md) · [Custom inputs](recipes/custom-input.md) · [Styling](recipes/styling.md). Upgrading from an earlier release: [UPGRADE.md](../UPGRADE.md). Label printing: [printing.md](printing.md).
 
 Configuration, browser events and translations. How-to material lives in [customizing.md](customizing.md) and [extending.md](extending.md); every public method is in the [API map](api.md).
 
@@ -2309,6 +2396,7 @@ This guide is written for agents that build *with* the package. Agents working *
 | many scans appended to one list (stocktake, receiving) | Batch Collector Scanning: `QrCollector` (form) or `QrCollectAction` (table/repeater action) | `…\Forms\Components`, `…\Tables\Actions` |
 | show a QR in a form / table / infolist | `QrCodeDisplay` / `QrColumn` / `QrEntry` | `…\Forms\Components`, `…\Tables\Columns`, `…\Infolists\Components` |
 | download one QR / many as a ZIP | `DownloadQrAction` / `DownloadQrBulkAction` | `Mmuqiitf\FilamentQrCode\Tables\Actions` |
+| print shelf labels from table rows | `PrintLabelsAction` / `PrintLabelsBulkAction` with `LabelSheet` (Avery presets, Digital Link QR, 2D barcodes) | `…\Tables\Actions`, `…\Printing` |
 | generate an SVG/PNG in PHP | `FilamentQrCode` facade or `QrCodeService` | `…\Facades`, `…\Services` |
 | read or write GS1 application identifiers | `Gs1::parse()` / `Gs1::build()`; Digital Link URIs with `DigitalLink::parse()` / `DigitalLink::build()` or `FilamentQrCode::make()->digitalLink()` | `Mmuqiitf\FilamentQrCode\Gs1` |
 | scan a GS1 label into a form (GTIN, expiry, batch into fields) | `QrScanner::gs1(fill: [...], require: [...])`, or `QrHardwareScannerListener::gs1(..., store: 'label')` for a gun with no scanner field | `Mmuqiitf\FilamentQrCode\Forms\Components` |
@@ -2452,7 +2540,7 @@ $dataUri = FilamentQrCode::make()
 
 - Every public method: [api.md](api.md). Every config key: [reference.md](reference.md#configuration).
 - Browser and Laravel events: [events.md](events.md). Extension seams: [extending.md](extending.md).
-- Worked flows: [recipes](recipes/pos.md) (POS, goods receiving, [GS1 receiving](recipes/gs1-receiving.md), work-order station, label page, custom inputs, styling, ZXing decoder). GS1 parse and scan rules: [gs1.md](gs1.md).
+- Worked flows: [recipes](recipes/pos.md) (POS, goods receiving, [GS1 receiving](recipes/gs1-receiving.md), work-order station, label page, [print to PDF](recipes/print-pdf.md), custom inputs, styling, ZXing decoder). GS1 parse and scan rules: [gs1.md](gs1.md). Label printing: [printing.md](printing.md).
 
 
 ---
@@ -2633,7 +2721,7 @@ protected function validColor(): string
 <x-filament::button class="filament-qr-no-print" x-on:click="window.print()">Print</x-filament::button>
 ```
 
-The package's print stylesheet lays out `.filament-qr-label-sheet` / `.filament-qr-label` as a grid and hides `.filament-qr-no-print` when printing.
+The package's print stylesheet lays out `.filament-qr-label-sheet` / `.filament-qr-label` as a grid and hides `.filament-qr-no-print` when printing. For table-driven Avery sheets, QR + barcode labels, and a PDF recipe, see [Label printing](../printing.md).
 
 ## Notes
 
@@ -3085,6 +3173,34 @@ From PHP, `$this->dispatch('qr-scanner-pause', field: 'data.scan')` does the sam
 - **Fast bursts**: one scan is queued while the previous one is checked; more fire `qr-scan-dropped`.
 
 Defaults for all of this live in `config/qr-code.php` under `scan.continuous`.
+
+
+---
+
+<!-- file: docs/recipes/print-pdf.md -->
+
+# Render a label sheet to PDF
+
+The package prints with HTML and CSS. It does not depend on a PDF library. If you need a downloadable PDF, render the same HTML the print page uses with [dompdf](https://github.com/dompdf/dompdf) (directly, or via [barryvdh/laravel-dompdf](https://github.com/barryvdh/laravel-dompdf)).
+
+Install one of those packages in the host app. Then rasterize the symbols as PNG — dompdf does not paint SVG reliably — and pass the document HTML in:
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
+use Mmuqiitf\FilamentQrCode\Printing\Label;
+use Mmuqiitf\FilamentQrCode\Printing\LabelSheet;
+use Mmuqiitf\FilamentQrCode\Printing\LabelSheetRenderer;
+
+$labels = [
+    Label::make()->qr('SKU-1')->caption('Widget'),
+];
+
+$html = LabelSheetRenderer::make(LabelSheet::avery5160())
+    ->format(QrFormat::Png)
+    ->toDocument($labels, 'Shelf labels');
+```
+
+Feed that `$html` to your PDF engine. With `dompdf/dompdf`, disable remote fetching (`isRemoteEnabled` off — label images are already data URIs), enable the HTML5 parser, `loadHtml($html)`, set the paper to `letter` (or `a4` with `LabelSheet::l7160()`), then `render()` and `stream('labels.pdf')`. With `barryvdh/laravel-dompdf` the same HTML is loaded, given the same paper size, and downloaded as `labels.pdf`.
 
 
 ---
@@ -3797,6 +3913,102 @@ Getters (read the resolved option; used by the views): `getBarcodeData()`, `getB
 
 Getters (read the resolved option; used by the views): `getBarcodeData()`, `getBarcodeService()`, `getType()`, `isDownloadable()`, `isEmbedded()`
 
+## Label printing
+
+### `PrintLabelsAction`
+
+`Mmuqiitf\FilamentQrCode\Tables\Actions\PrintLabelsAction`
+
+| Method | Purpose |
+| --- | --- |
+| `barcodeData(Closure\|string $data, BarcodeType\|string $type = BarcodeType::Code128): static` | Value and symbology for the barcode beside the QR; a closure receives the record. |
+| `caption(Closure\|string $caption): static` | Caption under the symbols; a closure receives the record. |
+| `copies(Closure\|int $copies): static` | Print each record this many times (default 1). |
+| `digitalLink(Closure\|array $elements): static` | Encode a GS1 Digital Link URI as the QR payload. A closure receives the record. |
+| `format(QrFormat\|Closure $format): static` | Symbol format; use PNG when a PDF engine cannot paint SVG. |
+| `heading(Closure\|string $heading): static` | Heading above the symbols; a closure receives the record. |
+| `labelForRecord(mixed $record): ?Label` | One label for a record, or null when it has no QR or barcode data. |
+| `labelUsing(Closure $callback): static` | Build the label yourself; the closure receives the record and must return a Label. |
+| `labelsForRecords(iterable $records): array` | Build a label for every record that has data, repeating each one `copies` times. |
+| `offset(Closure\|int $cells): static` | Skip this many cells on the first page, for a partly used Avery sheet. |
+| `qrData(Closure\|string $data): static` | Value encoded in the QR; a closure receives the record. |
+| `sheet(LabelSheet\|Closure $sheet): static` | The Avery or custom sheet laid out in the print page. |
+| `storePrint(iterable $records): ?string` | Render the sheet, store it behind a short-lived token, and return the print URL. |
+
+Getters (read the resolved option; used by the views): `getSheet()`
+
+### `PrintLabelsBulkAction`
+
+`Mmuqiitf\FilamentQrCode\Tables\Actions\PrintLabelsBulkAction`
+
+| Method | Purpose |
+| --- | --- |
+| `barcodeData(Closure\|string $data, BarcodeType\|string $type = BarcodeType::Code128): static` | Value and symbology for the barcode beside the QR; a closure receives the record. |
+| `caption(Closure\|string $caption): static` | Caption under the symbols; a closure receives the record. |
+| `copies(Closure\|int $copies): static` | Print each record this many times (default 1). |
+| `digitalLink(Closure\|array $elements): static` | Encode a GS1 Digital Link URI as the QR payload. A closure receives the record. |
+| `format(QrFormat\|Closure $format): static` | Symbol format; use PNG when a PDF engine cannot paint SVG. |
+| `heading(Closure\|string $heading): static` | Heading above the symbols; a closure receives the record. |
+| `labelForRecord(mixed $record): ?Label` | One label for a record, or null when it has no QR or barcode data. |
+| `labelUsing(Closure $callback): static` | Build the label yourself; the closure receives the record and must return a Label. |
+| `labelsForRecords(iterable $records): array` | Build a label for every record that has data, repeating each one `copies` times. |
+| `offset(Closure\|int $cells): static` | Skip this many cells on the first page, for a partly used Avery sheet. |
+| `qrData(Closure\|string $data): static` | Value encoded in the QR; a closure receives the record. |
+| `sheet(LabelSheet\|Closure $sheet): static` | The Avery or custom sheet laid out in the print page. |
+| `storePrint(iterable $records): ?string` | Render the sheet, store it behind a short-lived token, and return the print URL. |
+
+Getters (read the resolved option; used by the views): `getSheet()`
+
+### `LabelSheet`
+
+`Mmuqiitf\FilamentQrCode\Printing\LabelSheet` — A printable label grid: Avery presets or a custom row/column layout.
+
+| Method | Purpose |
+| --- | --- |
+| `__construct(int $columns, ?int $rows, string $labelWidth, string $labelHeight, ?string $pageSize = null, string $pageWidth = '', string $pageHeight = '', string $marginTop = '0', string $marginRight = '0', string $marginBottom = '0', string $marginLeft = '0', string $columnGap = '0', string $rowGap = '0')` | Custom sheet dimensions; prefer a preset or `make()` in app code. |
+| `static avery5160(): LabelSheet` | Avery 5160 / 8160: 30 labels on US Letter, 2.625 in × 1 in. |
+| `static avery5163(): LabelSheet` | Avery 5163 / 8163: 10 labels on US Letter, 4 in × 2 in. |
+| `cssStyle(): string` | `toCssVariables()` as an inline `style` attribute value. |
+| `static l7160(): LabelSheet` | Avery L7160: 21 labels on A4, 63.5 mm × 38.1 mm. |
+| `labelsPerPage(): ?int` | Labels that fit on one page, or null for a flowing sheet. |
+| `static make(int $columns, ?int $rows, string $labelWidth, string $labelHeight, ?string $pageSize = null, string $pageWidth = '', string $pageHeight = '', string $marginTop = '0', string $marginRight = '0', string $marginBottom = '0', string $marginLeft = '0', string $columnGap = '0', string $rowGap = '0'): LabelSheet` | A custom sheet; pass CSS lengths for size, margins and gaps. |
+| `static threeAcross(): LabelSheet` | A flowing three-column sheet that matches the existing `.filament-qr-label-sheet` print grid (no fixed page size). |
+| `toCssVariables(): array` | CSS custom properties applied to the sheet element. |
+
+### `Label`
+
+`Mmuqiitf\FilamentQrCode\Printing\Label` — One cell on a label sheet: an optional QR, an optional barcode, and text.
+
+| Method | Purpose |
+| --- | --- |
+| `barcode(?string $data, BarcodeType\|string $type = BarcodeType::Code128): Label` | Draw a barcode of this symbology, including 2D types. |
+| `barcodeDataUri(?QrFormat $format = null): ?string` | Data URI for the barcode `<img>`, or null when there is no barcode. |
+| `caption(?string $text): Label` | Text under the symbols. |
+| `digitalLink(ElementString\|array $elements, ?string $domain = null): Label` | Encode an uncompressed GS1 Digital Link URI as the QR payload. |
+| `heading(?string $text): Label` | Text above the symbols. |
+| `static make(): Label` | Start a blank label. |
+| `qr(?string $data): Label` | Encode this string as a QR code. |
+| `qrDataUri(?QrFormat $format = null): ?string` | Data URI for the QR `<img>`, or null when there is no QR. |
+| `qrPayload(): ?string` | The string encoded in the QR, including a Digital Link URI. |
+| `qrSize(int $pixels): Label` | QR module size in pixels (default 80). |
+
+Getters (read the resolved option; used by the views): `getCaption()`, `getHeading()`, `isEmpty()`
+
+### `LabelSheetRenderer`
+
+`Mmuqiitf\FilamentQrCode\Printing\LabelSheetRenderer` — Turn a list of labels into paged HTML the print stylesheet and the documented PDF recipe both consume.
+
+| Method | Purpose |
+| --- | --- |
+| `__construct(LabelSheet $sheet)` | Bind this renderer to a sheet layout. |
+| `format(QrFormat $format): LabelSheetRenderer` | Rasterize symbols as PNG when the consumer cannot paint SVG (dompdf). |
+| `static make(LabelSheet $sheet): LabelSheetRenderer` | Start a renderer for this sheet. |
+| `offset(int $cells): LabelSheetRenderer` | Skip this many cells on the first page, for a partly used Avery sheet. |
+| `pages(array $labels): array` | Split labels into pages, honouring `offset` and padding the last Avery page. |
+| `printCss(): string` | The published package CSS, inlined into `toDocument()`. |
+| `toDocument(array $labels, ?string $title = null): string` | A standalone HTML document with the package print CSS inlined, suitable for a print window or a PDF engine. |
+| `toHtml(array $labels): string` | The paged sheet markup only, without a surrounding HTML document. |
+
 ## Services and helpers
 
 ### `FilamentQrCode`
@@ -4175,6 +4387,8 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 # Upgrade guide
 
 ## Unreleased (from 1.2.0)
+
+- **Print stylesheet.** Run `php artisan filament:assets` so the Avery-style label sheet CSS is published. If you published the `ui` translations, copy the new `print_labels`, `print_labels_bulk`, `print_sheet`, `no_labels`, `print_qr_alt` and `print_barcode_alt` keys. Existing `.filament-qr-label-sheet` / `.filament-qr-label` / `.filament-qr-no-print` markup still works.
 
 - **New barcode types.** `BarcodeType` gains `DataMatrix`, `Gs1DataMatrix`, `Pdf417` and `Pdf417Compact`. Code that covers every case with a fixed lookup breaks on them, the same way `Gs1128` did in 1.2: a `match ($type)` without `default` throws `UnhandledMatchError`, and an array keyed by `$type->value` has no `'datamatrix'`, `'gs1-datamatrix'`, `'pdf417'` or `'pdf417-compact'` entry. Add the cases, or skip the new ones with `array_filter()`.
 

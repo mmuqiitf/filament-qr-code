@@ -179,7 +179,7 @@ This creates `app/Filament/Forms/Components/{Name}.php` with a `setUp()` stub. I
 
 ## Print sheets
 
-Wrap QR images in `.filament-qr-label-sheet` / `.filament-qr-label` for a three-per-row shelf-label print sheet (the camera UI hides itself in print). Generator look (`size()`, `margin()`, `color()`, `backgroundColor()`, `errorCorrection()`, `caption()`, `withText()`, `logo()`) is in [generating.md](generating.md#qr-generator-components); `withText()` / `logo()` force PNG output.
+For table-driven Avery-style sheets (QR + barcode, Digital Link, presets), see [Label printing](printing.md). The CSS classes `.filament-qr-label-sheet` / `.filament-qr-label` still layout a hand-built three-per-row sheet, and `.filament-qr-no-print` plus the camera UI hide themselves in print. Generator look (`size()`, `margin()`, `color()`, `backgroundColor()`, `errorCorrection()`, `caption()`, `withText()`, `logo()`) is in [generating.md](generating.md#qr-generator-components); `withText()` / `logo()` force PNG output.
 
 ## Styling
 

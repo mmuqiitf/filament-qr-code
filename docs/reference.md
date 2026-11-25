@@ -2,7 +2,7 @@
 
 > Back to [README](../README.md) · [Scanning](scanning.md) · [Batch collecting](collecting.md) · [Generating](generating.md) · [Customizing](customizing.md)
 
-Recipes: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/warehouse.md) · [Work-order station](recipes/manufacturing.md) · [Label generator page](recipes/generator-page.md) · [Custom inputs](recipes/custom-input.md) · [Styling](recipes/styling.md). Upgrading from an earlier release: [UPGRADE.md](../UPGRADE.md).
+Recipes: [POS checkout](recipes/pos.md) · [Goods receiving](recipes/warehouse.md) · [Work-order station](recipes/manufacturing.md) · [Label generator page](recipes/generator-page.md) · [Print to PDF](recipes/print-pdf.md) · [Custom inputs](recipes/custom-input.md) · [Styling](recipes/styling.md). Upgrading from an earlier release: [UPGRADE.md](../UPGRADE.md). Label printing: [printing.md](printing.md).
 
 Configuration, browser events and translations. How-to material lives in [customizing.md](customizing.md) and [extending.md](extending.md); every public method is in the [API map](api.md).
 

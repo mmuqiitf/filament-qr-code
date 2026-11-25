@@ -87,5 +87,8 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "suggest": {
+        "dompdf/dompdf": "Render a label sheet to PDF from the same HTML the print stylesheet uses."
+    }
 }

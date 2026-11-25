@@ -118,7 +118,7 @@ $table->bulkActions([
 ]);
 ```
 
-Rows without data are skipped; the archive downloads as one ZIP (needs the PHP `zip` extension). For printed shelf labels, wrap any QR images in `.filament-qr-label-sheet` / `.filament-qr-label` — the print stylesheet hides camera UI and tiles three labels per row.
+Rows without data are skipped; the archive downloads as one ZIP (needs the PHP `zip` extension). For printed shelf labels from a table, use [`PrintLabelsAction` / `PrintLabelsBulkAction`](printing.md). The CSS classes `.filament-qr-label-sheet` / `.filament-qr-label` still tile a hand-built page three labels per row and hide camera UI in print.
 
 To test the export or reuse the renders elsewhere, `recordsToFiles(Collection $records): array` returns the same files without zipping: file name with extension => raw image bytes.
 
