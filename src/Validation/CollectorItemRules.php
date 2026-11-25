@@ -9,7 +9,8 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 
 /**
- * Submit-time check of each collected code against QrCollector::itemRules().
+ * Submit-time check of each collected code against QrCollector::itemRules()
+ * and, when enabled, QrCollector::gs1().
  *
  * @internal Not an extension point. Use QrCollector::itemRules().
  */

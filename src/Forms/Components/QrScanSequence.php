@@ -11,6 +11,7 @@ use Mmuqiitf\FilamentQrCode\Concerns\HasAnnouncements;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
+use Mmuqiitf\FilamentQrCode\Concerns\HasGs1Scan;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasOptionsSync;
 use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
@@ -27,6 +28,7 @@ class QrScanSequence extends Component implements HasValidationRules
     use HasCameraScanning;
     use HasCodeNormalization;
     use HasFeedback;
+    use HasGs1Scan;
     use HasHardwareScanner;
     use HasOptionsSync;
     use HasRenderHookScopes;
@@ -91,6 +93,22 @@ class QrScanSequence extends Component implements HasValidationRules
     public function steps(array|Closure $steps): static
     {
         $this->scanFields = $steps;
+
+        return $this;
+    }
+
+    /**
+     * Default GS1 rules for every step that does not set its own gs1().
+     * `$fill` maps AIs to sibling fields by path relative to the sequence,
+     * like `$set`. A step-level `ScanStep::gs1()` wins for that step.
+     *
+     * @param  array<int|string, string>|Closure  $fill  AI => field, e.g. `['01' => 'gtin', '17' => 'expires_at']`
+     * @param  list<int|string>|Closure  $require  AIs every scan must carry, e.g. `['01', '17']`
+     * @param  bool|Closure  $keepMissing  keep a mapped field's value when an accepted label lacks its AI (default: empty it)
+     */
+    public function gs1(array|Closure $fill = [], array|Closure $require = [], bool|Closure $keepMissing = false): static
+    {
+        $this->configureGs1($fill, $require, $keepMissing);
 
         return $this;
     }

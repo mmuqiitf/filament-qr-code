@@ -18,7 +18,9 @@ use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
 use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
 use Mmuqiitf\FilamentQrCode\Events\ScanSequenceCompleted;
+use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
 use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
+use Mmuqiitf\FilamentQrCode\Support\Gs1ScanCheck;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
 use Mmuqiitf\FilamentQrCode\Support\SequenceScanResult;
@@ -260,6 +262,10 @@ trait HasSequenceSteps
      */
     public function hasServerSequenceWork(): bool
     {
+        if ($this->isGs1()) {
+            return true;
+        }
+
         foreach ($this->getScanSteps() as $step) {
             if ($step->hasChecks() || $step->isSticky() || $step->isRepeating() || $step->getNormalizeUsing() instanceof Closure) {
                 return true;
@@ -303,7 +309,7 @@ trait HasSequenceSteps
     {
         foreach ($this->getScanSteps() as $step) {
             // Repeat steps too: submit re-reads their live count.
-            if ($step->hasChecks() || $step->isRepeating()) {
+            if ($step->hasChecks() || $step->isRepeating() || $this->gs1CheckFor($step) !== null) {
                 $rules[$this->getStepValuePath($step->getKey())][] = new SequenceStepRule($this, $step);
             }
         }
@@ -426,6 +432,7 @@ trait HasSequenceSteps
 
         $values[$step] = $result->code;
         $this->writeSequenceValues($values);
+        $this->fillGs1FieldsForStep($steps[$index], $result->code);
         $this->dispatchAcceptedStep($result, $step, $values);
 
         $nextStep = $this->findNextStep($index, $values);
@@ -583,6 +590,7 @@ trait HasSequenceSteps
 
         $values[$key] = [...$this->repeatCodes($values, $key), $result->code];
         $this->writeSequenceValues($values);
+        $this->fillGs1FieldsForStep($step, $result->code);
         $this->dispatchAcceptedStep($result, $key, $values);
 
         $limit = $this->getRepeatLimit($step, $values);
@@ -805,13 +813,74 @@ trait HasSequenceSteps
      */
     public function checkStep(ScanStep $step, string $code, ?ScanInput $source, array $values): ScanResult
     {
+        $prepared = $this->prepareStepGs1($step, $code, $source);
+
+        if ($prepared instanceof ScanResult) {
+            return $prepared;
+        }
+
         return $step->checkPipeline($this)->run(
-            $code,
+            $prepared,
             $source,
             fn (Closure $closure, array $named = [], array $typed = []): mixed => $this->evaluate($closure, $named, $typed),
             $step->getLabel(),
             ['step' => $step, 'values' => $values],
         );
+    }
+
+    /**
+     * The GS1 check for this step: the step's own gs1(), else the sequence default.
+     *
+     * @internal
+     */
+    public function gs1CheckFor(ScanStep $step): ?Gs1ScanCheck
+    {
+        if ($step->isGs1()) {
+            $fill = $this->evaluateStepGs1Value($step->getGs1Fill(), $step);
+            $require = $this->evaluateStepGs1Value($step->getGs1Require(), $step);
+
+            return Gs1ScanCheck::from(is_array($fill) ? $fill : [], is_array($require) ? $require : []);
+        }
+
+        return $this->isGs1() ? $this->getGs1ScanCheck() : null;
+    }
+
+    /**
+     * The bracketed element string, or a rejection. Unchanged when the step is not GS1.
+     */
+    protected function prepareStepGs1(ScanStep $step, string $code, ?ScanInput $source): ScanResult|string
+    {
+        $check = $this->gs1CheckFor($step);
+
+        if ($check === null) {
+            return $code;
+        }
+
+        $elements = $check->inspect($code);
+
+        return is_string($elements)
+            ? ScanResult::reject($code, $source, $elements)
+            : $elements->bracketed();
+    }
+
+    protected function fillGs1FieldsForStep(ScanStep $step, string $bracketed): void
+    {
+        $check = $this->gs1CheckFor($step);
+
+        if ($check === null || $check->fill === []) {
+            return;
+        }
+
+        $keep = $step->isGs1()
+            ? (bool) $this->evaluateStepGs1Value($step->getGs1KeepMissing(), $step)
+            : $this->shouldKeepMissingGs1Fields();
+
+        $this->fillGs1Fields(Gs1::parse($bracketed), $check, $keep);
+    }
+
+    protected function evaluateStepGs1Value(mixed $value, ScanStep $step): mixed
+    {
+        return $value instanceof Closure ? $this->evaluateStepClosure($value, $step) : $value;
     }
 
     /**

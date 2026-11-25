@@ -170,7 +170,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 - **Batch Collector Scanning**: [`QrCollector` / `QrCollectAction`](docs/collecting.md).
 - **Generating**: [display components, downloads, ZIP export and payload builders](docs/generating.md).
 - **Barcodes**: [Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128, Data Matrix, GS1 DataMatrix, PDF417 and compact PDF417](docs/barcodes.md) with `BarcodeDisplay`, `BarcodeEntry`, `BarcodeColumn` and `BarcodeService`.
-- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128` or `BarcodeType::Gs1DataMatrix`, and [scan GS1 labels](docs/gs1.md#scanning-gs1-labels) into a form with `QrScanner::gs1(fill: [...], require: [...])`. [GS1 Digital Link](docs/gs1.md#digital-link) URIs parse into the same model, and `QrCodeService::digitalLink()` encodes one as a QR.
+- **GS1 element strings**: [`Gs1::parse()` and `Gs1::build()`](docs/gs1.md) for application identifiers, with check digits and dates enforced and `date()` / `decimal()` helpers. Draw them with `BarcodeType::Gs1128` or `BarcodeType::Gs1DataMatrix`, and [scan GS1 labels](docs/gs1.md#scanning-gs1-labels) into a form with `QrScanner::gs1(fill: [...], require: [...])`, `QrCollector::gs1(require: [...])`, or `ScanStep::gs1(...)` / `QrScanSequence::gs1(...)`. [GS1 Digital Link](docs/gs1.md#digital-link) URIs parse into the same model, and `QrCodeService::digitalLink()` encodes one as a QR.
 - **Tuning**: config defaults are in [Reference](docs/reference.md#configuration), and component setters always win over them. Live-scan normalization and audit logging are in [Customizing](docs/customizing.md#normalize-live-scans).
 - **Every public method**: the generated [API map](docs/api.md).
 
@@ -183,7 +183,7 @@ The full walkthrough, with config publishing, symbologies and a first server che
 | [Batch collecting](docs/collecting.md) | continuous inventory scanning in repeaters and tables |
 | [Generating](docs/generating.md) | display components, download actions, ZIP export, facade, payloads |
 | [Barcodes](docs/barcodes.md) | 1D barcodes: types, components, invalid values, accessibility, PHP API |
-| [GS1 element strings](docs/gs1.md) | `Gs1::parse()` and `Gs1::build()` for application identifiers, scanning GS1 labels with `->gs1()`, and [Digital Link](docs/gs1.md#digital-link) URIs |
+| [GS1 element strings](docs/gs1.md) | `Gs1::parse()` and `Gs1::build()` for application identifiers, scanning GS1 labels with `->gs1()` on the scanner, collector and sequence, and [Digital Link](docs/gs1.md#digital-link) URIs |
 | [Customizing](docs/customizing.md) | custom lookups, normalization, check stages, hooks, auditing, macros, styling, render hooks, views |
 | [Extension points](docs/extending.md) | every seam in one table: PHP closures, contracts, macros, render hooks, CSS variables, JS decoder, router, events |
 | [Events](docs/events.md) | every browser event fired or listened for, and every Laravel event with its properties |
@@ -443,7 +443,7 @@ Option reference:
 - `scanFormat()` / `onScan()` — programmatic-only hooks; they do **not** run on live camera or hardware scans. Normalize live values with `normalizeUsing()` — see [Normalize live scans](customizing.md#normalize-live-scans).
 - `hardwareScanner(terminators: [...], minBarcodeLength: 2)` — burst tuning. Buffers are sanitized (STX/ETX/CR/LF stripped, mirroring `HasHardwareScanner::sanitizeScannedValue()`), IME compositions never count, and terminator-less guns flush after `scanTimeoutMs` (default 150).
 - `scanRules(['min:3'])` — submit-time validation for scanned values. `rejectWhen(fn ($state) => ..., 'message')` clears bad live scans immediately and dispatches a `qr-scan-rejected` window event (with `{ message }`) so the app can notify. Camera and gun scans are checked on the server before the field accepts them, so screen readers only hear the rejection. A typed or pasted value that matches is cleared before the field's other `afterStateUpdated()` hooks run, so those hooks do not see it.
-- `gs1(fill: ['01' => 'gtin', '17' => 'expires_at'], require: ['01', '17'])` — read scans as GS1 labels (raw, bracketed, AIM-prefixed, or an uncompressed Digital Link URI): the field stores the bracketed string, mapped AIs fill sibling fields, and an invalid label or a missing AI is rejected before any state is written. See [Scanning GS1 labels](gs1.md#scanning-gs1-labels) and [GS1 Digital Link](gs1.md#digital-link).
+- `gs1(fill: ['01' => 'gtin', '17' => 'expires_at'], require: ['01', '17'])` — read scans as GS1 labels (raw, bracketed, AIM-prefixed, or an uncompressed Digital Link URI): the field stores the bracketed string, mapped AIs fill sibling fields, and an invalid label or a missing AI is rejected before any state is written. The same helper is on `QrCollector` (`require` only; each item is a GS1 string) and on `QrScanSequence` / `ScanStep` (per-step `fill`, with a sequence-level default). See [Scanning GS1 labels](gs1.md#scanning-gs1-labels) and [GS1 Digital Link](gs1.md#digital-link).
 - `hardwareInput(scope: HardwareInputScope::Page)` — also catch wedge scans when no scan field has focus (default `Focus`: only while focused; config `hardware_scanner.default_scope`). A focused scan field always wins.
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
 - `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a _maximum_: the actual decode box scales to the viewfinder and the green reticle follows it.
@@ -1034,7 +1034,7 @@ QrCollector::make('scanned_items')
     ->itemRules(['regex:/^PRD-\d+$/']);
 ```
 
-`->normalizeWith()` is the same as on a scanner or sequence: trim (on by default), optional uppercase, and optional prefix stripping run in the browser before duplicate detection and again on the server before `itemRules()`.
+`->normalizeWith()` is the same as on a scanner or sequence: trim (on by default), optional uppercase, and optional prefix stripping run in the browser before duplicate detection and again on the server before GS1 checks and `itemRules()`.
 
 ```php
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
@@ -1043,6 +1043,8 @@ QrCollector::make('scanned_items')
     ->normalizeWith(uppercase: true, stripPrefix: [']C1', ']Q1'])
     ->itemRules(['regex:/^SKU-/']);
 ```
+
+`->gs1(require: ['01', '17'])` treats every item as a GS1 label: the list stores the normalized bracketed string, and an invalid or incomplete label is rejected before it is added. There is no `fill` — use `QrScanner` or a [sequence step](gs1.md#scanning-gs1-labels) to write AIs into sibling fields. `itemRules` run after the GS1 check and see the bracketed string. The collect action modal does not run `gs1()`. See [Scanning GS1 labels](gs1.md#scanning-gs1-labels).
 
 
 ---
@@ -1655,7 +1657,11 @@ $components = [
 
 The listener sends `qr-hardware-scanned` with `{ value, field: null, gs1: true }` on success and `qr-scan-rejected` with `{ value, field: null, source: 'hardware', message }` on rejection, and fires `QrCodeScanned` with `source` `hardware` and the AIs in `context['gs1']`. A focused `QrScanner` still wins the burst. The listener needs a component key to be called; `gs1()` sets `qrGs1Listener` when there is none, so give each GS1 listener on one page its own `->key()`.
 
-`QrCollector` and `QrScanSequence` do not have `->gs1()` yet: parse in `validateUsing()` or `onScanned()` with `Gs1::parse()` there.
+`QrCollector::gs1(require: ['01', '17'])` treats every collected item as a GS1 label: the list stores the bracketed string, and an invalid or incomplete label is rejected before it is added, with the same translated reason as the scanner. There is no `fill` — a collector is a list of labels, not a single row of fields. The collect action modal does not run `gs1()`, just as it does not run `itemRules()`: use `QrCollector`.
+
+`QrScanSequence` and `ScanStep` take the same `gs1(fill:, require:, keepMissing:)` as the scanner. Put `gs1()` on a step when each step expects a different label (a pallet SSCC, then a case GTIN). `QrScanSequence::gs1()` is the default for steps that do not set their own. The step stores the bracketed string, `fill` writes sibling fields relative to the sequence, later checks see the bracketed string, and a rejection writes nothing. Typed corrections go through the same server check.
+
+These helpers parse with `Gs1::parse()`, so an uncompressed Digital Link URI is accepted the same way.
 
 A receiving page that fills a line from one label, rejects expired stock and an unknown GTIN, then saves the line is in [Receive a GS1 label](recipes/gs1-receiving.md).
 
@@ -2318,7 +2324,7 @@ This guide is written for agents that build *with* the package. Agents working *
 - **Write out every import**, including enums (`BarcodeFormat`, `ScanMode`, …) and Filament classes (`Filament\Schemas\Schema`). Nothing is global.
 - **Set `->formats([...])`** whenever you know the symbology. It speeds up decoding and cuts false positives.
 - **Check on the server** with `lookup()`, `lookupUsing()`, `validateUsing()`, `rejectWhen()` or `pipe()`. Live scans write straight into the Livewire state, and the server checks are what reject bad codes.
-- **Scan GS1 labels with `->gs1()`**, not a hand-written `rejectWhen()` around `Gs1::parse()`. The field stores the bracketed string, `fill` keys are AIs as strings (`'01'`, `'17'`; PHP's int keys work too), mapped fields a label lacks are emptied unless `keepMissing: true`, a rejection lands in the field's error bag (no `addError()` needed), typed values are checked like scans, and checks after it (`lookupUsing()`, `rejectWhen()`) receive the bracketed string. Uncompressed Digital Link URIs are accepted the same way.
+- **Scan GS1 labels with `->gs1()`**, not a hand-written `rejectWhen()` around `Gs1::parse()`. The field stores the bracketed string, `fill` keys are AIs as strings (`'01'`, `'17'`; PHP's int keys work too), mapped fields a label lacks are emptied unless `keepMissing: true`, a rejection lands in the field's error bag (no `addError()` needed), typed values are checked like scans, and checks after it (`lookupUsing()`, `rejectWhen()`) receive the bracketed string. Uncompressed Digital Link URIs are accepted the same way. Use `QrCollector::gs1(require: [...])` for a list of labels (no `fill`) and `ScanStep::gs1(...)` or `QrScanSequence::gs1(...)` in a sequence; a step-level `gs1()` wins over the sequence default.
 - **Normalize live scans** with `normalizeWith()` / `normalizeUsing()` (or `normalizeStepUsing()` on a sequence). `QrCollector` supports `normalizeWith()` too.
 - **Give a `QrScanSequence` a `->statePath()`** (or `->key()`), and read it on submit with `mergeSequenceState()` / `isSequenceComplete()`.
 - **Name fields exactly** in `nextField()` and `QrHardwareScannerListener::make([...])`. Dot paths like `items.0.sku` work, and `sku` never matches `parent_sku`.
@@ -3511,6 +3517,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `getRepeatLimit(ScanStep $step, array $values): ?int` | Resolved repeat(n) count for a step. |
 | `getStepValuePath(string $key): string` | Where each step's value lives in Livewire state: the component's own state path when it has one, else the flat per-step path. |
 | `goToStep(string $step): void` | Move the browser to a step (page code). |
+| `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false): static` | Default GS1 rules for every step that does not set its own gs1(). `$fill` maps AIs to sibling fields by path relative to the sequence, like `$set`. A step-level `ScanStep::gs1()` wins for that step. |
 | `handleStepScan(string $step, string $code, string $source): array` | Run the server checks for one step scan; called by the sequence JS, usable from tests. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `isSequenceComplete(?array $mergedState = null): bool` | Whether every required step has a value. |
@@ -3542,7 +3549,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, `getAutomaticKey()`, `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getComponentStatePath()`, `getControlKey()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFlatStatePrefix()`, `getFps()`, `getHardwareScannerScanPayload()`, `getInvalidSequenceBehavior()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanFields()`, `getScanPayload()`, `getScanSteps()`, `getScanTimeoutMs()`, `getSequenceState()`, `getStepErrors()`, `getStepsPayload()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerSequenceWork()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isEditable()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldAutoSubmit()`, `shouldPreventFormSubmit()`, `shouldResetAfterSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, `getAutomaticKey()`, `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getComponentStatePath()`, `getControlKey()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFlatStatePrefix()`, `getFps()`, `getHardwareScannerScanPayload()`, `getInvalidSequenceBehavior()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanFields()`, `getScanPayload()`, `getScanSteps()`, `getScanTimeoutMs()`, `getSequenceState()`, `getStepErrors()`, `getStepsPayload()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerSequenceWork()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isEditable()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldAutoSubmit()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`, `shouldResetAfterSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `ScanStep`
 
@@ -3553,6 +3560,7 @@ Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, 
 | `allowDuplicates(Closure\|bool $condition = true): ScanStep` | Accept the same code more than once in a repeat step. |
 | `finishWith(Closure\|string\|null $code): ScanStep` | A scan that finishes this repeat step instead of being stored. |
 | `static fromField(string\|int $index, mixed $field): ?ScanStep` | Adapter for the legacy fields() shapes: 'key', 'key' => 'Label' and ['key' => ..., 'label' => ...]. |
+| `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false): ScanStep` | Read this step's scan as a GS1 element string. The step stores the normalized bracketed form. `$fill` maps AIs to sibling fields by path relative to the sequence, like `$set`. `$require` lists AIs every scan must carry. A label that is not valid GS1, or misses a required AI, is rejected before any state is written. |
 | `label(Closure\|string\|null $label): ScanStep` | Step label shown in the progress list. |
 | `lookup(Closure\|string $model, Closure\|string $column = 'code', ?Closure $modifyQueryUsing = null): ScanStep` | Find a model by the scanned code; the scan is rejected when none matches. |
 | `lookupUsing(?Closure $resolver, bool $fallback = false): ScanStep` | Find the step's record yourself. Replaces lookup() unless $fallback, when it runs only after the model lookup found nothing. |
@@ -3567,7 +3575,7 @@ Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, 
 | `validateUsing(ValidationRule\|Closure\|array $rules): ScanStep` | Laravel rules or a closure each scan for this step must pass. |
 | `when(?Closure $condition): ScanStep` | Make the step conditional. The sequence evaluates the closure with $values and $step; while it returns false the step is skipped, not required, and its value is dropped. |
 
-Getters (read the resolved option; used by the views): `allowsDuplicates()`, `getFinishCodeUsing()`, `getKey()`, `getLabel()`, `getNormalizeUsing()`, `getRepeatCompleteUsing()`, `getRepeatTimesUsing()`, `getWhenUsing()`, `hasChecks()`, `isOptional()`, `isRepeating()`, `isSticky()`
+Getters (read the resolved option; used by the views): `allowsDuplicates()`, `getFinishCodeUsing()`, `getKey()`, `getLabel()`, `getNormalizeUsing()`, `getRepeatCompleteUsing()`, `getRepeatTimesUsing()`, `getWhenUsing()`, `hasChecks()`, `isGs1()`, `isOptional()`, `isRepeating()`, `isSticky()`
 
 ### `QrCollector`
 
@@ -3587,6 +3595,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `distinctItems(Closure\|bool $condition = true): static` | Server-side duplicate guard to match the client-side allowDuplicates(false): identical codes fail submit-time validation. |
 | `formats(Closure\|array $formats): static` | Symbologies the camera decodes (BarcodeFormat cases or strings); filtering speeds decoding. |
 | `fps(Closure\|int $fps): static` | Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. |
+| `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false): static` | Read every collected code as a GS1 element string. Each item in the list is stored as the normalized bracketed form. An invalid label, or one that misses a required AI, is rejected before it is added, with the same translated reason as QrScanner::gs1(). |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `itemRules(Closure\|array $rules): static` | Laravel rules for one collected code. The browser asks before adding the code, and submit fails on the first code that does not pass. Calling this again replaces the rules. An empty list accepts every code. |
 | `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
@@ -3599,7 +3608,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrCollectAction`
 

@@ -344,7 +344,15 @@ export default function qrCollectorComponent({
                 return;
             }
 
-            this.acceptCode(trimmed);
+            const stored = typeof result.code === 'string' && result.code !== '' ? result.code : trimmed;
+
+            if (!allowDuplicates && this.scannedSet.has(stored)) {
+                this.releaseRejectedCode(stored, messages.duplicateMessage);
+
+                return;
+            }
+
+            this.acceptCode(stored);
         },
 
         releaseRejectedCode(trimmed, reason) {

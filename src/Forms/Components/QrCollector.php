@@ -8,10 +8,12 @@ use Closure;
 use Filament\Forms\Components\Field;
 use Filament\Support\Components\Attributes\ExposedLivewireMethod;
 use Illuminate\Support\Facades\Validator;
+use InvalidArgumentException;
 use Mmuqiitf\FilamentQrCode\Concerns\HasAnnouncements;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCameraScanning;
 use Mmuqiitf\FilamentQrCode\Concerns\HasCodeNormalization;
 use Mmuqiitf\FilamentQrCode\Concerns\HasFeedback;
+use Mmuqiitf\FilamentQrCode\Concerns\HasGs1Scan;
 use Mmuqiitf\FilamentQrCode\Concerns\HasHardwareScanner;
 use Mmuqiitf\FilamentQrCode\Concerns\HasRenderHookScopes;
 use Mmuqiitf\FilamentQrCode\Concerns\HasScanPayload;
@@ -25,6 +27,7 @@ class QrCollector extends Field
     use HasCameraScanning;
     use HasCodeNormalization;
     use HasFeedback;
+    use HasGs1Scan;
     use HasHardwareScanner;
     use HasRenderHookScopes;
     use HasScanPayload;
@@ -52,6 +55,32 @@ class QrCollector extends Field
     public function delayBetweenScans(int|Closure $ms): static
     {
         $this->delayBetweenScansMs = $ms;
+
+        return $this;
+    }
+
+    /**
+     * Read every collected code as a GS1 element string. Each item in the
+     * list is stored as the normalized bracketed form. An invalid label, or
+     * one that misses a required AI, is rejected before it is added, with
+     * the same translated reason as QrScanner::gs1().
+     *
+     * There is no `$fill`: a collector holds a list of labels, not a single
+     * row of sibling fields. Use `require` for AIs every item must carry, or
+     * QrScanner / a sequence step to write AIs into fields.
+     *
+     * @param  array<int|string, string>|Closure  $fill  must be empty
+     * @param  list<int|string>|Closure  $require  AIs every item must carry, e.g. `['01', '17']`
+     * @param  bool|Closure  $keepMissing  unused: the collector has no fill map
+     */
+    public function gs1(array|Closure $fill = [], array|Closure $require = [], bool|Closure $keepMissing = false): static
+    {
+        if (is_array($fill) && $fill !== []) {
+            throw new InvalidArgumentException('QrCollector::gs1() does not take fill: each collected item is a GS1 string in the list. Pass require: for AIs every item must carry, or use QrScanner / QrScanSequence to write AIs into sibling fields.');
+        }
+
+        $this->configureGs1($fill, $require, $keepMissing);
+        $this->registerCollectorItemRule();
 
         return $this;
     }
@@ -86,33 +115,52 @@ class QrCollector extends Field
     /**
      * Live check used by the collector. Empty rules pass.
      *
-     * @return array{passes: bool, message: ?string}
+     * @return array{passes: bool, message: ?string, code?: string}
      */
     #[ExposedLivewireMethod]
     public function checkCollectorItem(string $code): array
     {
         $code = $this->applyCodeNormalizer($code);
+
+        $this->assertCollectorGs1HasNoFill();
+
+        $normalized = $code;
+
+        if ($this->isGs1()) {
+            $elements = $this->getGs1ScanCheck()->inspect($code);
+
+            if (is_string($elements)) {
+                return ['passes' => false, 'message' => $elements];
+            }
+
+            $normalized = $elements->bracketed();
+        }
+
         $rules = $this->resolveItemRules();
 
-        if ($rules === []) {
+        if ($rules !== []) {
+            $validator = Validator::make(
+                ['code' => $normalized],
+                ['code' => $rules],
+            );
+
+            if (! $validator->passes()) {
+                $message = (string) $validator->errors()->first('code');
+
+                return [
+                    'passes' => false,
+                    'message' => $message !== '' ? $message : (string) __('filament-qr-code::ui.scan_failed'),
+                ];
+            }
+        } elseif (! $this->isGs1()) {
             return ['passes' => true, 'message' => null];
         }
 
-        $validator = Validator::make(
-            ['code' => $code],
-            ['code' => $rules],
-        );
-
-        if ($validator->passes()) {
-            return ['passes' => true, 'message' => null];
+        if ($this->isGs1()) {
+            return ['passes' => true, 'message' => null, 'code' => $normalized];
         }
 
-        $message = (string) $validator->errors()->first('code');
-
-        return [
-            'passes' => false,
-            'message' => $message !== '' ? $message : (string) __('filament-qr-code::ui.scan_failed'),
-        ];
+        return ['passes' => true, 'message' => null];
     }
 
     public function hasItemRules(): bool
@@ -138,11 +186,11 @@ class QrCollector extends Field
             'delayBetweenScansMs' => $this->getDelayBetweenScansMs(),
             // $wire proxies every name, so the browser cannot probe for the hook itself.
             'wireScanHandler' => $this->hostDefinesCollectorScanHandler(),
-            'hasItemRules' => $this->hasItemRules(),
+            'hasItemRules' => $this->collectorNeedsItemCheck(),
             ...ScanMessages::forAnnouncements(),
             ...$this->getAnnouncementsScanPayload(),
             ...$this->getAnnouncementComponentKey(),
-            ...($this->hasItemRules() ? [
+            ...($this->collectorNeedsItemCheck() ? [
                 'scanFailedMessage' => ScanMessages::scanFailed(),
                 ...$this->componentKeyPayload(),
             ] : []),
@@ -196,6 +244,22 @@ class QrCollector extends Field
         $rules = $this->evaluate($this->itemRules);
 
         return is_array($rules) ? $rules : [];
+    }
+
+    protected function collectorNeedsItemCheck(): bool
+    {
+        return $this->hasItemRules() || $this->isGs1();
+    }
+
+    protected function assertCollectorGs1HasNoFill(): void
+    {
+        if (! $this->isGs1()) {
+            return;
+        }
+
+        if ($this->getGs1ScanCheck()->fill !== []) {
+            throw new InvalidArgumentException('QrCollector::gs1() does not take fill: each collected item is a GS1 string in the list. Pass require: for AIs every item must carry, or use QrScanner / QrScanSequence to write AIs into sibling fields.');
+        }
     }
 
     /**
