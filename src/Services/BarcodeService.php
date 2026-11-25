@@ -16,8 +16,9 @@ use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Fluent builder for linear barcodes (Code 128, EAN-13, EAN-8, UPC-A,
- * Code 39, ITF-14, GS1-128), the barcode counterpart of QrCodeService.
+ * Fluent builder for barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39,
+ * ITF-14, GS1-128, Data Matrix, GS1 DataMatrix, PDF417 and compact
+ * PDF417), the barcode counterpart of QrCodeService.
  */
 class BarcodeService
 {
@@ -35,7 +36,7 @@ class BarcodeService
 
     protected string $backgroundColor = '#ffffff';
 
-    protected bool $showText = true;
+    protected ?bool $showText = null;
 
     protected int $fontSize = 14;
 
@@ -69,7 +70,7 @@ class BarcodeService
         return $this;
     }
 
-    /** Width in pixels of the narrowest bar (one module). */
+    /** Width in pixels of the narrowest bar (one module). For 2D types this is the module size. */
     public function barWidth(int $pixels): self
     {
         $this->barWidth = max(1, $pixels);
@@ -77,7 +78,7 @@ class BarcodeService
         return $this;
     }
 
-    /** Bar height in pixels, not counting the text line. */
+    /** Bar height in pixels, not counting the text line. Ignored for 2D types, which size themselves from barWidth() and the symbol rows. */
     public function height(int $pixels): self
     {
         $this->height = max(10, $pixels);
@@ -85,7 +86,7 @@ class BarcodeService
         return $this;
     }
 
-    /** Quiet zone in modules on each side; null uses the type default (10, or 0 for ITF-14). */
+    /** Quiet zone in modules; null uses the type default. 2D types apply it on all four sides. */
     public function margin(?int $modules): self
     {
         $this->margin = $modules === null ? null : max(0, $modules);
@@ -109,7 +110,7 @@ class BarcodeService
         return $this;
     }
 
-    /** Print the human-readable value under the bars (on by default). */
+    /** Print the human-readable value under the symbol. On by default for 1D types, off for 2D. */
     public function showText(bool $condition = true): self
     {
         $this->showText = $condition;
@@ -236,7 +237,7 @@ class BarcodeService
             margin: $this->margin ?? $this->type->getDefaultMargin(),
             foregroundColor: $this->foregroundColor,
             backgroundColor: $this->backgroundColor,
-            showText: $this->showText,
+            showText: $this->showText ?? $this->type->showsTextByDefault(),
             fontSize: $this->fontSize,
             fontPath: $this->fontPath,
         );

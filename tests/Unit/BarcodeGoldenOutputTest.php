@@ -10,7 +10,7 @@ use Mmuqiitf\FilamentQrCode\Services\BarcodeService;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
 
 /*
- * Golden-output tests for the 1.1 barcodes. Every fixture was checked with a
+ * Golden-output tests for the barcode generator. Every fixture was checked with a
  * barcode scanner library (zxing-cpp) when it was first written.
  *
  * SVG is compared byte for byte. PNG bars are axis-aligned rectangles with no
@@ -41,6 +41,10 @@ function barcodeGoldenValues(): array
         'code39' => [BarcodeType::Code39, 'HELLO-1'],
         'itf14' => [BarcodeType::Itf14, '00012345678905'],
         'gs1128' => [BarcodeType::Gs1128, '(01)09521101530001(17)251231(10)LOT-1'],
+        'datamatrix' => [BarcodeType::DataMatrix, 'HELLO-DM'],
+        'gs1-datamatrix' => [BarcodeType::Gs1DataMatrix, '(01)09521101530001(17)251231(10)LOT-1'],
+        'pdf417' => [BarcodeType::Pdf417, 'PDF417-HELLO'],
+        'pdf417-compact' => [BarcodeType::Pdf417Compact, 'PDF417-HELLO'],
     ];
 }
 
@@ -103,7 +107,7 @@ it('keeps the barcode SVG output byte for byte', function (string $case) {
 
     expect($fixture)->toBeFile()
         ->and($svg)->toBe(file_get_contents($fixture));
-})->with(array_keys(barcodeGoldenSvgCases()));
+})->with(fn () => array_keys(barcodeGoldenSvgCases()));
 
 it('keeps the barcode PNG bars identical on GD and Imagick', function (string $typeKey, bool $imagick) {
     if ($imagick && ! extension_loaded('imagick')) {
@@ -132,4 +136,4 @@ it('keeps the barcode PNG bars identical on GD and Imagick', function (string $t
     }
 
     expect(barcodePngFingerprint($png))->toBe($all[$typeKey] ?? null);
-})->with(array_keys(barcodeGoldenValues()))->with(['gd' => false, 'imagick' => true]);
+})->with(fn () => array_keys(barcodeGoldenValues()))->with(['gd' => false, 'imagick' => true]);

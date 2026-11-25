@@ -79,6 +79,23 @@ it('defaults to Code 128 with text, and the column to a compact strip without te
         ->and(BarcodeColumn::make('a')->data('X')->getBarcodeService()->getRaw())->not->toContain('<text');
 });
 
+it('hides the text under a 2D symbol on display, entry and column unless showText() is set', function ($component) {
+    $component->type(BarcodeType::DataMatrix)->data('HELLO-DM');
+
+    expect($component->getBarcodeService()->getRaw())->not->toContain('<text')
+        ->and($component->showText()->getBarcodeService()->getRaw())->toContain('>HELLO-DM</text>');
+})->with('barcode components');
+
+it('returns an inline error for an invalid GS1 DataMatrix value', function ($component) {
+    $render = $component->type(BarcodeType::Gs1DataMatrix)->data('(05)1234')->getBarcodeRender();
+
+    expect($render['uri'])->toBe('')
+        ->and($render['error'])->toBe(__('filament-qr-code::ui.barcode_invalid', [
+            'type' => 'GS1 DataMatrix',
+            'reason' => 'unknown application identifier 05',
+        ]));
+})->with('barcode components');
+
 it('renders the field and entry views with alt text and an inline error', function () {
     $html = Livewire::test(BarcodeRenderComponent::class)->html();
 

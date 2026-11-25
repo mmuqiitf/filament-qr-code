@@ -45,7 +45,7 @@ final class BarcodeRenderer
         $fg = $this->hex($options->foregroundColor);
         $bg = $this->hex($options->backgroundColor);
         $width = $this->width($symbol, $options);
-        $height = $options->height + ($options->showText ? $options->fontSize + self::TEXT_GAP * 2 : 0);
+        $height = $this->barsHeight($symbol, $options) + ($options->showText ? $options->fontSize + self::TEXT_GAP * 2 : 0);
         $label = $this->escape(self::accessibleName($options, $symbol->text));
 
         $rects = '';
@@ -58,7 +58,7 @@ final class BarcodeRenderer
             $text = sprintf(
                 '<text x="%s" y="%d" text-anchor="middle" font-family="monospace" font-size="%d" fill="%s">%s</text>',
                 $this->number($width / 2),
-                $options->height + self::TEXT_GAP + $options->fontSize,
+                $this->barsHeight($symbol, $options) + self::TEXT_GAP + $options->fontSize,
                 $options->fontSize,
                 $fg,
                 $this->escape($symbol->text),
@@ -96,7 +96,7 @@ final class BarcodeRenderer
 
     private function pngWithGd(BarcodeSymbol $symbol, BarcodeRenderOptions $options): string
     {
-        $image = imagecreatetruecolor(max(1, $this->width($symbol, $options)), max(1, $options->height));
+        $image = imagecreatetruecolor(max(1, $this->width($symbol, $options)), max(1, $this->barsHeight($symbol, $options)));
         $bg = HexColor::toRgb($options->backgroundColor);
         $fg = HexColor::toRgb($options->foregroundColor);
         imagefill($image, 0, 0, (int) imagecolorallocate($image, $bg['r'], $bg['g'], $bg['b']));
@@ -125,7 +125,7 @@ final class BarcodeRenderer
         }
 
         $image = new Imagick;
-        $image->newImage(max(1, $this->width($symbol, $options)), max(1, $options->height), new ImagickPixel($this->hex($options->backgroundColor)));
+        $image->newImage(max(1, $this->width($symbol, $options)), max(1, $this->barsHeight($symbol, $options)), new ImagickPixel($this->hex($options->backgroundColor)));
         $image->setImageFormat('png');
         $image->drawImage($draw);
         $png = $image->getImageBlob();
@@ -140,19 +140,49 @@ final class BarcodeRenderer
     }
 
     /**
-     * Bars in pixels: modules scaled by the bar width horizontally and
-     * stretched to the requested height vertically.
+     * Height of the symbol in pixels, not counting the text line.
+     * 1D types use the requested height; 2D types size themselves from
+     * the module size, the row aspect and a quiet zone on all four sides.
+     */
+    private function barsHeight(BarcodeSymbol $symbol, BarcodeRenderOptions $options): int
+    {
+        if (! $options->type->isTwoDimensional()) {
+            return $options->height;
+        }
+
+        return ($symbol->rows * $options->type->rowAspect() + 2 * $options->margin) * $options->barWidth;
+    }
+
+    /**
+     * Bars in pixels. 1D types scale modules by the bar width horizontally
+     * and stretch them to the requested height. 2D types keep a square
+     * module (Data Matrix) or a 3:1 PDF417 row, with the quiet zone on
+     * every side.
      *
      * @return list<array{float, float, float, float}>
      */
     private function pixelBars(BarcodeSymbol $symbol, BarcodeRenderOptions $options): array
     {
+        $module = $options->barWidth;
+
+        if ($options->type->isTwoDimensional()) {
+            $rowHeight = $module * $options->type->rowAspect();
+            $offsetY = $options->margin * $module;
+
+            return array_map(fn (array $bar): array => [
+                (float) (($bar[0] + $options->margin) * $module),
+                (float) ($bar[1] * $rowHeight + $offsetY),
+                (float) ($bar[2] * $module),
+                (float) ($bar[3] * $rowHeight),
+            ], $symbol->bars);
+        }
+
         $rowHeight = $options->height / max(1, $symbol->rows);
 
         return array_map(fn (array $bar): array => [
-            (float) (($bar[0] + $options->margin) * $options->barWidth),
+            (float) (($bar[0] + $options->margin) * $module),
             $bar[1] * $rowHeight,
-            (float) ($bar[2] * $options->barWidth),
+            (float) ($bar[2] * $module),
             $bar[3] * $rowHeight,
         ], $symbol->bars);
     }

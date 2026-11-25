@@ -25,9 +25,23 @@ function validBarcodes(): array
     ];
 }
 
-it('covers the linear symbologies', function () {
+/** @return array<string, array{BarcodeType, string, string}> */
+function validTwoDimensionalBarcodes(): array
+{
+    return [
+        'data matrix' => [BarcodeType::DataMatrix, 'HELLO-DM', 'HELLO-DM'],
+        'gs1 datamatrix' => [BarcodeType::Gs1DataMatrix, '(01)09521101530001(17)251231(10)LOT-1', '(01)09521101530001(17)251231(10)LOT-1'],
+        'pdf417' => [BarcodeType::Pdf417, 'PDF417-HELLO', 'PDF417-HELLO'],
+        'compact pdf417' => [BarcodeType::Pdf417Compact, 'PDF417-HELLO', 'PDF417-HELLO'],
+    ];
+}
+
+it('covers the supported symbologies', function () {
     expect(array_map(fn (BarcodeType $type) => $type->getLabel(), BarcodeType::cases()))
-        ->toBe(['Code 128', 'EAN-13', 'EAN-8', 'UPC-A', 'Code 39', 'ITF-14', 'GS1-128']);
+        ->toBe([
+            'Code 128', 'EAN-13', 'EAN-8', 'UPC-A', 'Code 39', 'ITF-14', 'GS1-128',
+            'Data Matrix', 'GS1 DataMatrix', 'PDF417', 'Compact PDF417',
+        ]);
 });
 
 it('renders every type as an accessible SVG by default', function (BarcodeType $type, string $value, string $text) {
@@ -60,11 +74,96 @@ function svgHeight(string $svg): int
     return (int) $m[1];
 }
 
+function svgWidth(string $svg): int
+{
+    preg_match('/<svg[^>]* width="(\d+)"/', $svg, $m);
+
+    return (int) $m[1];
+}
+
 it('sizes the SVG from the bar width, height and quiet zone', function () {
     $svg = BarcodeService::make()->type(BarcodeType::Ean8)->barWidth(3)->height(80)->margin(5)->showText(false)->generate('96385074')->getRaw();
 
     // EAN-8 is 67 modules wide; 5-module quiet zone either side.
     expect($svg)->toContain('width="231" height="80"');
+});
+
+it('renders every 2D type as an accessible SVG with no text by default', function (BarcodeType $type, string $value, string $text) {
+    $service = BarcodeService::make()->type($type)->generate($value);
+
+    expect($service->getRaw())
+        ->toContain('<svg')
+        ->toContain('role="img"')
+        ->toContain('aria-label="'.$type->getLabel().' barcode: '.$text.'"')
+        ->toContain('<title>'.$type->getLabel().' barcode: '.$text.'</title>')
+        ->not->toContain('<text')
+        ->and($service->getText())->toBe($text);
+})->with(fn () => validTwoDimensionalBarcodes());
+
+it('draws a Data Matrix with square modules and ignores height()', function () {
+    $svg = BarcodeService::make()
+        ->type(BarcodeType::DataMatrix)
+        ->barWidth(4)
+        ->height(200)
+        ->margin(1)
+        ->generate('A')
+        ->getRaw();
+    $same = BarcodeService::make()
+        ->type(BarcodeType::DataMatrix)
+        ->barWidth(4)
+        ->height(10)
+        ->margin(1)
+        ->generate('A')
+        ->getRaw();
+
+    // Smallest ECC 200 symbol is 10x10; 1-module quiet zone on all four sides.
+    expect($svg)->toContain('width="48" height="48"')
+        ->and($svg)->toContain('width="4" height="4"')
+        ->and($same)->toBe($svg);
+});
+
+it('draws PDF417 with a 3:1 row-to-module ratio', function () {
+    $svg = BarcodeService::make()
+        ->type(BarcodeType::Pdf417)
+        ->barWidth(2)
+        ->height(200)
+        ->margin(2)
+        ->generate('A')
+        ->getRaw();
+
+    $taller = BarcodeService::make()
+        ->type(BarcodeType::Pdf417)
+        ->barWidth(2)
+        ->height(10)
+        ->margin(2)
+        ->generate('A')
+        ->getRaw();
+
+    expect($svg)->toContain('height="6"') // a 3X row at barWidth 2
+        ->and(svgHeight($svg))->toBe(svgHeight($taller))
+        ->and(svgHeight($svg))->not->toBe(svgWidth($svg));
+});
+
+it('prints a human-readable line under a 2D symbol when showText(true) is set', function () {
+    $hidden = BarcodeService::make()->type(BarcodeType::DataMatrix)->generate('HELLO');
+    $shown = BarcodeService::make()->type(BarcodeType::DataMatrix)->showText()->generate('HELLO');
+
+    expect($hidden->getRaw())->not->toContain('<text')
+        ->and($shown->getRaw())->toContain('>HELLO</text>')
+        ->and(svgHeight($shown->getRaw()))->toBeGreaterThan(svgHeight($hidden->getRaw()));
+});
+
+it('draws the same GS1 DataMatrix from bracketed data, raw scan data and a symbology prefix', function () {
+    $bracketed = '(01)09521101530001(10)LOT-1(17)251231';
+    $raw = "010952110153000110LOT-1\x1D17251231";
+
+    $fromBracketed = BarcodeService::make()->type(BarcodeType::Gs1DataMatrix)->generate($bracketed);
+    $fromRaw = BarcodeService::make()->type('gs1-datamatrix')->generate($raw);
+    $fromPrefix = BarcodeService::make()->type(BarcodeType::Gs1DataMatrix)->generate(']d2'.$raw);
+
+    expect($fromBracketed->getText())->toBe($bracketed)
+        ->and($fromRaw->getRaw())->toBe($fromBracketed->getRaw())
+        ->and($fromPrefix->getRaw())->toBe($fromBracketed->getRaw());
 });
 
 it('appends the check digit when it is left out', function (BarcodeType $type, string $value, string $text) {
@@ -105,6 +204,28 @@ it('rejects invalid values with InvalidBarcodeException', function (BarcodeType 
     'gs1-128 unknown ai' => [BarcodeType::Gs1128, '(05)1234', 'unknown application identifier'],
     'gs1-128 parentheses in a value' => [BarcodeType::Gs1128, '10A(B', 'parentheses'],
     'gs1-128 too long' => [BarcodeType::Gs1128, '(10)'.str_repeat('A', 20).'(21)'.str_repeat('B', 20).'(240)EXTRA', 'too long'],
+]);
+
+it('rejects invalid 2D values with InvalidBarcodeException', function (BarcodeType $type, string $value, string $reason) {
+    try {
+        BarcodeService::make()->type($type)->generate($value);
+    } catch (InvalidBarcodeException $e) {
+        expect($e->type)->toBe($type)
+            ->and($e->value)->toBe($value)
+            ->and($e->getMessage())->toContain($type->getLabel())
+            ->and($e->getMessage())->toContain($reason);
+
+        return;
+    }
+
+    test()->fail('No InvalidBarcodeException thrown.');
+})->with(fn () => [
+    'data matrix empty' => [BarcodeType::DataMatrix, '', 'empty'],
+    'pdf417 empty' => [BarcodeType::Pdf417, '', 'empty'],
+    'gs1 datamatrix unknown ai' => [BarcodeType::Gs1DataMatrix, '(05)1234', 'unknown application identifier'],
+    'gs1 datamatrix parentheses in a value' => [BarcodeType::Gs1DataMatrix, '10A(B', 'parentheses'],
+    'data matrix too large' => [BarcodeType::DataMatrix, str_repeat('A', 4000), 'too large'],
+    'pdf417 too large' => [BarcodeType::Pdf417, str_repeat('A', 4000), 'capacity'],
 ]);
 
 it('draws the same GS1-128 bars from bracketed data, raw scan data and a symbology prefix', function () {

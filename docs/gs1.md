@@ -2,7 +2,7 @@
 
 > Back to [README](../README.md) · [Barcodes](barcodes.md) · [Reference](reference.md)
 
-`Gs1::parse()` and `Gs1::build()` read and write a GS1 element string: the application identifiers (AIs) inside a GS1-128, GS1 DataMatrix or GS1 QR symbol. Parsing does not draw a barcode: see [Drawing GS1-128](#drawing-gs1-128). To scan GS1 labels into a form, see [Scanning GS1 labels](#scanning-gs1-labels).
+`Gs1::parse()` and `Gs1::build()` read and write a GS1 element string: the application identifiers (AIs) inside a GS1-128, GS1 DataMatrix or GS1 QR symbol. Parsing does not draw a barcode: see [Drawing GS1-128](#drawing-gs1-128) and [Drawing GS1 DataMatrix](#drawing-gs1-datamatrix). To scan GS1 labels into a form, see [Scanning GS1 labels](#scanning-gs1-labels).
 
 Length and character set follow the [GS1 Barcode Syntax Dictionary](https://ref.gs1.org/tools/gs1-barcode-syntax-resource/syntax-dictionary/) release 2026-01-27, vendored at `resources/gs1/` under the Apache License 2.0. So do [check digits](#check-digit) and [dates](#dates): both are always enforced. Unknown AIs are rejected. Country and currency codes, times and "this AI requires that AI" rules are not applied yet.
 
@@ -56,6 +56,21 @@ use Mmuqiitf\FilamentQrCode\Services\BarcodeService;
 
 $barcode = BarcodeService::make()
     ->type(BarcodeType::Gs1128)
+    ->generate('(01)09521101530001(17)251231(10)LOT-1');
+
+$barcode->getText(); // '(01)09521101530001(17)251231(10)LOT-1'
+```
+
+## Drawing GS1 DataMatrix
+
+`BarcodeType::Gs1DataMatrix` (`type('gs1-datamatrix')`) draws the same element string as a GS1 DataMatrix (FNC1 in the first position, square ECC 200). A raw scan, a `]d2` prefix and the bracketed string encode the same modules. The human-readable text is the bracketed form. There is no 48-character cap. Check digits are not added.
+
+```php
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
+use Mmuqiitf\FilamentQrCode\Services\BarcodeService;
+
+$barcode = BarcodeService::make()
+    ->type(BarcodeType::Gs1DataMatrix)
     ->generate('(01)09521101530001(17)251231(10)LOT-1');
 
 $barcode->getText(); // '(01)09521101530001(17)251231(10)LOT-1'

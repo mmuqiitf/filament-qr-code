@@ -70,7 +70,7 @@ trait HasBarcodeOptions
         return $this;
     }
 
-    /** Height in pixels of the bars, not counting the text line. */
+    /** Height in pixels of the bars, not counting the text line. Ignored for 2D types. */
     public function height(int|Closure $pixels): static
     {
         $this->barHeight = $pixels;
@@ -78,7 +78,7 @@ trait HasBarcodeOptions
         return $this;
     }
 
-    /** Quiet zone on each side in modules; null uses the type's default. */
+    /** Quiet zone in modules; null uses the type's default. 2D types apply it on all four sides. */
     public function margin(int|Closure|null $modules): static
     {
         $this->barcodeMargin = $modules;
@@ -102,7 +102,7 @@ trait HasBarcodeOptions
         return $this;
     }
 
-    /** Show the human-readable value under the bars. */
+    /** Show the human-readable value under the symbol. Defaults to on for 1D types and off for 2D. */
     public function showText(bool|Closure $condition = true): static
     {
         $this->barcodeShowText = $condition;
@@ -238,7 +238,7 @@ trait HasBarcodeOptions
 
     protected function getDefaultShowText(): bool
     {
-        return true;
+        return $this->getType()->showsTextByDefault();
     }
 
     protected function getDefaultDownloadable(): bool

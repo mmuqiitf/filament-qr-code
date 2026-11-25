@@ -2,7 +2,7 @@
 
 > Back to [README](../README.md) · [Generating QR codes](generating.md) · [Reference](reference.md)
 
-Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128) in forms, infolists and tables, or generate them in PHP. Encoding comes from [tc-lib-barcode](https://github.com/tecnickcom/tc-lib-barcode); the package draws the bars itself, so the SVG output is stable and accessible. QR codes still use [BaconQR](https://github.com/Bacon/BaconQrCode).
+Render 1D and 2D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128, Data Matrix, GS1 DataMatrix, PDF417 and compact PDF417) in forms, infolists and tables, or generate them in PHP. Encoding comes from [tc-lib-barcode](https://github.com/tecnickcom/tc-lib-barcode); the package draws the bars itself, so the SVG output is stable and accessible. QR codes still use [BaconQR](https://github.com/Bacon/BaconQrCode).
 
 ## Supported types
 
@@ -15,8 +15,14 @@ Render 1D barcodes (Code 128, EAN-13, EAN-8, UPC-A, Code 39, ITF-14, GS1-128) in
 | `Code39` | `0-9`, `A-Z`, space and `- . $ / + %` (uppercase only) | none |
 | `Itf14` | 13 or 14 digits | appended or checked; drawn with bearer bars and its own quiet zone |
 | `Gs1128` | a GS1 element string: `(01)09521101530001(10)LOT-1`, the same data with group separators, or an AIM prefix such as `]C1` | not added or checked. One symbol holds at most 48 data characters |
+| `DataMatrix` | any non-empty string that fits an ECC 200 symbol | none |
+| `Gs1DataMatrix` | a GS1 element string, as for `Gs1128`, including a `]d2` prefix | not added or checked. No 48-character cap |
+| `Pdf417` | any non-empty string that fits a PDF417 symbol | none |
+| `Pdf417Compact` | the same as `Pdf417`; omits the right row indicator (ISO truncated PDF417), for clean print environments | none |
 
-That check digit is the GS1 mod-10 digit. Calculate or validate it on its own with [`CheckDigit`](gs1.md#check-digit). GS1-128 does not append one: a GTIN you pass is encoded as given. Read and write the element string with [`Gs1`](gs1.md). Parentheses inside a value are rejected, because they delimit application identifiers.
+That check digit is the GS1 mod-10 digit. Calculate or validate it on its own with [`CheckDigit`](gs1.md#check-digit). GS1-128 and GS1 DataMatrix do not append one: a GTIN you pass is encoded as given. Read and write the element string with [`Gs1`](gs1.md). Parentheses inside a value are rejected, because they delimit application identifiers.
+
+For 2D types, `barWidth()` is the module size and `height()` is ignored: a Data Matrix stays square, and a PDF417 row is 3 modules tall (the ISO 15438 recommended minimum). The quiet zone is applied on all four sides (1 module for Data Matrix, 2 for PDF417; override with `margin()`). Human-readable text is off by default; call `showText()` to print the value under the symbol.
 
 ## Components
 
@@ -49,10 +55,10 @@ BarcodeColumn::make('gtin')
 | `type(BarcodeType\|string)` | `Code128` | `Code128` |
 | `format(QrFormat\|string)` | SVG | SVG |
 | `barWidth(int $pixels)` | 2 | 1 |
-| `height(int $pixels)` | 80 (bars only) | 32 |
-| `margin(?int $modules)` | 10, 0 for ITF-14 | same |
+| `height(int $pixels)` | 80 (bars only; ignored for 2D) | 32 (ignored for 2D) |
+| `margin(?int $modules)` | 10, 0 for ITF-14, 1 for Data Matrix, 2 for PDF417 | same |
 | `color()` / `backgroundColor()` | `#000000` / `#ffffff` | same |
-| `showText(bool)` | `true` | `false` |
+| `showText(bool)` | `true` for 1D, `false` for 2D | `false` |
 | `downloadable(bool)` | `true` | `false` |
 | `embedded(bool)` | — (always a data URI) | `false` (signed URL) |
 
