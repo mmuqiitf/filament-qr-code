@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        php: [8.2, 8.3, 8.4, 8.5]
+        php: [8.2, 8.3, 8.4, 8.5, 8.6]
         laravel: [12.*, 13.*]
         dependency-version: [prefer-lowest, prefer-stable]
         include:
@@ -25,6 +25,10 @@ jobs:
           # Laravel 13 (and Testbench 11) need PHP 8.3.
           - laravel: 13.*
             php: 8.2
+          # Laravel 12 is not PHP 8.6-ready (deprecated spl_object_hash(),
+          # and ArraySessionHandler missing create_sid() becomes an ErrorException).
+          - laravel: 12.*
+            php: 8.6
 
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }} - ${{ matrix.os }}
 
@@ -47,7 +51,8 @@ jobs:
           # composer.json pins platform php 8.2 for local installs; CI resolves for the real PHP.
           composer config --unset platform.php
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --dev --no-interaction --no-update
-          if [ "${{ matrix.php }}" = "8.5" ]; then
+          # 8.5/8.6 may not yet appear in every dependency's platform constraint.
+          if [ "${{ matrix.php }}" = "8.5" ] || [ "${{ matrix.php }}" = "8.6" ]; then
             composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction --ignore-platform-req=php+
           else
             composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction

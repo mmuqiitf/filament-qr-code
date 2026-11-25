@@ -218,6 +218,10 @@ it('submit never runs onScanned/onRejected or dispatches scan events', function 
 it('logs accepted live scans through LogQrCodeScanListener when auditing is enabled', function (): void {
     $logged = [];
     Log::listen(function (MessageLogged $message) use (&$logged): void {
+        if ($message->message !== 'filament-qr-code.scan') {
+            return;
+        }
+
         $logged[] = $message->context;
     });
     config()->set('qr-code.audit.enabled', true);
