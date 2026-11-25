@@ -69,3 +69,50 @@ QrCollector::make('scanned_items')
 ```
 
 `->gs1(require: ['01', '17'])` treats every item as a GS1 label: the list stores the normalized bracketed string, and an invalid or incomplete label is rejected before it is added. There is no `fill` — use `QrScanner` or a [sequence step](gs1.md#scanning-gs1-labels) to write AIs into sibling fields. `itemRules` run after the GS1 check and see the bracketed string. The collect action modal does not run `gs1()`. See [Scanning GS1 labels](gs1.md#scanning-gs1-labels).
+
+### Quantity tracking (`->quantity()`)
+
+Quantity tracking is opt-in and off by default (`QrCollector` stores a plain `list<string>` unless `->quantity()` is set). When enabled, rescanning an existing code increments its quantity instead of rejecting a duplicate, and operators can adjust quantities inline with `-`, `+`, or direct number entry.
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+
+QrCollector::make('items')
+    ->quantity()
+    ->normalizeWith(uppercase: true);
+```
+
+When `->quantity()` is enabled, the field state is `list<array{code: string, qty: int}>` (for example `[['code' => 'PRD-1', 'qty' => 3]]`), and submit-time validation verifies each row has a non-empty `code` and an integer `qty >= 1`.
+
+### Maximum items (`->maxItems()`)
+
+Cap how many collected entries the component accepts in both the browser and on form submit with `->maxItems(?int $max)`. Passing `0` or a negative integer throws `InvalidArgumentException`; pass `null` for unlimited.
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+
+QrCollector::make('items')
+    ->quantity()
+    ->maxItems(25);
+```
+
+In standard mode, `maxItems` caps the total number of scanned codes. In quantity mode, `maxItems` caps the number of distinct line items (`count($items)`), so operators can continue rescanning an already-listed code to increment its quantity even when the item limit is reached.
+
+### CSV import and export (`->csvImport()`, `->csvExport()`, `->csv()`)
+
+Enable CSV download and upload buttons in the collector toolbar:
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+
+QrCollector::make('items')
+    ->quantity()
+    ->maxItems(100)
+    ->csv(fileName: 'shelf-audit.csv')
+    ->itemRules(['regex:/^PRD-\d+$/']);
+```
+
+Or enable each direction individually with `->csvImport()` and `->csvExport(fileName: '...')`, and format items from PHP with `$collector->toCsv($items)`.
+
+- **Export** writes RFC 4180 CSV (`code` header in standard mode, `code,qty` header in quantity mode).
+- **Import** accepts UTF-8 BOM or plain UTF-8 CSV with an optional `code` / `qty` (or `quantity`) header, runs `normalizeWith()`, `gs1()`, `itemRules()`, duplicate rules, and `maxItems()` on every row on the server, merges quantities in quantity mode, and renders a dismissible summary listing any rejected rows with their row number and reason.

@@ -19,6 +19,10 @@ export const fallbackMessages = Object.freeze({
     rejectedAnnouncement: 'Rejected: :reason',
     scanRejectedMessage: 'This code was rejected.',
     scanFailedMessage: 'The scan could not be checked. Please try again.',
+    maxItemsMessage: 'Maximum of :max items reached.',
+    csvImportSummary: 'Imported :added row(s), :rejected rejected.',
+    csvImportSuccess: 'Imported :added row(s).',
+    csvRejectedRow: 'Row :row (:code): :reason',
 });
 
 /** The payload's messages over the fallbacks; undefined or empty values fall back. */

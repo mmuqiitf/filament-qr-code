@@ -34,7 +34,7 @@ Every event the package fires or listens for. Browser events are dispatched on `
 
 | Event | `detail` | Fired when |
 | --- | --- | --- |
-| `qr-collector-item-added` | `{ code }` | each accepted batch scan |
+| `qr-collector-item-added` | `{ code }` (or `{ code, qty }` when `->quantity()` is enabled) | each accepted batch scan |
 
 ### Hardware router (`QrHardwareScannerListener` and every wedge target)
 

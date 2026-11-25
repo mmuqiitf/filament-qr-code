@@ -3,12 +3,17 @@
     $scanPayload = $getScanPayload();
     $extraAttributes = $getExtraAttributeBag();
     $renderHookScopes = $getRenderHookScopes();
+    $hasQuantity = $hasQuantity();
+    $maxItems = $getMaxItems();
+    $csvImport = $isCsvImportEnabled();
+    $csvExport = $isCsvExportEnabled();
 @endphp
 
 <x-dynamic-component
     :component="$getFieldWrapperView()"
     :field="$field"
 >
+
     <div
         x-data="qrCollector({
             state: $wire.entangle('{{ $statePath }}'),

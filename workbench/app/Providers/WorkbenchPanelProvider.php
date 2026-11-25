@@ -18,6 +18,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Mmuqiitf\FilamentQrCode\FilamentQrCodePlugin;
 use Workbench\App\Filament\Pages\AnnounceSmoke;
 use Workbench\App\Filament\Pages\BarcodeSmoke;
+use Workbench\App\Filament\Pages\CollectorQtyCsvSmoke;
 use Workbench\App\Filament\Pages\CollectorSmoke;
 use Workbench\App\Filament\Pages\CollectSmoke;
 use Workbench\App\Filament\Pages\Gs1Smoke;
@@ -46,7 +47,7 @@ class WorkbenchPanelProvider extends PanelProvider
             ->path('workbench')
             ->topbar(false)
             ->plugin(FilamentQrCodePlugin::make())
-            ->pages([AnnounceSmoke::class, BarcodeSmoke::class, Gs1Smoke::class, ScanSmoke::class, CollectSmoke::class, CollectorSmoke::class, ModalSmoke::class, RapidCollectorSmoke::class, SequenceSmoke::class, TableSmoke::class])
+            ->pages([AnnounceSmoke::class, BarcodeSmoke::class, Gs1Smoke::class, ScanSmoke::class, CollectSmoke::class, CollectorSmoke::class, CollectorQtyCsvSmoke::class, ModalSmoke::class, RapidCollectorSmoke::class, CollectorQtyCsvSmoke::class, SequenceSmoke::class, TableSmoke::class])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

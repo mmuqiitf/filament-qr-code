@@ -1049,6 +1049,53 @@ QrCollector::make('scanned_items')
 
 `->gs1(require: ['01', '17'])` treats every item as a GS1 label: the list stores the normalized bracketed string, and an invalid or incomplete label is rejected before it is added. There is no `fill` — use `QrScanner` or a [sequence step](gs1.md#scanning-gs1-labels) to write AIs into sibling fields. `itemRules` run after the GS1 check and see the bracketed string. The collect action modal does not run `gs1()`. See [Scanning GS1 labels](gs1.md#scanning-gs1-labels).
 
+### Quantity tracking (`->quantity()`)
+
+Quantity tracking is opt-in and off by default (`QrCollector` stores a plain `list<string>` unless `->quantity()` is set). When enabled, rescanning an existing code increments its quantity instead of rejecting a duplicate, and operators can adjust quantities inline with `-`, `+`, or direct number entry.
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+
+QrCollector::make('items')
+    ->quantity()
+    ->normalizeWith(uppercase: true);
+```
+
+When `->quantity()` is enabled, the field state is `list<array{code: string, qty: int}>` (for example `[['code' => 'PRD-1', 'qty' => 3]]`), and submit-time validation verifies each row has a non-empty `code` and an integer `qty >= 1`.
+
+### Maximum items (`->maxItems()`)
+
+Cap how many collected entries the component accepts in both the browser and on form submit with `->maxItems(?int $max)`. Passing `0` or a negative integer throws `InvalidArgumentException`; pass `null` for unlimited.
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+
+QrCollector::make('items')
+    ->quantity()
+    ->maxItems(25);
+```
+
+In standard mode, `maxItems` caps the total number of scanned codes. In quantity mode, `maxItems` caps the number of distinct line items (`count($items)`), so operators can continue rescanning an already-listed code to increment its quantity even when the item limit is reached.
+
+### CSV import and export (`->csvImport()`, `->csvExport()`, `->csv()`)
+
+Enable CSV download and upload buttons in the collector toolbar:
+
+```php
+use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+
+QrCollector::make('items')
+    ->quantity()
+    ->maxItems(100)
+    ->csv(fileName: 'shelf-audit.csv')
+    ->itemRules(['regex:/^PRD-\d+$/']);
+```
+
+Or enable each direction individually with `->csvImport()` and `->csvExport(fileName: '...')`, and format items from PHP with `$collector->toCsv($items)`.
+
+- **Export** writes RFC 4180 CSV (`code` header in standard mode, `code,qty` header in quantity mode).
+- **Import** accepts UTF-8 BOM or plain UTF-8 CSV with an optional `code` / `qty` (or `quantity`) header, runs `normalizeWith()`, `gs1()`, `itemRules()`, duplicate rules, and `maxItems()` on every row on the server, merges quantities in quantity mode, and renders a dismissible summary listing any rejected rows with their row number and reason.
+
 
 ---
 
@@ -2076,7 +2123,7 @@ Every event the package fires or listens for. Browser events are dispatched on `
 
 | Event | `detail` | Fired when |
 | --- | --- | --- |
-| `qr-collector-item-added` | `{ code }` | each accepted batch scan |
+| `qr-collector-item-added` | `{ code }` (or `{ code, qty }` when `->quantity()` is enabled) | each accepted batch scan |
 
 ### Hardware router (`QrHardwareScannerListener` and every wedge target)
 
@@ -2416,7 +2463,7 @@ This guide is written for agents that build *with* the package. Agents working *
 - **Set `->formats([...])`** whenever you know the symbology. It speeds up decoding and cuts false positives.
 - **Check on the server** with `lookup()`, `lookupUsing()`, `validateUsing()`, `rejectWhen()` or `pipe()`. Live scans write straight into the Livewire state, and the server checks are what reject bad codes.
 - **Scan GS1 labels with `->gs1()`**, not a hand-written `rejectWhen()` around `Gs1::parse()`. The field stores the bracketed string, `fill` keys are AIs as strings (`'01'`, `'17'`; PHP's int keys work too), mapped fields a label lacks are emptied unless `keepMissing: true`, a rejection lands in the field's error bag (no `addError()` needed), typed values are checked like scans, and checks after it (`lookupUsing()`, `rejectWhen()`) receive the bracketed string. Uncompressed Digital Link URIs are accepted the same way. Use `QrCollector::gs1(require: [...])` for a list of labels (no `fill`) and `ScanStep::gs1(...)` or `QrScanSequence::gs1(...)` in a sequence; a step-level `gs1()` wins over the sequence default.
-- **Normalize live scans** with `normalizeWith()` / `normalizeUsing()` (or `normalizeStepUsing()` on a sequence). `QrCollector` supports `normalizeWith()` too.
+- **Normalize live scans** with `normalizeWith()` / `normalizeUsing()` (or `normalizeStepUsing()` on a sequence). `QrCollector` supports `normalizeWith()`, opt-in `->quantity()` (`list<array{code: string, qty: int}>` state), `->maxItems()`, and `->csv()` / `->csvImport()` / `->csvExport()`.
 - **Give a `QrScanSequence` a `->statePath()`** (or `->key()`), and read it on submit with `mergeSequenceState()` / `isSequenceComplete()`.
 - **Name fields exactly** in `nextField()` and `QrHardwareScannerListener::make([...])`. Dot paths like `items.0.sku` work, and `sku` never matches `parent_sku`.
 - **Add the `@source` line** for the package views to the panel theme, and run `php artisan filament:assets` after installing or updating.
@@ -3710,24 +3757,31 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `beepFrequency(Closure\|int $hertz): static` | Beep pitch in hertz (config `feedback.beep_frequency`). |
 | `cameraControls(Closure\|bool $condition = true): static` | Torch and zoom controls appear when the running camera supports them; pass false to keep the viewfinder free of them. |
 | `checkCollectorItem(string $code): array` | Live check used by the collector. Empty rules pass. |
+| `csv(Closure\|bool $import = true, Closure\|bool $export = true, Closure\|string\|null $fileName = null): static` | Enable both CSV import and CSV export on this collector. |
+| `csvExport(Closure\|bool $condition = true, Closure\|string\|null $fileName = null): static` | Enable exporting collected items as a CSV download. |
+| `csvImport(Closure\|bool $condition = true): static` | Enable importing collected items from a CSV file (respects normalizeWith(), gs1(), itemRules(), and maxItems()). |
 | `delayBetweenScans(Closure\|int $ms): static` | Pause in milliseconds before the next camera scan is accepted. |
 | `distinctItems(Closure\|bool $condition = true): static` | Server-side duplicate guard to match the client-side allowDuplicates(false): identical codes fail submit-time validation. |
 | `formats(Closure\|array $formats): static` | Symbologies the camera decodes (BarcodeFormat cases or strings); filtering speeds decoding. |
 | `fps(Closure\|int $fps): static` | Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. |
 | `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false): static` | Read every collected code as a GS1 element string. Each item in the list is stored as the normalized bracketed form. An invalid label, or one that misses a required AI, is rejected before it is added, with the same translated reason as QrScanner::gs1(). |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
+| `importCollectorCsv(string $csv, ?array $existing = null): array` | Parse and validate a CSV upload against the collector's normalizer, GS1, itemRules, duplicates, and maxItems settings. |
 | `itemRules(Closure\|array $rules): static` | Laravel rules for one collected code. The browser asks before adding the code, and submit fails on the first code that does not pass. Calling this again replaces the rules. An empty list accepts every code. |
+| `maxItems(Closure\|int\|null $max): static` | Cap how many items the collector can hold, enforced in the browser and on submit. |
 | `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `normalizeWith(bool $trim = true, bool $uppercase = false, array\|string\|null $stripPrefix = null): static` | Clean every scanned code in the browser (before duplicate detection and step matching) and again on the server. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
+| `quantity(Closure\|bool $condition = true): static` | Track a quantity per unique code so rescans increment the count instead of rejecting duplicates. |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
 | `scanTimeout(Closure\|int $milliseconds): static` | Flush window in milliseconds for guns that send no terminator; 0 disables (config `hardware_scanner.scan_timeout_ms`). |
 | `sound(Closure\|bool $condition = true): static` | Play the synthesized beep on a successful scan (config `feedback.sound`). |
+| `toCsv(iterable $items): string` | Format collected items as an RFC 4180 CSV string (includes a `qty` column in quantity mode). |
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getCsvFileName()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMaxItems()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasQuantity()`, `hasSound()`, `hasVibration()`, `isCsvExportEnabled()`, `isCsvImportEnabled()`, `isDuplicatesAllowed()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrCollectAction`
 
