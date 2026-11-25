@@ -1,6 +1,6 @@
 # Upgrade guide
 
-## Unreleased (from 1.2.0)
+## From 1.2.0 to 1.3.0
 
 - **Print stylesheet.** Run `php artisan filament:assets` so the Avery-style label sheet CSS is published. If you published the `ui` translations, copy the new `print_labels`, `print_labels_bulk`, `print_sheet`, `no_labels`, `print_qr_alt` and `print_barcode_alt` keys. Existing `.filament-qr-label-sheet` / `.filament-qr-label` / `.filament-qr-no-print` markup still works.
 
