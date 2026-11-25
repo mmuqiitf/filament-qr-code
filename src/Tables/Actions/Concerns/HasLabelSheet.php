@@ -65,9 +65,10 @@ trait HasLabelSheet
     }
 
     /**
+     * Encode a GS1 Digital Link URI as the QR payload. A closure receives the record.
+     *
      * @param  Closure|array<int|string, mixed>  $elements
      */
-    /** Encode a GS1 Digital Link URI as the QR payload. A closure receives the record. */
     public function digitalLink(Closure|array $elements): static
     {
         $this->digitalLink = $elements;

@@ -163,9 +163,10 @@ final class LabelSheet
     }
 
     /**
+     * CSS custom properties applied to the sheet element.
+     *
      * @return array<string, string>
      */
-    /** CSS custom properties applied to the sheet element. */
     public function toCssVariables(): array
     {
         $variables = [

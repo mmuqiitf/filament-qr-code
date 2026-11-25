@@ -44,9 +44,10 @@ final class LabelSheetRenderer
     }
 
     /**
+     * The paged sheet markup only, without a surrounding HTML document.
+     *
      * @param  list<Label>  $labels
      */
-    /** The paged sheet markup only, without a surrounding HTML document. */
     public function toHtml(array $labels): string
     {
         return view('filament-qr-code::print.labels', [
@@ -75,10 +76,11 @@ final class LabelSheetRenderer
     }
 
     /**
+     * Split labels into pages, honouring `offset` and padding the last Avery page.
+     *
      * @param  list<Label>  $labels
      * @return list<list<Label|null>>
      */
-    /** Split labels into pages, honouring `offset` and padding the last Avery page. */
     public function pages(array $labels): array
     {
         $cells = [];
