@@ -2,7 +2,7 @@
 
 > Back to [README](../README.md) · [Barcodes](barcodes.md) · [Reference](reference.md)
 
-`Gs1::parse()` and `Gs1::build()` read and write a GS1 element string: the application identifiers (AIs) inside a GS1-128, GS1 DataMatrix or GS1 QR symbol. Parsing does not draw a barcode: see [Drawing GS1-128](#drawing-gs1-128) and [Drawing GS1 DataMatrix](#drawing-gs1-datamatrix). To scan GS1 labels into a form, see [Scanning GS1 labels](#scanning-gs1-labels).
+`Gs1::parse()` and `Gs1::build()` read and write a GS1 element string: the application identifiers (AIs) inside a GS1-128, GS1 DataMatrix or GS1 QR symbol. `Gs1::parse()` also accepts an uncompressed [GS1 Digital Link](#digital-link) URI. Parsing does not draw a barcode: see [Drawing GS1-128](#drawing-gs1-128) and [Drawing GS1 DataMatrix](#drawing-gs1-datamatrix). To scan GS1 labels into a form, see [Scanning GS1 labels](#scanning-gs1-labels).
 
 Length and character set follow the [GS1 Barcode Syntax Dictionary](https://ref.gs1.org/tools/gs1-barcode-syntax-resource/syntax-dictionary/) release 2026-01-27, vendored at `resources/gs1/` under the Apache License 2.0. So do [check digits](#check-digit) and [dates](#dates): both are always enforced. Unknown AIs are rejected. Country and currency codes, times and "this AI requires that AI" rules are not applied yet.
 
@@ -45,6 +45,41 @@ $gs1->raw(); // "010952110153000110LOT-1\x1D17251231"
 ```
 
 Order is the order of the array. Write every key as a string. `'01'` and `'00'` keep their leading zero only as strings. PHP turns `'10'` and `'8003'` into integer keys on its own; `build()` casts those back.
+
+
+## Digital Link
+
+A [GS1 Digital Link](https://ref.gs1.org/standards/digital-link/) URI carries the same application identifiers as an element string, in a web URL. `DigitalLink::parse()` and `DigitalLink::build()` read and write the uncompressed form (path and query). URI compression and a resolver are not implemented.
+
+`Gs1::parse()` accepts an `http` or `https` Digital Link URI and returns the same `ElementString`. `Gs1::build()` still writes an element string; use `DigitalLink::build()` for a URI.
+
+```php
+use Mmuqiitf\FilamentQrCode\Facades\FilamentQrCode;
+use Mmuqiitf\FilamentQrCode\Gs1\DigitalLink;
+use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
+
+$gs1 = DigitalLink::parse('https://id.gs1.org/01/09521101530001/10/LOT-1?17=251231');
+$gs1->get('01');   // '09521101530001'
+$gs1->bracketed(); // '(01)09521101530001(10)LOT-1(17)251231'
+
+DigitalLink::build($gs1);
+// https://id.gs1.org/01/09521101530001/10/LOT-1?17=251231
+
+DigitalLink::build(['01' => '09521101530001', '10' => 'LOT-1'], 'https://brand.example/gtin');
+// https://brand.example/gtin/01/09521101530001/10/LOT-1
+
+FilamentQrCode::make()
+    ->digitalLink(['01' => '09521101530001', '17' => '251231'])
+    ->toDataUri();
+```
+
+The default domain is `https://id.gs1.org`, from `qr-code.gs1.digital_link.domain`. A per-call `$domain` wins; a trailing slash is stripped, and a path prefix is kept.
+
+**What goes in the URI.** One Digital Link primary key is required (for example AI 01, 00 or 414). Qualifiers follow the Syntax Dictionary `dlpkey` order in the path: for a GTIN, `22`, `10` and `21` in that order, or `235` instead. Other AIs the dictionary marks as Digital Link data attributes go in the query string, sorted by AI. AIs that are neither a qualifier nor a data attribute are rejected. Check digits and dates are enforced like `Gs1::parse()`. A GTIN of 8, 12 or 13 digits is padded to 14 before the check. Values are percent-encoded with `rawurlencode` (a space is `%20`). Query parameters that are not AIs, such as `linkType`, are ignored when parsing.
+
+A compressed-looking URI (an extra path segment that is not an AI) is rejected as not supported.
+
+`QrScanner::gs1()` and `QrHardwareScannerListener::gs1()` accept a Digital Link scan the same way they accept a raw element string: the field stores the bracketed form, and `fill` / `require` run on the identifiers. The stored AI order follows the URI (path, then query), so it can differ from a raw element string of the same AIs.
 
 ## Drawing GS1-128
 

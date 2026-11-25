@@ -7,6 +7,8 @@ namespace Mmuqiitf\FilamentQrCode\Services;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use Illuminate\Support\Facades\Response;
 use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
+use Mmuqiitf\FilamentQrCode\Gs1\DigitalLink;
+use Mmuqiitf\FilamentQrCode\Gs1\ElementString;
 use Mmuqiitf\FilamentQrCode\Rendering\HexColor;
 use Mmuqiitf\FilamentQrCode\Rendering\QrRenderCache;
 use Mmuqiitf\FilamentQrCode\Rendering\QrRenderer;
@@ -204,6 +206,17 @@ class QrCodeService
         $this->fileName = $fileName;
 
         return $this;
+    }
+
+    /**
+     * Encode a GS1 Digital Link URI as the QR payload, then render it.
+     * `$domain` overrides `qr-code.gs1.digital_link.domain`.
+     *
+     * @param  ElementString|array<int|string, mixed>  $elements
+     */
+    public function digitalLink(ElementString|array $elements, ?string $domain = null): self
+    {
+        return $this->generate(DigitalLink::build($elements, $domain));
     }
 
     /** Render the QR and return the raw SVG or PNG bytes. */

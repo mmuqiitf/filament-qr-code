@@ -78,9 +78,11 @@ final class SyntaxTable
         $ais = $tokens[0];
         $index = 1;
         $fixed = false;
+        $digitalLinkAttribute = false;
 
         if (isset($tokens[$index]) && self::isFlagToken($tokens[$index])) {
             $fixed = str_contains($tokens[$index], '*');
+            $digitalLinkAttribute = str_contains($tokens[$index], '?');
             $index++;
         }
 
@@ -125,6 +127,16 @@ final class SyntaxTable
             throw new RuntimeException("GS1 syntax dictionary line {$lineNumber} is marked fixed-length but the format varies.");
         }
 
+        $digitalLinkQualifiers = null;
+
+        while (isset($tokens[$index])) {
+            $token = $tokens[$index];
+            if ($token === 'dlpkey' || str_starts_with($token, 'dlpkey=')) {
+                $digitalLinkQualifiers = self::digitalLinkQualifierSequences($token);
+            }
+            $index++;
+        }
+
         $ruleFor = fn (string $ai): AiRule => new AiRule(
             $ai,
             $fixed,
@@ -133,6 +145,8 @@ final class SyntaxTable
             $components,
             $minLength,
             $maxLength,
+            $digitalLinkAttribute,
+            $digitalLinkQualifiers,
         );
 
         if (preg_match('/^(\d+)-(\d+)$/', $ais, $range) === 1) {
@@ -150,6 +164,25 @@ final class SyntaxTable
         }
 
         return [$ais => $ruleFor($ais)];
+    }
+
+    /**
+     * @return list<list<string>>
+     */
+    private static function digitalLinkQualifierSequences(string $token): array
+    {
+        if ($token === 'dlpkey') {
+            return [];
+        }
+
+        $spec = substr($token, strlen('dlpkey='));
+        $sequences = [];
+
+        foreach (explode('|', $spec) as $sequence) {
+            $sequences[] = $sequence === '' ? [] : explode(',', $sequence);
+        }
+
+        return $sequences;
     }
 
     private static function isFlagToken(string $token): bool

@@ -144,6 +144,11 @@ return FilamentQrCode::make()
     ->withText('BATCH #1024', 16, '#000000')
     ->generate('BATCH-1024')
     ->download('batch-1024'); // StreamedResponse download; stream() inlines
+
+// GS1 Digital Link QR (domain defaults to qr-code.gs1.digital_link.domain)
+return FilamentQrCode::make()
+    ->digitalLink(['01' => '09521101530001', '10' => 'LOT-1'], 'https://brand.example')
+    ->toDataUri();
 ```
 
 Rules that bite:

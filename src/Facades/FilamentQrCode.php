@@ -22,6 +22,7 @@ use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
  * @method static QrCodeService font(string $fontPath)
  * @method static QrCodeService logo(string $path, int $size = 50)
  * @method static QrCodeService fileName(string $fileName)
+ * @method static QrCodeService digitalLink(\Mmuqiitf\FilamentQrCode\Gs1\ElementString|array<int|string, mixed> $elements, ?string $domain = null)
  * @method static QrCodeService generate(string $data)
  * @method static string getRaw()
  * @method static string toDataUri()

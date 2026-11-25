@@ -150,6 +150,20 @@ it('stores the normalized bracketed string and fills mapped fields from a raw sc
     'QR AIM prefix' => [']Q30109506000134352172612311'.'0ABC'."\x1D".'3103001250'],
 ]);
 
+it('stores the normalized bracketed string and fills mapped fields from a Digital Link URI', function (): void {
+    $test = Livewire::test(ScannerGs1TestComponent::class);
+    $expected = '(01)09506000134352(10)ABC(17)261231(3103)001250';
+
+    gs1Scan($test, 'https://id.gs1.org/01/09506000134352/10/ABC?17=261231&3103=001250')
+        ->assertReturned(fn (array $result): bool => $result['passes'] === true && $result['code'] === $expected)
+        ->assertSet('data.label', $expected)
+        ->assertSet('data.gtin', GS1_GTIN)
+        ->assertSet('data.expires_at', '2026-12-31')
+        ->assertSet('data.batch', 'ABC')
+        ->assertSet('data.net_weight', '1.250')
+        ->assertSet('data.serial', null);
+});
+
 it('writes day 00 as the last day of the month', function (): void {
     $test = Livewire::test(ScannerGs1TestComponent::class);
 

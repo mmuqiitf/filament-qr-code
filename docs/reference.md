@@ -142,6 +142,12 @@ Every key of `qr-code.sequence`; each has a per-component setter that wins over 
 | `strict_colors` | `false` | require `#rrggbb` colours on the image route (default accepts `#rgb`, `#rrggbb` or bare hex); anything else gets 422 |
 | `middleware`    | `[]`    | extra middleware on both image routes, after `signed` and the throttle. Class names or aliases. The routes stay off the `web` group. Non-strings are ignored at registration; `qr-code:doctor` fails the config |
 
+### `gs1`
+
+| Key                    | Default                 | Meaning |
+| ---------------------- | ----------------------- | ------- |
+| `digital_link.domain`  | `https://id.gs1.org`    | Default domain (scheme + host, optional path prefix) for `DigitalLink::build()` and `QrCodeService::digitalLink()` when no per-call domain is given. Trailing slashes are stripped. See [GS1 Digital Link](gs1.md#digital-link) |
+
 ### `audit`
 
 | Key       | Default | Meaning |
