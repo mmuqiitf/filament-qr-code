@@ -146,6 +146,28 @@ it('stays quiet about the station listener when fallback is off and the image ro
         ->doesntExpectOutputToContain('[WARN] Image route has no ttl or throttle');
 });
 
+it('warns when the configured scan region cannot be used', function (mixed $region) {
+    publishDoctorAssets();
+    config()->set('qr-code.camera.scan_region', $region);
+
+    $this->artisan('qr-code:doctor')
+        ->assertSuccessful()
+        ->expectsOutputToContain('[WARN] qr-code.camera.scan_region must set width and height as ratios <= 1.0 or integer pixel maxima.');
+})->with([
+    'string ratio' => ['0.85'],
+    'float pixels' => [['width' => 320.0, 'height' => 140.0]],
+    'one axis' => [['width' => 0.8]],
+]);
+
+it('stays quiet about a usable scan region', function () {
+    publishDoctorAssets();
+    config()->set('qr-code.camera.scan_region', ['width' => 0.85, 'height' => 0.35]);
+
+    $this->artisan('qr-code:doctor')
+        ->assertSuccessful()
+        ->doesntExpectOutputToContain('[WARN] qr-code.camera.scan_region');
+});
+
 it('describes itself with the product name', function () {
     expect(Artisan::all()['qr-code:doctor']->getDescription())
         ->toBe('Check the Filament QR & Barcode install: image backends, fonts, assets, config, and routes.');

@@ -22,11 +22,14 @@ Per-component options override these defaults:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 
 QrScanner::make('sku')
+    ->preset(ScannerPreset::Warehouse) // optional camera bundle (retail, warehouse, inventory, ticketing, gs1)
     ->fps(25)
-    ->qrbox(250) // responsive max; the decode box scales to the viewfinder
+    ->qrbox(250) // responsive max when no scanRegion is active; the decode box scales to the viewfinder
+    ->scanRegion(0.80, 0.55) // replaces qrbox; ratios <= 1.0, integers > 1 are pixel maxima
     ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
     ->preferRearCamera()
     ->cameraControls() // torch / zoom when the camera supports them; false hides them
@@ -98,10 +101,14 @@ QrHardwareScannerListener::make(['sku'])
 
 | Key                  | Default | Meaning                                                                                  |
 | -------------------- | ------- | ---------------------------------------------------------------------------------------- |
-| `fps`                | `25`    | decode attempts per second; auto-degrades to 12 when unrestricted and not explicitly set |
-| `qrbox`              | `250`   | _maximum_ decode-box edge; scales to the viewfinder (wide band only for 1D-only fields)  |
-| `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins                                |
-| `controls`           | `true`  | torch / zoom controls, shown only when the running camera reports the capability         |
+| `preset`             | `null`  | optional `ScannerPreset` (`retail`, `warehouse`, `inventory`, `ticketing`, `gs1`). When set, replaces `fps`, `scan_region`, `prefer_rear_camera`, and `controls` |
+| `fps`                | `25`    | decode attempts per second; auto-degrades to 12 when unrestricted and not explicitly set. Unused while a preset is set |
+| `qrbox`              | `250`   | _maximum_ decode-box edge when no region is active; scales to the viewfinder (wide band only for 1D-only fields) |
+| `scan_region`        | `null`  | optional `['width' => float\|int, 'height' => float\|int]` (ratios `<= 1.0`, integer pixel maxima `> 1`). Unused while a preset is set |
+| `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins. Unused while a preset is set |
+| `controls`           | `true`  | torch / zoom controls, shown only when the running camera reports the capability. Unused while a preset is set |
+
+A preset is a whole camera profile. The four keys it replaces apply only when `preset` is `null`. Per-component setters (`->fps()`, `->scanRegion()`, `->qrbox()`, `->formats()`, `->preferRearCamera()`, `->cameraControls()`) override the preset in either call order. `->scanRegion()` draws the box; `->qrbox()` draws it when no region is active. `ScannerPreset::Gs1` does not parse GS1 labels — use `->gs1()` for that. An invalid `scan_region` is ignored at runtime; `qr-code:doctor` warns about it.
 
 ### `scan`
 

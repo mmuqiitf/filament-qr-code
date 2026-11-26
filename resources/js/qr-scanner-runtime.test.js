@@ -90,6 +90,36 @@ describe('QrScanner runtime options', () => {
         expect(host.qrScanner.getOptions().mode).toBe('continuous');
     });
 
+    it('clears scanRegion when a morph omits it', async () => {
+        const region = { width: 0.85, height: 0.35 };
+        const { host } = track(mountScanner({
+            attribute: { ...baseOptions, syncOptions: 'morph', scanRegion: region },
+        }));
+
+        expect(host.qrScanner.getOptions().scanRegion).toEqual(region);
+
+        host.setAttribute('data-qr-options', JSON.stringify({ ...baseOptions, syncOptions: 'morph' }));
+        await flush();
+
+        expect(host.qrScanner.getOptions().scanRegion).toBeNull();
+    });
+
+    it('clears scanRegion on refresh when the attribute omits it', async () => {
+        const region = { width: 0.85, height: 0.35 };
+        const { host } = track(mountScanner({
+            attribute: { ...baseOptions, syncOptions: 'refresh', scanRegion: region },
+        }));
+
+        host.setAttribute('data-qr-options', JSON.stringify({ ...baseOptions, syncOptions: 'refresh' }));
+        await flush();
+
+        expect(host.qrScanner.getOptions().scanRegion).toEqual(region);
+
+        window.dispatchEvent(new CustomEvent('qr-scanner-refresh', { detail: { field: 'data.sku' } }));
+
+        expect(host.qrScanner.getOptions().scanRegion).toBeNull();
+    });
+
     it('waits for a refresh event in refresh mode', async () => {
         const { host } = track(mountScanner({ attribute: { ...baseOptions, pauseOnReject: false, syncOptions: 'refresh' } }));
 

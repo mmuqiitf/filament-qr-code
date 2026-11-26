@@ -5,17 +5,32 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Concerns;
 
 use Closure;
+use InvalidArgumentException;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
+use Mmuqiitf\FilamentQrCode\Support\ScanRegion;
 
 trait HasCameraScanning
 {
+    protected ScannerPreset|string|Closure|null $preset = null;
+
+    protected bool $presetCustomized = false;
+
     protected int|Closure|null $fps = null;
 
     protected bool $fpsCustomized = false;
 
     protected int|Closure|null $qrbox = null;
+
+    protected bool $qrboxCustomized = false;
+
+    protected int|float|Closure|null $scanRegionWidth = null;
+
+    protected int|float|Closure|null $scanRegionHeight = null;
+
+    protected bool $scanRegionCustomized = false;
 
     protected bool|Closure|null $preferRearCamera = null;
 
@@ -25,6 +40,54 @@ trait HasCameraScanning
      * @var array<int, BarcodeFormat|string>|Closure
      */
     protected array|Closure $supportedFormats = [];
+
+    protected bool $formatsCustomized = false;
+
+    /**
+     * Bundle camera defaults (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`)
+     * for a common workflow; explicit setters always win regardless of call order.
+     */
+    public function preset(ScannerPreset|string|Closure|null $preset): static
+    {
+        if (is_string($preset) && ScannerPreset::tryFrom($preset) === null) {
+            throw new InvalidArgumentException("Unknown scanner preset [{$preset}].");
+        }
+
+        $this->preset = $preset;
+        $this->presetCustomized = true;
+
+        return $this;
+    }
+
+    public function getPreset(): ?ScannerPreset
+    {
+        $raw = $this->presetCustomized
+            ? $this->evaluate($this->preset)
+            : (function_exists('config') ? config('qr-code.camera.preset') : null);
+
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        if ($raw instanceof ScannerPreset) {
+            return $raw;
+        }
+
+        if (is_string($raw)) {
+            $resolved = ScannerPreset::tryFrom($raw);
+            if ($resolved === null && $this->presetCustomized) {
+                throw new InvalidArgumentException("Unknown scanner preset [{$raw}].");
+            }
+
+            return $resolved;
+        }
+
+        if ($this->presetCustomized) {
+            throw new InvalidArgumentException('Scanner preset must be a ScannerPreset case, preset string, or null.');
+        }
+
+        return null;
+    }
 
     /** Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. */
     public function fps(int|Closure $fps): static
@@ -39,8 +102,51 @@ trait HasCameraScanning
     public function qrbox(int|Closure $qrbox): static
     {
         $this->qrbox = $qrbox;
+        $this->qrboxCustomized = true;
 
         return $this;
+    }
+
+    /**
+     * Explicit decode box and reticle dimensions (config `camera.scan_region`).
+     * Values <= 1.0 are viewfinder ratios (e.g. 0.85, 0.35); integers > 1 are pixel maxima.
+     * Pass `scanRegion()` or `scanRegion(null, null)` to clear a preset or config region.
+     */
+    public function scanRegion(int|float|Closure|null $width = null, int|float|Closure|null $height = null): static
+    {
+        if (! $width instanceof Closure && ! $height instanceof Closure) {
+            ScanRegion::pair($width, $height);
+        }
+
+        $this->scanRegionWidth = $width;
+        $this->scanRegionHeight = $height;
+        $this->scanRegionCustomized = true;
+
+        return $this;
+    }
+
+    /**
+     * @return array{width: int|float, height: int|float}|null
+     */
+    public function getScanRegion(): ?array
+    {
+        if ($this->scanRegionCustomized) {
+            return ScanRegion::pair(
+                $this->evaluate($this->scanRegionWidth),
+                $this->evaluate($this->scanRegionHeight),
+            );
+        }
+
+        if ($this->qrboxCustomized) {
+            return null;
+        }
+
+        $preset = $this->getPreset();
+        if ($preset !== null) {
+            return $preset->scanRegion();
+        }
+
+        return $this->readConfiguredScanRegion();
     }
 
     /** Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). */
@@ -64,11 +170,16 @@ trait HasCameraScanning
 
     public function hasCameraControls(): bool
     {
-        if ($this->cameraControls === null) {
-            return ConfigValue::bool('qr-code.camera.controls', true);
+        if ($this->cameraControls !== null) {
+            return (bool) $this->evaluate($this->cameraControls);
         }
 
-        return (bool) $this->evaluate($this->cameraControls);
+        $preset = $this->getPreset();
+        if ($preset !== null) {
+            return $preset->cameraControls();
+        }
+
+        return ConfigValue::bool('qr-code.camera.controls', true);
     }
 
     /**
@@ -79,17 +190,23 @@ trait HasCameraScanning
     public function formats(array|Closure $formats): static
     {
         $this->supportedFormats = $formats;
+        $this->formatsCustomized = true;
 
         return $this;
     }
 
     public function getFps(): int
     {
-        if ($this->fps === null) {
-            return ConfigValue::int('qr-code.camera.fps', 25, minimum: 1);
+        if ($this->fps !== null) {
+            return max(1, (int) $this->evaluate($this->fps));
         }
 
-        return max(1, (int) $this->evaluate($this->fps));
+        $preset = $this->getPreset();
+        if ($preset !== null) {
+            return max(1, $preset->fps());
+        }
+
+        return ConfigValue::int('qr-code.camera.fps', 25, minimum: 1);
     }
 
     /**
@@ -125,11 +242,16 @@ trait HasCameraScanning
 
     public function isPreferRearCamera(): bool
     {
-        if ($this->preferRearCamera === null) {
-            return ConfigValue::bool('qr-code.camera.prefer_rear_camera', true);
+        if ($this->preferRearCamera !== null) {
+            return (bool) $this->evaluate($this->preferRearCamera);
         }
 
-        return (bool) $this->evaluate($this->preferRearCamera);
+        $preset = $this->getPreset();
+        if ($preset !== null) {
+            return $preset->preferRearCamera();
+        }
+
+        return ConfigValue::bool('qr-code.camera.prefer_rear_camera', true);
     }
 
     /**
@@ -137,7 +259,13 @@ trait HasCameraScanning
      */
     public function getSupportedFormats(): array
     {
-        $formats = $this->evaluate($this->supportedFormats);
+        if ($this->formatsCustomized) {
+            $formats = $this->evaluate($this->supportedFormats);
+        } else {
+            $preset = $this->getPreset();
+            $formats = $preset !== null ? $preset->formats() : [];
+        }
+
         if (! is_array($formats)) {
             return [];
         }
@@ -157,7 +285,7 @@ trait HasCameraScanning
     /** @return array<string, mixed> */
     public function getCameraScanPayload(): array
     {
-        return [
+        $payload = [
             'fps' => $this->getEffectiveFps(),
             'qrbox' => $this->getQrbox(),
             'preferRearCamera' => $this->isPreferRearCamera(),
@@ -165,5 +293,24 @@ trait HasCameraScanning
             'formats' => $this->getSupportedFormats(),
             ...ScanMessages::forCamera(),
         ];
+
+        $scanRegion = $this->getScanRegion();
+        if ($scanRegion !== null) {
+            $payload['scanRegion'] = $scanRegion;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return array{width: int|float, height: int|float}|null
+     */
+    private function readConfiguredScanRegion(): ?array
+    {
+        if (! function_exists('config')) {
+            return null;
+        }
+
+        return ScanRegion::tryFromConfig(config('qr-code.camera.scan_region'));
     }
 }

@@ -47,7 +47,8 @@ Option reference:
 - `gs1(fill: ['01' => 'gtin', '17' => 'expires_at'], require: ['01', '17'])` — read scans as GS1 labels (raw, bracketed, AIM-prefixed, or an uncompressed Digital Link URI): the field stores the bracketed string, mapped AIs fill sibling fields, and an invalid label or a missing AI is rejected before any state is written. The same helper is on `QrCollector` (`require` only; each item is a GS1 string) and on `QrScanSequence` / `ScanStep` (per-step `fill`, with a sequence-level default). See [Scanning GS1 labels](gs1.md#scanning-gs1-labels) and [GS1 Digital Link](gs1.md#digital-link).
 - `hardwareInput(scope: HardwareInputScope::Page)` — also catch wedge scans when no scan field has focus (default `Focus`: only while focused; config `hardware_scanner.default_scope`). A focused scan field always wins.
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
-- `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a _maximum_: the actual decode box scales to the viewfinder and the green reticle follows it.
+- `preset(ScannerPreset::Warehouse)` — bundles `formats`, `fps`, `scanRegion`, `preferRearCamera`, and `cameraControls` for `Retail`, `Warehouse`, `Inventory`, `Ticketing`, or `Gs1`. The method or `camera.preset` replaces those camera config keys (`fps`, `scan_region`, `prefer_rear_camera`, `controls`). Explicit setters still win, in either call order. `ScannerPreset::Gs1` only tunes the camera; call `gs1()` as well to parse GS1 labels.
+- `fps()` / `qrbox()` / `scanRegion()` — defaults 25 / 250 / `null`. `qrbox` is a _maximum_ square/band edge, used when no region is active. `scanRegion(width, height)` replaces that box and syncs the reticle (`<= 1.0` = viewfinder ratio such as `0.85, 0.35`; integers `> 1` = pixel maxima such as `320, 140`). `scanRegion()` or `scanRegion(null, null)` clears a preset or config region. `->qrbox()` does the same when `scanRegion()` was not called.
 - `preferRearCamera()` — rear heuristic, but the operator's last camera choice (stored in `localStorage`) always wins.
 - `allowUpload(false)` — hides the image-file fallback.
 - `beepFrequency()` / `beepDuration()` / `vibrateDuration()` — feedback tuning.
@@ -494,7 +495,7 @@ When a re-render changes a field's options (say a `pauseOnReject(fn () => $this-
 The current scan always finishes first:
 
 - New options wait for a server check that's running.
-- Camera options (`fps`, `qrbox`, `formats`, `preferRearCamera`) apply on the next camera start.
+- Camera options (`preset`, `fps`, `qrbox`, `scanRegion`, `formats`, `preferRearCamera`) apply on the next camera start.
 - A sequence keeps its list of steps until the round completes or resets. Everything else (repeat counts, labels, active steps) applies right away.
 
 To apply changes only when you ask, set config `scan.sync_options` to `'refresh'` or use a per-field override, then send a refresh event:

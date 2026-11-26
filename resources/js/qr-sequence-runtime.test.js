@@ -58,6 +58,18 @@ afterEach(() => {
 });
 
 describe('QrScanSequence runtime options', () => {
+    it('clears scanRegion when a morph omits it', async () => {
+        const region = { width: 0.8, height: 0.55 };
+        const { sequence, host } = mountSequence({ payload: basePayload({ scanRegion: region }) });
+
+        expect(sequence.options.scanRegion).toEqual(region);
+
+        host.setAttribute('data-qr-options', JSON.stringify(basePayload()));
+        await flush();
+
+        expect(sequence.options.scanRegion).toBeNull();
+    });
+
     it('changing quantity updates repeat k/n', async () => {
         const { sequence, rerender } = mountSequence({ payload: basePayload({ values: { po: 'PO-1', sku: 'PRD-1', serials: ['SN-1'] } }) });
 

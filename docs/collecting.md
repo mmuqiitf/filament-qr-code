@@ -29,6 +29,8 @@ QrCollector::make('scanned_items')
     ->preferRearCamera();
 ```
 
+`QrCollector` and `QrCollectAction` also share `->preset(ScannerPreset::Warehouse)` and `->scanRegion(0.85, 0.35)` with `QrScanner` and `QrScanSequence`.
+
 ### As a Table / Repeater Action
 
 ```php
