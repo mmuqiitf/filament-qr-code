@@ -40,6 +40,13 @@ final class ScanMessages
         'scanFailedMessage' => 'filament-qr-code::ui.scan_failed',
     ];
 
+    private const Collector = [
+        'maxItemsMessage' => 'filament-qr-code::ui.collector_max_items',
+        'csvImportSummary' => 'filament-qr-code::ui.csv_import_summary',
+        'csvImportSuccess' => 'filament-qr-code::ui.csv_import_success',
+        'csvRejectedRow' => 'filament-qr-code::ui.csv_rejected_row',
+    ];
+
     /** @return array<string, string> */
     public static function forCamera(): array
     {
@@ -63,6 +70,12 @@ final class ScanMessages
         return self::translate(self::Checks)['scanFailedMessage'];
     }
 
+    /** @return array<string, string> */
+    public static function forCollector(): array
+    {
+        return self::translate(self::Collector);
+    }
+
     /**
      * Option name => ui key (without the namespace) of every message.
      *
@@ -72,7 +85,7 @@ final class ScanMessages
     {
         return array_map(
             fn (string $key): string => substr($key, strlen('filament-qr-code::ui.')),
-            [...self::Camera, ...self::Announcements, ...self::ScannerAnnouncements, ...self::Checks],
+            [...self::Camera, ...self::Announcements, ...self::ScannerAnnouncements, ...self::Checks, ...self::Collector],
         );
     }
 

@@ -199,24 +199,31 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `beepFrequency(Closure\|int $hertz): static` | Beep pitch in hertz (config `feedback.beep_frequency`). |
 | `cameraControls(Closure\|bool $condition = true): static` | Torch and zoom controls appear when the running camera supports them; pass false to keep the viewfinder free of them. |
 | `checkCollectorItem(string $code): array` | Live check used by the collector. Empty rules pass. |
+| `csv(Closure\|bool $import = true, Closure\|bool $export = true, Closure\|string\|null $fileName = null): static` | Enable both CSV import and CSV export on this collector. |
+| `csvExport(Closure\|bool $condition = true, Closure\|string\|null $fileName = null): static` | Enable exporting collected items as a CSV download. |
+| `csvImport(Closure\|bool $condition = true): static` | Enable importing collected items from a CSV file (respects normalizeWith(), gs1(), itemRules(), and maxItems()). |
 | `delayBetweenScans(Closure\|int $ms): static` | Pause in milliseconds before the next camera scan is accepted. |
 | `distinctItems(Closure\|bool $condition = true): static` | Server-side duplicate guard to match the client-side allowDuplicates(false): identical codes fail submit-time validation. |
 | `formats(Closure\|array $formats): static` | Symbologies the camera decodes (BarcodeFormat cases or strings); filtering speeds decoding. |
 | `fps(Closure\|int $fps): static` | Camera decode attempts per second (config `camera.fps`); setting it turns off the automatic slow-device degrade. |
 | `gs1(Closure\|array $fill = [], Closure\|array $require = [], Closure\|bool $keepMissing = false): static` | Read every collected code as a GS1 element string. Each item in the list is stored as the normalized bracketed form. An invalid label, or one that misses a required AI, is rejected before it is added, with the same translated reason as QrScanner::gs1(). |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
+| `importCollectorCsv(string $csv, ?array $existing = null): array` | Parse and validate a CSV upload against the collector's normalizer, GS1, itemRules, duplicates, and maxItems settings. |
 | `itemRules(Closure\|array $rules): static` | Laravel rules for one collected code. The browser asks before adding the code, and submit fails on the first code that does not pass. Calling this again replaces the rules. An empty list accepts every code. |
+| `maxItems(Closure\|int\|null $max): static` | Cap how many items the collector can hold, enforced in the browser and on submit. |
 | `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `normalizeWith(bool $trim = true, bool $uppercase = false, array\|string\|null $stripPrefix = null): static` | Clean every scanned code in the browser (before duplicate detection and step matching) and again on the server. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
+| `quantity(Closure\|bool $condition = true): static` | Track a quantity per unique code so rescans increment the count instead of rejecting duplicates. |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
 | `scanTimeout(Closure\|int $milliseconds): static` | Flush window in milliseconds for guns that send no terminator; 0 disables (config `hardware_scanner.scan_timeout_ms`). |
 | `sound(Closure\|bool $condition = true): static` | Play the synthesized beep on a successful scan (config `feedback.sound`). |
+| `toCsv(iterable $items): string` | Format collected items as an RFC 4180 CSV string (includes a `qty` column in quantity mode). |
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getCsvFileName()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMaxItems()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasQuantity()`, `hasSound()`, `hasVibration()`, `isCsvExportEnabled()`, `isCsvImportEnabled()`, `isDuplicatesAllowed()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrCollectAction`
 

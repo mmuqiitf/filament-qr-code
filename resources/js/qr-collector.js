@@ -22,6 +22,42 @@ import {
     storageKeyFor,
 } from './qr-camera-core.js';
 
+function normalizeInitialItems(state, quantity) {
+    if (!Array.isArray(state)) {
+        return [];
+    }
+
+    const now = new Date().toLocaleTimeString();
+
+    if (!quantity) {
+        return state.map((item) =>
+            typeof item === 'object' && item !== null && item.code
+                ? item
+                : { code: String(item), scanned_at: now }
+        );
+    }
+
+    const grouped = [];
+    const byCode = new Map();
+
+    for (const item of state) {
+        const isObj = typeof item === 'object' && item !== null && item.code !== undefined;
+        const code = isObj ? String(item.code) : String(item);
+        const qty = isObj ? Math.max(1, parseInt(item.qty, 10) || 1) : 1;
+        const scannedAt = isObj && item.scanned_at ? item.scanned_at : now;
+
+        if (byCode.has(code)) {
+            byCode.get(code).qty += qty;
+        } else {
+            const entry = { code, qty, scanned_at: scannedAt };
+            byCode.set(code, entry);
+            grouped.push(entry);
+        }
+    }
+
+    return grouped;
+}
+
 /**
  * Alpine component for QrCollector (batch scanning).
  */
@@ -29,6 +65,11 @@ export default function qrCollectorComponent({
     state = null,
     statePath = null,
     allowDuplicates = false,
+    quantity = false,
+    maxItems = null,
+    csvImport = false,
+    csvExport = false,
+    csvFileName = 'collected-codes.csv',
     sound = true,
     vibrate = true,
     beepFrequency = 880,
@@ -58,19 +99,19 @@ export default function qrCollectorComponent({
 } = {}) {
     const messages = messagesFrom(messageOptions);
     const announceOptions = { announcements, customAnnouncements, componentKey };
-    const initialItems = Array.isArray(state)
-        ? state.map(item => typeof item === 'object' && item !== null && item.code ? item : { code: String(item), scanned_at: new Date().toLocaleTimeString() })
-        : [];
+    const initialItems = normalizeInitialItems(state, quantity);
 
     const storageKey = cameraStorageKey || storageKeyFor('collector');
 
     return {
         ...cameraControlsMixin(),
         ...announcerMixin(),
+        state,
         items: initialItems,
         lastAddedCode: null,
         statePath: statePath,
         scannedSet: new Set(initialItems.map(i => i.code)),
+        importReport: null,
         isScanning: false,
         isProcessing: false,
         isLoading: false,
@@ -83,6 +124,11 @@ export default function qrCollectorComponent({
         unregisterTarget: null,
 
         init() {
+            if (this.items.length === 0 && Array.isArray(this.state) && this.state.length > 0) {
+                this.items = normalizeInitialItems(this.state, quantity);
+                this.scannedSet = new Set(this.items.map(i => i.code));
+            }
+
             this.elementId = `qr-collector-${this.$id('qr-col')}`;
 
             this.stopWatchingVisibility = watchPageVisibility(this, {
@@ -123,11 +169,34 @@ export default function qrCollectorComponent({
             this.stopCollector();
         },
 
-        syncState() {
-            const rawCodes = this.items.map(i => i.code);
-            if (this.statePath && this.$wire) {
-                this.$wire.set(this.statePath, rawCodes);
+        serializedState() {
+            if (quantity) {
+                return this.items.map(i => ({
+                    code: i.code,
+                    qty: Math.max(1, parseInt(i.qty, 10) || 1),
+                }));
             }
+
+            return this.items.map(i => i.code);
+        },
+
+        syncState() {
+            const payload = this.serializedState();
+            if (this.statePath && this.$wire) {
+                this.$wire.set(this.statePath, payload);
+            }
+        },
+
+        totalQuantity() {
+            if (!quantity) {
+                return this.items.length;
+            }
+
+            return this.items.reduce((sum, item) => sum + Math.max(1, parseInt(item.qty, 10) || 1), 0);
+        },
+
+        maxItemsError() {
+            return formatMessage(messages.maxItemsMessage, { max: maxItems });
         },
 
         async loadCameras({ start = autoStart } = {}) {
@@ -254,7 +323,7 @@ export default function qrCollectorComponent({
             const trimmed = normalizeCode(sanitizeScannedValue(code), normalize);
             if (!trimmed || this.isProcessing) return;
 
-            if (!allowDuplicates && this.scannedSet.has(trimmed)) {
+            if (!quantity && !allowDuplicates && this.scannedSet.has(trimmed)) {
                 // The code just added is usually still in view: not a new rejection.
                 if (trimmed !== this.lastAddedCode) {
                     this.rejectCode(trimmed, messages.duplicateMessage);
@@ -267,21 +336,41 @@ export default function qrCollectorComponent({
                 return this.acceptWhenItemRulesPass(trimmed);
             }
 
+            const existingItem = quantity ? this.items.find(i => i.code === trimmed) : null;
+            if (maxItems !== null && !existingItem && this.items.length >= maxItems) {
+                this.rejectCode(trimmed, this.maxItemsError());
+
+                return;
+            }
+
             this.acceptCode(trimmed);
         },
 
         acceptCode(trimmed) {
             this.isProcessing = true;
-            this.scannedSet.add(trimmed);
-            this.items.unshift({
-                code: trimmed,
-                scanned_at: new Date().toLocaleTimeString(),
-            });
+            const existing = quantity ? this.items.find(i => i.code === trimmed) : null;
+
+            if (existing) {
+                existing.qty = Math.max(1, parseInt(existing.qty, 10) || 1) + 1;
+                existing.scanned_at = new Date().toLocaleTimeString();
+            } else {
+                this.scannedSet.add(trimmed);
+                const entry = {
+                    code: trimmed,
+                    scanned_at: new Date().toLocaleTimeString(),
+                };
+                if (quantity) {
+                    entry.qty = 1;
+                }
+                this.items.unshift(entry);
+            }
+
             this.lastAddedCode = trimmed;
+            const countForAnnouncement = quantity ? this.totalQuantity() : this.items.length;
             this.announceScan(announceOptions, {
                 code: trimmed,
                 accepted: true,
-                fallback: formatMessage(messages.addedAnnouncement, { code: trimmed, count: this.items.length }),
+                fallback: formatMessage(messages.addedAnnouncement, { code: trimmed, count: countForAnnouncement }),
             });
 
             emitScanFeedback(qrFeedback, {
@@ -301,16 +390,23 @@ export default function qrCollectorComponent({
             if (wireScanHandler && this.$wire) {
                 this.$wire.handleCollectorScan(trimmed);
             } else {
+                const detail = quantity
+                    ? { code: trimmed, qty: existing ? existing.qty : 1 }
+                    : { code: trimmed };
                 window.dispatchEvent(new CustomEvent('qr-collector-item-added', {
-                    detail: { code: trimmed },
+                    detail,
                 }));
             }
 
             this.syncState();
 
-            setTimeout(() => {
+            if (delayBetweenScansMs > 0) {
+                setTimeout(() => {
+                    this.isProcessing = false;
+                }, delayBetweenScansMs);
+            } else {
                 this.isProcessing = false;
-            }, delayBetweenScansMs);
+            }
         },
 
         // Item rules are checked before the code is added. A missing key or a
@@ -345,9 +441,16 @@ export default function qrCollectorComponent({
             }
 
             const stored = typeof result.code === 'string' && result.code !== '' ? result.code : trimmed;
+            const existingItem = quantity ? this.items.find(i => i.code === stored) : null;
 
-            if (!allowDuplicates && this.scannedSet.has(stored)) {
+            if (!quantity && !allowDuplicates && this.scannedSet.has(stored)) {
                 this.releaseRejectedCode(stored, messages.duplicateMessage);
+
+                return;
+            }
+
+            if (maxItems !== null && !existingItem && this.items.length >= maxItems) {
+                this.releaseRejectedCode(stored, this.maxItemsError());
 
                 return;
             }
@@ -358,9 +461,13 @@ export default function qrCollectorComponent({
         releaseRejectedCode(trimmed, reason) {
             this.rejectCode(trimmed, reason);
 
-            setTimeout(() => {
+            if (delayBetweenScansMs > 0) {
+                setTimeout(() => {
+                    this.isProcessing = false;
+                }, delayBetweenScansMs);
+            } else {
                 this.isProcessing = false;
-            }, delayBetweenScansMs);
+            }
         },
 
         rejectCode(trimmed, reason) {
@@ -370,6 +477,31 @@ export default function qrCollectorComponent({
                 reason,
                 fallback: formatMessage(messages.rejectedAnnouncement, { reason }),
             });
+        },
+
+        incrementQty(index) {
+            const item = this.items[index];
+            if (!item) return;
+
+            item.qty = Math.max(1, parseInt(item.qty, 10) || 1) + 1;
+            this.syncState();
+        },
+
+        decrementQty(index) {
+            const item = this.items[index];
+            if (!item) return;
+
+            item.qty = Math.max(1, (parseInt(item.qty, 10) || 1) - 1);
+            this.syncState();
+        },
+
+        setQty(index, rawValue) {
+            const item = this.items[index];
+            if (!item) return;
+
+            const parsed = parseInt(rawValue, 10);
+            item.qty = Number.isFinite(parsed) && parsed >= 1 ? parsed : 1;
+            this.syncState();
         },
 
         removeItem(index) {
@@ -385,6 +517,138 @@ export default function qrCollectorComponent({
             this.items = [];
             this.scannedSet.clear();
             this.syncState();
+        },
+
+        escapeCsvCell(value) {
+            const str = String(value ?? '');
+            if (/[",\r\n]/.test(str)) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+
+            return str;
+        },
+
+        buildCsv() {
+            const lines = [quantity ? 'code,qty' : 'code'];
+
+            for (const item of this.items) {
+                if (quantity) {
+                    const qty = Math.max(1, parseInt(item.qty, 10) || 1);
+                    lines.push(`${this.escapeCsvCell(item.code)},${qty}`);
+                } else {
+                    lines.push(this.escapeCsvCell(item.code));
+                }
+            }
+
+            return `${lines.join('\n')}\n`;
+        },
+
+        exportCsv() {
+            if (!csvExport) return;
+
+            const csv = this.buildCsv();
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = csvFileName || 'collected-codes.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        },
+
+        async importCsvFile(event) {
+            const file = event?.target?.files?.[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                await this.importCsvText(text);
+            } finally {
+                if (event?.target) {
+                    event.target.value = '';
+                }
+            }
+        },
+
+        async importCsvText(csv) {
+            if (!csvImport || !componentKey || typeof this.$wire?.callSchemaComponentMethod !== 'function') {
+                this.rejectCode('', messages.scanFailedMessage);
+
+                return;
+            }
+
+            const existing = this.serializedState();
+            let result;
+
+            try {
+                result = await this.$wire.callSchemaComponentMethod(componentKey, 'importCollectorCsv', { csv, existing });
+            } catch {
+                this.rejectCode('', messages.scanFailedMessage);
+
+                return;
+            }
+
+            if (!result || !Array.isArray(result.items)) {
+                this.rejectCode('', messages.scanFailedMessage);
+
+                return;
+            }
+
+            const existingTimestamps = new Map(this.items.map(i => [i.code, i.scanned_at]));
+            const now = new Date().toLocaleTimeString();
+
+            this.items = result.items.map((item) => {
+                if (quantity && typeof item === 'object' && item !== null) {
+                    const code = String(item.code);
+
+                    return {
+                        code,
+                        qty: Math.max(1, parseInt(item.qty, 10) || 1),
+                        scanned_at: existingTimestamps.get(code) ?? now,
+                    };
+                }
+
+                const code = String(item);
+
+                return {
+                    code,
+                    scanned_at: existingTimestamps.get(code) ?? now,
+                };
+            });
+
+            this.scannedSet = new Set(this.items.map(i => i.code));
+            this.importReport = {
+                added: Number(result.added) || 0,
+                rejected: Array.isArray(result.rejected) ? result.rejected : [],
+            };
+            this.syncState();
+        },
+
+        importSummary() {
+            if (!this.importReport) return '';
+
+            const rejectedCount = Array.isArray(this.importReport.rejected) ? this.importReport.rejected.length : 0;
+
+            if (rejectedCount > 0) {
+                return formatMessage(messages.csvImportSummary, {
+                    added: this.importReport.added,
+                    rejected: rejectedCount,
+                });
+            }
+
+            return formatMessage(messages.csvImportSuccess, {
+                added: this.importReport.added,
+            });
+        },
+
+        formatRejectedRow(entry) {
+            return formatMessage(messages.csvRejectedRow, {
+                row: entry.row,
+                code: entry.code || '-',
+                reason: entry.reason,
+            });
         },
     };
 }
