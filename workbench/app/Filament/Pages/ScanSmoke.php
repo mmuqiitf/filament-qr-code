@@ -7,6 +7,7 @@ namespace Workbench\App\Filament\Pages;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 
 /**
@@ -36,6 +37,7 @@ class ScanSmoke extends Page
                 QrScanner::make('wedge')->label('Wedge')->validateUsing(['string', 'starts_with:WEDGE-']),
                 QrScanner::make('camera')->label('Camera')->formats([BarcodeFormat::QrCode]),
                 QrScanner::make('mixedCamera')->label('Mixed camera')->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128]),
+                QrScanner::make('presetCamera')->label('Preset camera')->preset(ScannerPreset::Retail),
             ]);
     }
 }

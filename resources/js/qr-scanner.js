@@ -41,6 +41,7 @@ const DEFAULT_OPTIONS = {
     preventSubmit: true,
     fps: 25,
     qrbox: 250,
+    scanRegion: null,
     preferRearCamera: true,
     formats: [],
     ...fallbackMessages,
@@ -224,7 +225,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             const rendered = readOptionsAttribute(this.fieldElement());
 
             if (rendered) {
-                this.setOptions(rendered);
+                this.setOptions({ scanRegion: null, ...rendered });
             }
         },
 
@@ -375,7 +376,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
         },
 
         currentQrbox() {
-            return resolveQrboxFor(this.scannerElementId, this.options.qrbox, this.options.formats);
+            return resolveQrboxFor(this.scannerElementId, this.options.qrbox, this.options.formats, this.options.scanRegion);
         },
 
         async startScan(run = null) {

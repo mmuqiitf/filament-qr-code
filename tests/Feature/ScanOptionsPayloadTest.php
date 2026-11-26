@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
@@ -139,3 +141,93 @@ it('sends a translated message for images without a readable code', function () 
 
     expect($payload['fileScanFailedMessage'])->toBe('Tidak ada barcode atau kode QR pada gambar yang dipilih.');
 });
+
+it('applies camera presets across every camera surface and lets explicit setters win in any order', function (object $field) {
+    $configured = $field->preset(ScannerPreset::Warehouse);
+    $payload = $configured->getScanPayload();
+
+    expect($configured->getPreset())->toBe(ScannerPreset::Warehouse)
+        ->and($payload['fps'])->toBe(20)
+        ->and($payload['formats'])->toBe(['CODE_128', 'CODE_39', 'ITF', 'QR_CODE', 'DATA_MATRIX'])
+        ->and($payload['scanRegion'])->toBe(['width' => 0.80, 'height' => 0.55])
+        ->and($payload['preferRearCamera'])->toBeTrue()
+        ->and($payload['cameraControls'])->toBeTrue();
+})->with([
+    'scanner' => fn () => QrScanner::make('sku'),
+    'sequence' => fn () => QrScanSequence::make(['step']),
+    'collector' => fn () => QrCollector::make('codes'),
+    'collect action' => fn () => QrCollectAction::make(),
+]);
+
+it('lets explicit setters override preset values regardless of call order', function () {
+    $after = QrScanner::make('sku')
+        ->preset(ScannerPreset::Retail)
+        ->formats([BarcodeFormat::QrCode])
+        ->fps(15)
+        ->scanRegion(320, 140)
+        ->preferRearCamera(false)
+        ->cameraControls(false);
+
+    $before = QrScanner::make('sku')
+        ->formats([BarcodeFormat::QrCode])
+        ->fps(15)
+        ->scanRegion(320, 140)
+        ->preferRearCamera(false)
+        ->cameraControls(false)
+        ->preset(ScannerPreset::Retail);
+
+    foreach ([$after, $before] as $field) {
+        $payload = $field->getScanPayload();
+        expect($payload['formats'])->toBe(['QR_CODE'])
+            ->and($payload['fps'])->toBe(15)
+            ->and($payload['scanRegion'])->toBe(['width' => 320, 'height' => 140])
+            ->and($payload['preferRearCamera'])->toBeFalse()
+            ->and($payload['cameraControls'])->toBeFalse();
+    }
+
+    $qrboxWins = QrScanner::make('sku')
+        ->preset(ScannerPreset::Warehouse)
+        ->qrbox(200);
+
+    expect($qrboxWins->getQrbox())->toBe(200)
+        ->and(array_key_exists('scanRegion', $qrboxWins->getScanPayload()))->toBeFalse();
+
+    $clearedRegion = QrScanner::make('sku')
+        ->preset(ScannerPreset::Warehouse)
+        ->scanRegion(null, null);
+
+    expect(array_key_exists('scanRegion', $clearedRegion->getScanPayload()))->toBeFalse();
+});
+
+it('reads preset and scanRegion defaults from config and accepts closures', function () {
+    config()->set('qr-code.camera.preset', 'ticketing');
+
+    $fromConfigPreset = QrScanner::make('sku')->getScanPayload();
+    expect($fromConfigPreset['fps'])->toBe(30)
+        ->and($fromConfigPreset['formats'])->toBe(['QR_CODE', 'AZTEC'])
+        ->and($fromConfigPreset['scanRegion'])->toBe(['width' => 0.65, 'height' => 0.65]);
+
+    config()->set('qr-code.camera.preset', null);
+    config()->set('qr-code.camera.scan_region', ['width' => 0.9, 'height' => 0.4]);
+
+    $fromConfigRegion = QrScanner::make('sku')->getScanPayload();
+    expect($fromConfigRegion['scanRegion'])->toBe(['width' => 0.9, 'height' => 0.4]);
+
+    $fromClosure = QrScanner::make('sku')
+        ->preset(fn () => ScannerPreset::Gs1)
+        ->scanRegion(fn () => 280, fn () => 120)
+        ->getScanPayload();
+
+    expect($fromClosure['formats'])->toBe(['CODE_128', 'DATA_MATRIX', 'QR_CODE'])
+        ->and($fromClosure['scanRegion'])->toBe(['width' => 280, 'height' => 120]);
+});
+
+it('rejects invalid scanRegion bounds', function (mixed $width, mixed $height) {
+    expect(fn () => QrScanner::make('sku')->scanRegion($width, $height)->getScanPayload())
+        ->toThrow(InvalidArgumentException::class);
+})->with([
+    'zero width' => [0, 0.5],
+    'negative height' => [0.8, -1],
+    'float ratio over 1' => [1.25, 0.5],
+    'single axis null' => [0.8, null],
+]);

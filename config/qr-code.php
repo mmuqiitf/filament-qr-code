@@ -139,8 +139,12 @@ return [
     |
     */
     'camera' => [
+        // Optional ScannerPreset case or string (retail, warehouse, inventory, ticketing, gs1).
+        'preset' => null,
         'fps' => 25,
         'qrbox' => 250,
+        // Optional explicit decode box: ['width' => 0.85, 'height' => 0.35] (<=1 ratio, >1 px).
+        'scan_region' => null,
         'prefer_rear_camera' => true,
         // Torch / zoom buttons, shown only when the camera supports them.
         'controls' => true,

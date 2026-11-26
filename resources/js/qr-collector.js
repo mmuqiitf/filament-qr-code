@@ -83,6 +83,7 @@ export default function qrCollectorComponent({
     scanTimeoutMs = 150,
     fps = 25,
     qrbox = 250,
+    scanRegion = null,
     preferRearCamera = true,
     formats = [],
     cameraControls = true,
@@ -242,7 +243,7 @@ export default function qrCollectorComponent({
         },
 
         currentQrbox() {
-            return resolveQrboxFor(this.elementId, qrbox, formats);
+            return resolveQrboxFor(this.elementId, qrbox, formats, scanRegion);
         },
 
         async startCollector({ reloaded = false, run = null } = {}) {

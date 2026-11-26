@@ -7,6 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Console\Commands;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Support\LogoPathGuard;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -177,6 +178,12 @@ class QrCodeDoctorCommand extends Command
         $fps = $this->intConfig('qr-code.camera.fps', 25);
         if ($fps < 1 || $fps > 120) {
             $this->warn('  [WARN] qr-code.camera.fps should be between 1 and 120.');
+            $problems++;
+        }
+
+        $preset = config('qr-code.camera.preset');
+        if ($preset !== null && $preset !== '' && ! $preset instanceof ScannerPreset && (! is_string($preset) || ScannerPreset::tryFrom($preset) === null)) {
+            $this->warn('  [WARN] qr-code.camera.preset is not a valid ScannerPreset.');
             $problems++;
         }
 

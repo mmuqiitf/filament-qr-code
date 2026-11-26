@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { computeQrboxForElement, emitScanFeedback } from './qr-camera-core.js';
+import { computeQrboxForElement, emitScanFeedback, syncReticleToQrbox } from './qr-camera-core.js';
 
 describe('emitScanFeedback', () => {
     it('delivers one trigger with mapped option names', () => {
@@ -61,5 +61,34 @@ describe('computeQrboxForElement', () => {
 
     it('uses a square box when no formats are restricted', () => {
         expect(computeQrboxForElement(viewfinder, 250, [])).toEqual({ width: 250, height: 250 });
+    });
+});
+
+describe('scanRegion in computeQrboxForElement & syncReticleToQrbox', () => {
+    const viewfinder = { clientWidth: 480, clientHeight: 360 };
+
+    it('computes ratio-based scanRegion dimensions inside viewfinder', () => {
+        expect(computeQrboxForElement(viewfinder, 250, ['QR_CODE'], { width: 0.85, height: 0.35 })).toEqual({
+            width: 408,
+            height: 126,
+        });
+    });
+
+    it('clamps pixel-based scanRegion to viewfinder bounds and minimum size', () => {
+        expect(computeQrboxForElement({ clientWidth: 300, clientHeight: 200 }, 250, [], { width: 420, height: 40 })).toEqual({
+            width: 300,
+            height: 80,
+        });
+    });
+
+    it('syncs non-square scanRegion dimensions onto the reticle box', () => {
+        const box = { style: {} };
+        const scope = { querySelector: (selector) => (selector === '.filament-qr-reticle-box' ? box : null) };
+        const element = { closest: () => scope };
+
+        syncReticleToQrbox(element, { width: 384, height: 198 });
+
+        expect(box.style.width).toBe('384px');
+        expect(box.style.height).toBe('198px');
     });
 });

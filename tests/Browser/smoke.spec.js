@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { installFakeCamera } from './fake-camera.js';
 
@@ -64,4 +65,27 @@ test('torch and zoom controls follow camera capabilities', async ({ page }) => {
     const constraints = await page.evaluate(() => window.__fakeCameraConstraints);
     expect(constraints).toContainEqual({ advanced: [{ torch: true }] });
     expect(constraints).toContainEqual({ advanced: [{ zoom: 3 }] });
+});
+
+test('preset scanRegion sizes the reticle proportionally with zero axe violations', async ({ page }) => {
+    await page.addInitScript(installFakeCamera, {
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>',
+    });
+    await page.goto('/workbench/scan-smoke');
+
+    const wrapper = field(page, 'presetCamera');
+    await wrapper.locator('[data-qr-part="scanner.camera-button"]').click();
+
+    const reticleBox = wrapper.locator('.filament-qr-reticle-box');
+    await expect(reticleBox).toBeVisible({ timeout: 10_000 });
+
+    const box = await reticleBox.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box.width).toBeGreaterThan(box.height * 1.5);
+
+    const axeResults = await new AxeBuilder({ page })
+        .include('[data-field-name="presetCamera"] [data-qr-part="scanner.modal"]')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
+        .analyze();
+    expect(axeResults.violations).toEqual([]);
 });

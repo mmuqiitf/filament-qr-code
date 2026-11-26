@@ -22,11 +22,14 @@ Per-component options override these defaults:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 
 QrScanner::make('sku')
+    ->preset(ScannerPreset::Warehouse) // optional camera bundle (retail, warehouse, inventory, ticketing, gs1)
     ->fps(25)
     ->qrbox(250) // responsive max; the decode box scales to the viewfinder
+    ->scanRegion(0.80, 0.55) // optional explicit decode box (<= 1.0 ratio, > 1 pixel max)
     ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
     ->preferRearCamera()
     ->cameraControls() // torch / zoom when the camera supports them; false hides them
@@ -98,8 +101,10 @@ QrHardwareScannerListener::make(['sku'])
 
 | Key                  | Default | Meaning                                                                                  |
 | -------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| `preset`             | `null`  | optional `ScannerPreset` case or string (`retail`, `warehouse`, `inventory`, `ticketing`, `gs1`) |
 | `fps`                | `25`    | decode attempts per second; auto-degrades to 12 when unrestricted and not explicitly set |
 | `qrbox`              | `250`   | _maximum_ decode-box edge; scales to the viewfinder (wide band only for 1D-only fields)  |
+| `scan_region`        | `null`  | optional `['width' => float|int, 'height' => float|int]` (`<= 1.0` ratio, `> 1` px max) |
 | `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins                                |
 | `controls`           | `true`  | torch / zoom controls, shown only when the running camera reports the capability         |
 

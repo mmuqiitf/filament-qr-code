@@ -72,9 +72,30 @@ export function hasTwoDimensionalCode(formats) {
  * Both axes are clamped to the measured container so the box (and its
  * reticle) never overflows a 4:3 or otherwise non-square viewfinder.
  */
-export function computeQrboxForElement(element, maxBox = 250, formats = []) {
+function resolveScanRegionAxis(value, containerSize) {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        return null;
+    }
+
+    const raw = value <= 1 ? Math.round(containerSize * value) : Math.floor(value);
+    const minEdge = Math.min(containerSize, 80);
+
+    return Math.max(minEdge, Math.min(containerSize, raw));
+}
+
+export function computeQrboxForElement(element, maxBox = 250, formats = [], scanRegion = null) {
     const containerWidth = element?.clientWidth || 480;
     const containerHeight = element?.clientHeight || 0;
+
+    if (scanRegion && typeof scanRegion === 'object') {
+        const effectiveHeight = containerHeight > 0 ? containerHeight : Math.round((containerWidth * 3) / 4);
+        const width = resolveScanRegionAxis(scanRegion.width, containerWidth);
+        const height = resolveScanRegionAxis(scanRegion.height, effectiveHeight);
+
+        if (width !== null && height !== null) {
+            return { width, height };
+        }
+    }
     const wide = hasOneDimensionalCode(formats) && !hasTwoDimensionalCode(formats);
     const target = Math.min(Math.max(maxBox, 120), 600);
     const maxWidth = Math.max(120, Math.min(target, Math.floor(containerWidth * 0.85)));
@@ -210,9 +231,9 @@ export function scannerFormatsConfigFor(formats, formatsEnum = null) {
  * Resolve the responsive decode box for a viewfinder element id and keep
  * the on-screen reticle in sync. Replaces the per-component `currentQrbox()`.
  */
-export function resolveQrboxFor(elementId, maxBox = 250, formats = []) {
+export function resolveQrboxFor(elementId, maxBox = 250, formats = [], scanRegion = null) {
     const container = typeof document !== 'undefined' ? document.getElementById(elementId) : null;
-    const box = computeQrboxForElement(container, maxBox, formats);
+    const box = computeQrboxForElement(container, maxBox, formats, scanRegion);
     syncReticleToQrbox(container, box);
 
     return box;

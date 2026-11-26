@@ -449,7 +449,8 @@ Option reference:
 - `gs1(fill: ['01' => 'gtin', '17' => 'expires_at'], require: ['01', '17'])` — read scans as GS1 labels (raw, bracketed, AIM-prefixed, or an uncompressed Digital Link URI): the field stores the bracketed string, mapped AIs fill sibling fields, and an invalid label or a missing AI is rejected before any state is written. The same helper is on `QrCollector` (`require` only; each item is a GS1 string) and on `QrScanSequence` / `ScanStep` (per-step `fill`, with a sequence-level default). See [Scanning GS1 labels](gs1.md#scanning-gs1-labels) and [GS1 Digital Link](gs1.md#digital-link).
 - `hardwareInput(scope: HardwareInputScope::Page)` — also catch wedge scans when no scan field has focus (default `Focus`: only while focused; config `hardware_scanner.default_scope`). A focused scan field always wins.
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
-- `fps()` / `qrbox()` — defaults 25 / 250. `qrbox` is a _maximum_: the actual decode box scales to the viewfinder and the green reticle follows it.
+- `preset(ScannerPreset::Warehouse)` — bundles `formats`, `fps`, `scanRegion`, `preferRearCamera`, and `cameraControls` for `Retail`, `Warehouse`, `Inventory`, `Ticketing`, or `Gs1` (`config` `camera.preset`). Explicit setters always override the preset regardless of call order.
+- `fps()` / `qrbox()` / `scanRegion()` — defaults 25 / 250 / `null`. `qrbox` is a _maximum_ square/band edge; `scanRegion(width, height)` sets an explicit decode box and synced reticle (`<= 1.0` = viewfinder ratio such as `0.85, 0.35`; `> 1` = pixel maxima such as `320, 140`).
 - `preferRearCamera()` — rear heuristic, but the operator's last camera choice (stored in `localStorage`) always wins.
 - `allowUpload(false)` — hides the image-file fallback.
 - `beepFrequency()` / `beepDuration()` / `vibrateDuration()` — feedback tuning.
@@ -896,7 +897,7 @@ When a re-render changes a field's options (say a `pauseOnReject(fn () => $this-
 The current scan always finishes first:
 
 - New options wait for a server check that's running.
-- Camera options (`fps`, `qrbox`, `formats`, `preferRearCamera`) apply on the next camera start.
+- Camera options (`preset`, `fps`, `qrbox`, `scanRegion`, `formats`, `preferRearCamera`) apply on the next camera start.
 - A sequence keeps its list of steps until the round completes or resets. Everything else (repeat counts, labels, active steps) applies right away.
 
 To apply changes only when you ask, set config `scan.sync_options` to `'refresh'` or use a per-field override, then send a refresh event:
@@ -1007,6 +1008,8 @@ QrCollector::make('scanned_items')
     ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
     ->preferRearCamera();
 ```
+
+`QrCollector` and `QrCollectAction` also share `->preset(ScannerPreset::Warehouse)` and `->scanRegion(0.85, 0.35)` with `QrScanner` and `QrScanSequence`.
 
 ### As a Table / Repeater Action
 
@@ -2195,11 +2198,14 @@ Per-component options override these defaults:
 
 ```php
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 
 QrScanner::make('sku')
+    ->preset(ScannerPreset::Warehouse) // optional camera bundle (retail, warehouse, inventory, ticketing, gs1)
     ->fps(25)
     ->qrbox(250) // responsive max; the decode box scales to the viewfinder
+    ->scanRegion(0.80, 0.55) // optional explicit decode box (<= 1.0 ratio, > 1 pixel max)
     ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
     ->preferRearCamera()
     ->cameraControls() // torch / zoom when the camera supports them; false hides them
@@ -2271,8 +2277,10 @@ QrHardwareScannerListener::make(['sku'])
 
 | Key                  | Default | Meaning                                                                                  |
 | -------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| `preset`             | `null`  | optional `ScannerPreset` case or string (`retail`, `warehouse`, `inventory`, `ticketing`, `gs1`) |
 | `fps`                | `25`    | decode attempts per second; auto-degrades to 12 when unrestricted and not explicitly set |
 | `qrbox`              | `250`   | _maximum_ decode-box edge; scales to the viewfinder (wide band only for 1D-only fields)  |
+| `scan_region`        | `null`  | optional `['width' => float|int, 'height' => float|int]` (`<= 1.0` ratio, `> 1` px max) |
 | `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins                                |
 | `controls`           | `true`  | torch / zoom controls, shown only when the running camera reports the capability         |
 
@@ -2460,7 +2468,7 @@ This guide is written for agents that build *with* the package. Agents working *
 ## Do
 
 - **Write out every import**, including enums (`BarcodeFormat`, `ScanMode`, …) and Filament classes (`Filament\Schemas\Schema`). Nothing is global.
-- **Set `->formats([...])`** whenever you know the symbology. It speeds up decoding and cuts false positives.
+- **Set `->preset(ScannerPreset::...)` or `->formats([...])`** whenever you know the symbology. Presets (`Retail`, `Warehouse`, `Inventory`, `Ticketing`, `Gs1`) bundle `formats`, `fps`, `scanRegion`, `preferRearCamera`, and `cameraControls`; explicit setters always win.
 - **Check on the server** with `lookup()`, `lookupUsing()`, `validateUsing()`, `rejectWhen()` or `pipe()`. Live scans write straight into the Livewire state, and the server checks are what reject bad codes.
 - **Scan GS1 labels with `->gs1()`**, not a hand-written `rejectWhen()` around `Gs1::parse()`. The field stores the bracketed string, `fill` keys are AIs as strings (`'01'`, `'17'`; PHP's int keys work too), mapped fields a label lacks are emptied unless `keepMissing: true`, a rejection lands in the field's error bag (no `addError()` needed), typed values are checked like scans, and checks after it (`lookupUsing()`, `rejectWhen()`) receive the bracketed string. Uncompressed Digital Link URIs are accepted the same way. Use `QrCollector::gs1(require: [...])` for a list of labels (no `fill`) and `ScanStep::gs1(...)` or `QrScanSequence::gs1(...)` in a sequence; a step-level `gs1()` wins over the sequence default.
 - **Normalize live scans** with `normalizeWith()` / `normalizeUsing()` (or `normalizeStepUsing()` on a sequence). `QrCollector` supports `normalizeWith()`, opt-in `->quantity()` (`list<array{code: string, qty: int}>` state), `->maxItems()`, and `->csv()` / `->csvImport()` / `->csvExport()`.
@@ -3617,11 +3625,13 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `pauseOnReject(Closure\|bool $condition = true): static` | Continuous mode: pause until the error is dismissed instead of scanning on. |
 | `pipe(ScanCheckStage\|string ...$stages): static` | Add custom checks that run after the rules, lookup and closures. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
+| `preset(ScannerPreset\|Closure\|string\|null $preset): static` | Bundle camera defaults (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`) for a common workflow; explicit setters always win regardless of call order. |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
 | `rejectWhen(Closure $predicate, Closure\|string $message): static` | Immediately reject a live scan matching $predicate: the state is cleared and a `qr-scan-rejected` browser event (with message) is dispatched so the app can notify the operator. Camera and gun scans are checked on the server first, so a rejected scan is never announced as added. A typed value is cleared before the field's other `afterStateUpdated()` hooks run, so they do not see the rejected value. |
 | `runScanChecks(string $code, ?ScanInput $source): ScanResult` | Run the field's live-scan checks (rules, lookup, closures, piped stages) on an already normalized code. The first failure stops the run. |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
 | `scanFormat(?Closure $formatter): static` | Programmatic-only formatter. Runs only via formatScannedValue() in custom flows — never on live camera/hardware scans. For live values use normalizeUsing() (or afterStateUpdated() directly). |
+| `scanRegion(Closure\|int\|float\|null $width = null, Closure\|int\|float\|null $height = null): static` | Explicit decode box and reticle dimensions (config `camera.scan_region`). Values <= 1.0 are viewfinder ratios (e.g. 0.85, 0.35); integers > 1 are pixel maxima. Pass `scanRegion()` or `scanRegion(null, null)` to clear a preset or config region. |
 | `scanRules(Closure\|array $rules): static` | Submit-time validation rules for scanned values. Live scans write state directly, so these run on submit like any other field rules — pair with rejectWhen() for immediate feedback. |
 | `scanTimeout(Closure\|int $milliseconds): static` | Flush window in milliseconds for guns that send no terminator; 0 disables (config `hardware_scanner.scan_timeout_ms`). |
 | `sound(Closure\|bool $condition = true): static` | Play the synthesized beep on a successful scan (config `feedback.sound`). |
@@ -3631,7 +3641,7 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getContinuousDisplay()`, `getCooldownMs()`, `getEffectiveFps()`, `getErrorFeedback()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareInputScope()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getMode()`, `getNextField()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getOutcomeFeedbackScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanCheckPipeline()`, `getScanChecksScanPayload()`, `getScanModeScanPayload()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSequentialScanPayload()`, `getSuccessFeedback()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerScanChecks()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `isUploadAllowed()`, `shouldClearOnReject()`, `shouldKeepCameraOpen()`, `shouldKeepMissingGs1Fields()`, `shouldPauseOnReject()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getContinuousDisplay()`, `getCooldownMs()`, `getEffectiveFps()`, `getErrorFeedback()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareInputScope()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getMode()`, `getNextField()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getOutcomeFeedbackScanPayload()`, `getPreset()`, `getQrbox()`, `getRenderHookScopes()`, `getScanCheckPipeline()`, `getScanChecksScanPayload()`, `getScanModeScanPayload()`, `getScanPayload()`, `getScanRegion()`, `getScanTimeoutMs()`, `getSequentialScanPayload()`, `getSuccessFeedback()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerScanChecks()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `isUploadAllowed()`, `shouldClearOnReject()`, `shouldKeepCameraOpen()`, `shouldKeepMissingGs1Fields()`, `shouldPauseOnReject()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrHardwareScannerListener`
 
@@ -3700,11 +3710,13 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `onStepRejected(?Closure $callback): static` | Side effect after a step rejects a scan. It can't change the result or the message. |
 | `onStepScanned(?Closure $callback): static` | Programmatic-only step callback. Invoke via triggerOnStep() in custom flows — live scans dispatch the `qr-sequence-step` window event and write Livewire state directly instead. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
+| `preset(ScannerPreset\|Closure\|string\|null $preset): static` | Bundle camera defaults (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`) for a common workflow; explicit setters always win regardless of call order. |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
 | `resetAfterSubmit(Closure\|bool\|null $condition = true): static` | Clear the non-sticky steps after a successful submit. |
 | `resetSequence(bool $keepSticky = true, array $values = []): void` | Start the sequence over from page code: sticky values stay unless $keepSticky is false; $values seeds steps. |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
 | `scanFormat(?Closure $formatter): static` | Programmatic-only step formatter. Runs via formatScannedValue() / triggerOnStep() in custom flows — never on live camera/hardware scans. For live values use normalizeStepUsing() (applied on merge) or afterStateUpdated() on real fields. |
+| `scanRegion(Closure\|int\|float\|null $width = null, Closure\|int\|float\|null $height = null): static` | Explicit decode box and reticle dimensions (config `camera.scan_region`). Values <= 1.0 are viewfinder ratios (e.g. 0.85, 0.35); integers > 1 are pixel maxima. Pass `scanRegion()` or `scanRegion(null, null)` to clear a preset or config region. |
 | `scanTimeout(Closure\|int $milliseconds): static` | Flush window in milliseconds for guns that send no terminator; 0 disables (config `hardware_scanner.scan_timeout_ms`). |
 | `setRepeatCount(string $step, ?int $count): void` | Override a repeat step's count for this page until set back to null. Stored in the session so later server checks agree with the browser. |
 | `sound(Closure\|bool $condition = true): static` | Play the synthesized beep on a successful scan (config `feedback.sound`). |
@@ -3715,7 +3727,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, `getAutomaticKey()`, `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getComponentStatePath()`, `getControlKey()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFlatStatePrefix()`, `getFps()`, `getHardwareScannerScanPayload()`, `getInvalidSequenceBehavior()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getQrbox()`, `getRenderHookScopes()`, `getScanFields()`, `getScanPayload()`, `getScanSteps()`, `getScanTimeoutMs()`, `getSequenceState()`, `getStepErrors()`, `getStepsPayload()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerSequenceWork()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isEditable()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldAutoSubmit()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`, `shouldResetAfterSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getAutoSubmitMethod()`, `getAutomaticKey()`, `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getComponentStatePath()`, `getControlKey()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFlatStatePrefix()`, `getFps()`, `getHardwareScannerScanPayload()`, `getInvalidSequenceBehavior()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getOptionsSync()`, `getOptionsSyncScanPayload()`, `getPreset()`, `getQrbox()`, `getRenderHookScopes()`, `getScanFields()`, `getScanPayload()`, `getScanRegion()`, `getScanSteps()`, `getScanTimeoutMs()`, `getSequenceState()`, `getStepErrors()`, `getStepsPayload()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasServerSequenceWork()`, `hasSound()`, `hasVibration()`, `isContinuous()`, `isEditable()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldAutoSubmit()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`, `shouldResetAfterSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `ScanStep`
 
@@ -3772,16 +3784,18 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `normalizeWith(bool $trim = true, bool $uppercase = false, array\|string\|null $stripPrefix = null): static` | Clean every scanned code in the browser (before duplicate detection and step matching) and again on the server. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
+| `preset(ScannerPreset\|Closure\|string\|null $preset): static` | Bundle camera defaults (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`) for a common workflow; explicit setters always win regardless of call order. |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
 | `quantity(Closure\|bool $condition = true): static` | Track a quantity per unique code so rescans increment the count instead of rejecting duplicates. |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
+| `scanRegion(Closure\|int\|float\|null $width = null, Closure\|int\|float\|null $height = null): static` | Explicit decode box and reticle dimensions (config `camera.scan_region`). Values <= 1.0 are viewfinder ratios (e.g. 0.85, 0.35); integers > 1 are pixel maxima. Pass `scanRegion()` or `scanRegion(null, null)` to clear a preset or config region. |
 | `scanTimeout(Closure\|int $milliseconds): static` | Flush window in milliseconds for guns that send no terminator; 0 disables (config `hardware_scanner.scan_timeout_ms`). |
 | `sound(Closure\|bool $condition = true): static` | Play the synthesized beep on a successful scan (config `feedback.sound`). |
 | `toCsv(iterable $items): string` | Format collected items as an RFC 4180 CSV string (includes a `qty` column in quantity mode). |
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getCsvFileName()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMaxItems()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasQuantity()`, `hasSound()`, `hasVibration()`, `isCsvExportEnabled()`, `isCsvImportEnabled()`, `isDuplicatesAllowed()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getCodeNormalizationScanPayload()`, `getCodeNormalizer()`, `getComponentScanPayload()`, `getCsvFileName()`, `getDelayBetweenScansMs()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMaxItems()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getPreset()`, `getQrbox()`, `getRenderHookScopes()`, `getScanPayload()`, `getScanRegion()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasAnnouncements()`, `hasCameraControls()`, `hasItemRules()`, `hasQuantity()`, `hasSound()`, `hasVibration()`, `isCsvExportEnabled()`, `isCsvImportEnabled()`, `isDuplicatesAllowed()`, `isGs1()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldKeepMissingGs1Fields()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ### `QrCollectAction`
 
@@ -3800,14 +3814,16 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `onScan(?Closure $callback): static` | Callback run for each collected code. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
+| `preset(ScannerPreset\|Closure\|string\|null $preset): static` | Bundle camera defaults (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`) for a common workflow; explicit setters always win regardless of call order. |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
 | `static sanitizeScannedValue(string $value): string` | Strip handheld-scanner framing (STX/ETX prefixes, CR/LF suffixes) and surrounding whitespace. Mirrors the JS sanitizeScannedValue(). |
+| `scanRegion(Closure\|int\|float\|null $width = null, Closure\|int\|float\|null $height = null): static` | Explicit decode box and reticle dimensions (config `camera.scan_region`). Values <= 1.0 are viewfinder ratios (e.g. 0.85, 0.35); integers > 1 are pixel maxima. Pass `scanRegion()` or `scanRegion(null, null)` to clear a preset or config region. |
 | `scanTimeout(Closure\|int $milliseconds): static` | Flush window in milliseconds for guns that send no terminator; 0 disables (config `hardware_scanner.scan_timeout_ms`). |
 | `sound(Closure\|bool $condition = true): static` | Play the synthesized beep on a successful scan (config `feedback.sound`). |
 | `vibrate(Closure\|bool $condition = true, ?array $success = null, ?array $error = null): static` | Vibrate on a successful scan; success / error patterns apply to server-checked fields. |
 | `vibrateDuration(Closure\|int $milliseconds): static` | Haptic pulse length in milliseconds (config `feedback.vibrate_duration_ms`). |
 
-Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getComponentScanPayload()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getQrbox()`, `getScanPayload()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasCameraControls()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
+Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `getBeepFrequencyHz()`, `getBurstThresholdMs()`, `getCameraScanPayload()`, `getComponentScanPayload()`, `getEffectiveFps()`, `getFeedbackScanPayload()`, `getFps()`, `getHardwareScannerScanPayload()`, `getMinBarcodeLength()`, `getMinFastKeys()`, `getPreset()`, `getQrbox()`, `getScanPayload()`, `getScanRegion()`, `getScanTimeoutMs()`, `getSupportedFormats()`, `getTerminators()`, `getVibrateDurationMs()`, `hasCameraControls()`, `hasSound()`, `hasVibration()`, `isDuplicatesAllowed()`, `isHardwareScannerEnabled()`, `isPreferRearCamera()`, `shouldPreventFormSubmit()`, `shouldWarnUnrestrictedPerformance()`
 
 ## Generating components
 
@@ -4415,8 +4431,10 @@ Every key in `config/qr-code.php` (prefix `qr-code.`). Meanings: [reference.md](
 | `sequence.continuous` | `false` |
 | `sequence.repeat_complete` | `'advance'` |
 | `sequence.finish_code` | `null` |
+| `camera.preset` | `null` |
 | `camera.fps` | `25` |
 | `camera.qrbox` | `250` |
+| `camera.scan_region` | `null` |
 | `camera.prefer_rear_camera` | `true` |
 | `camera.controls` | `true` |
 | `generator.size` | `300` |
