@@ -11,7 +11,7 @@
 
 ## Verification and generated files
 
-- Give each unit or integration test a clear failure it should catch. Use the simplest setup that exercises the behavior, assert observable outcomes, and cover the edge cases that could realistically change the result, such as rejected scans, duplicate input, or missing fonts.
+- Only add unit or integration tests that are worth it: protect real behaviour, public API contracts, regressions, or tricky edge cases (such as rejected scans, duplicate input, or missing fonts). Avoid low-value tests — trivial getters/setters, re-testing framework or vendor behaviour, duplicate coverage, or snapshot noise — that only add lines of code. Prefer extending an existing test over creating a new file; TDD still applies to meaningful behaviour, using the simplest setup that asserts observable outcomes.
 - Follow [CONTRIBUTING.md](CONTRIBUTING.md) for test, analysis, and formatting commands, including frontend tests with `npm test`.
 - Run `composer docs` after changing public signatures, public docblocks, config keys, or user-facing docs, including `README.md` and `UPGRADE.md`. It regenerates `docs/api.md` and `llms-full.txt`. For new docs pages, update `llms.txt` and check whether the page needs an explicit entry in `llmsFullFiles()` in [the generator](bin/generate-api-docs.php).
 - After changes under `resources/js/` or `resources/css/`, regenerate `resources/dist/` with `npm run build` and include the generated changes with the source. Host apps refresh the assets with `php artisan filament:assets`.
