@@ -140,10 +140,12 @@ return [
     */
     'camera' => [
         // Optional ScannerPreset case or string (retail, warehouse, inventory, ticketing, gs1).
+        // When set, replaces fps, scan_region, prefer_rear_camera, and controls. Fluent setters still win.
         'preset' => null,
         'fps' => 25,
         'qrbox' => 250,
-        // Optional explicit decode box: ['width' => 0.85, 'height' => 0.35] (<=1 ratio, >1 px).
+        // Optional explicit decode box: ['width' => 0.85, 'height' => 0.35] (<=1 ratio, integer >1 px).
+        // Ignored while preset is set. Per-component scanRegion() still wins.
         'scan_region' => null,
         'prefer_rear_camera' => true,
         // Torch / zoom buttons, shown only when the camera supports them.

@@ -7,8 +7,10 @@ namespace Mmuqiitf\FilamentQrCode\Console\Commands;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use InvalidArgumentException;
 use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Support\LogoPathGuard;
+use Mmuqiitf\FilamentQrCode\Support\ScanRegion;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
@@ -185,6 +187,16 @@ class QrCodeDoctorCommand extends Command
         if ($preset !== null && $preset !== '' && ! $preset instanceof ScannerPreset && (! is_string($preset) || ScannerPreset::tryFrom($preset) === null)) {
             $this->warn('  [WARN] qr-code.camera.preset is not a valid ScannerPreset.');
             $problems++;
+        }
+
+        $scanRegion = config('qr-code.camera.scan_region');
+        if ($scanRegion !== null) {
+            try {
+                ScanRegion::fromConfig($scanRegion);
+            } catch (InvalidArgumentException) {
+                $this->warn('  [WARN] qr-code.camera.scan_region must set width and height as ratios <= 1.0 or integer pixel maxima.');
+                $problems++;
+            }
         }
 
         $beep = $this->intConfig('qr-code.feedback.beep_frequency', 880);

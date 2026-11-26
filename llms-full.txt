@@ -449,8 +449,8 @@ Option reference:
 - `gs1(fill: ['01' => 'gtin', '17' => 'expires_at'], require: ['01', '17'])` — read scans as GS1 labels (raw, bracketed, AIM-prefixed, or an uncompressed Digital Link URI): the field stores the bracketed string, mapped AIs fill sibling fields, and an invalid label or a missing AI is rejected before any state is written. The same helper is on `QrCollector` (`require` only; each item is a GS1 string) and on `QrScanSequence` / `ScanStep` (per-step `fill`, with a sequence-level default). See [Scanning GS1 labels](gs1.md#scanning-gs1-labels) and [GS1 Digital Link](gs1.md#digital-link).
 - `hardwareInput(scope: HardwareInputScope::Page)` — also catch wedge scans when no scan field has focus (default `Focus`: only while focused; config `hardware_scanner.default_scope`). A focused scan field always wins.
 - `nextField('other')` — focuses that field after a scan (field handoff, see §4).
-- `preset(ScannerPreset::Warehouse)` — bundles `formats`, `fps`, `scanRegion`, `preferRearCamera`, and `cameraControls` for `Retail`, `Warehouse`, `Inventory`, `Ticketing`, or `Gs1` (`config` `camera.preset`). Explicit setters always override the preset regardless of call order.
-- `fps()` / `qrbox()` / `scanRegion()` — defaults 25 / 250 / `null`. `qrbox` is a _maximum_ square/band edge; `scanRegion(width, height)` sets an explicit decode box and synced reticle (`<= 1.0` = viewfinder ratio such as `0.85, 0.35`; `> 1` = pixel maxima such as `320, 140`).
+- `preset(ScannerPreset::Warehouse)` — bundles `formats`, `fps`, `scanRegion`, `preferRearCamera`, and `cameraControls` for `Retail`, `Warehouse`, `Inventory`, `Ticketing`, or `Gs1`. The method or `camera.preset` replaces those camera config keys (`fps`, `scan_region`, `prefer_rear_camera`, `controls`). Explicit setters still win, in either call order. `ScannerPreset::Gs1` only tunes the camera; call `gs1()` as well to parse GS1 labels.
+- `fps()` / `qrbox()` / `scanRegion()` — defaults 25 / 250 / `null`. `qrbox` is a _maximum_ square/band edge, used when no region is active. `scanRegion(width, height)` replaces that box and syncs the reticle (`<= 1.0` = viewfinder ratio such as `0.85, 0.35`; integers `> 1` = pixel maxima such as `320, 140`). `scanRegion()` or `scanRegion(null, null)` clears a preset or config region. `->qrbox()` does the same when `scanRegion()` was not called.
 - `preferRearCamera()` — rear heuristic, but the operator's last camera choice (stored in `localStorage`) always wins.
 - `allowUpload(false)` — hides the image-file fallback.
 - `beepFrequency()` / `beepDuration()` / `vibrateDuration()` — feedback tuning.
@@ -2204,8 +2204,8 @@ use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 QrScanner::make('sku')
     ->preset(ScannerPreset::Warehouse) // optional camera bundle (retail, warehouse, inventory, ticketing, gs1)
     ->fps(25)
-    ->qrbox(250) // responsive max; the decode box scales to the viewfinder
-    ->scanRegion(0.80, 0.55) // optional explicit decode box (<= 1.0 ratio, > 1 pixel max)
+    ->qrbox(250) // responsive max when no scanRegion is active; the decode box scales to the viewfinder
+    ->scanRegion(0.80, 0.55) // replaces qrbox; ratios <= 1.0, integers > 1 are pixel maxima
     ->formats([BarcodeFormat::QrCode, BarcodeFormat::Code128])
     ->preferRearCamera()
     ->cameraControls() // torch / zoom when the camera supports them; false hides them
@@ -2277,12 +2277,14 @@ QrHardwareScannerListener::make(['sku'])
 
 | Key                  | Default | Meaning                                                                                  |
 | -------------------- | ------- | ---------------------------------------------------------------------------------------- |
-| `preset`             | `null`  | optional `ScannerPreset` case or string (`retail`, `warehouse`, `inventory`, `ticketing`, `gs1`) |
-| `fps`                | `25`    | decode attempts per second; auto-degrades to 12 when unrestricted and not explicitly set |
-| `qrbox`              | `250`   | _maximum_ decode-box edge; scales to the viewfinder (wide band only for 1D-only fields)  |
-| `scan_region`        | `null`  | optional `['width' => float|int, 'height' => float|int]` (`<= 1.0` ratio, `> 1` px max) |
-| `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins                                |
-| `controls`           | `true`  | torch / zoom controls, shown only when the running camera reports the capability         |
+| `preset`             | `null`  | optional `ScannerPreset` (`retail`, `warehouse`, `inventory`, `ticketing`, `gs1`). When set, replaces `fps`, `scan_region`, `prefer_rear_camera`, and `controls` |
+| `fps`                | `25`    | decode attempts per second; auto-degrades to 12 when unrestricted and not explicitly set. Unused while a preset is set |
+| `qrbox`              | `250`   | _maximum_ decode-box edge when no region is active; scales to the viewfinder (wide band only for 1D-only fields) |
+| `scan_region`        | `null`  | optional `['width' => float\|int, 'height' => float\|int]` (ratios `<= 1.0`, integer pixel maxima `> 1`). Unused while a preset is set |
+| `prefer_rear_camera` | `true`  | rear heuristic; the remembered `localStorage` choice wins. Unused while a preset is set |
+| `controls`           | `true`  | torch / zoom controls, shown only when the running camera reports the capability. Unused while a preset is set |
+
+A preset is a whole camera profile. The four keys it replaces apply only when `preset` is `null`. Per-component setters (`->fps()`, `->scanRegion()`, `->qrbox()`, `->formats()`, `->preferRearCamera()`, `->cameraControls()`) override the preset in either call order. `->scanRegion()` draws the box; `->qrbox()` draws it when no region is active. `ScannerPreset::Gs1` does not parse GS1 labels — use `->gs1()` for that. An invalid `scan_region` is ignored at runtime; `qr-code:doctor` warns about it.
 
 ### `scan`
 
@@ -2468,7 +2470,7 @@ This guide is written for agents that build *with* the package. Agents working *
 ## Do
 
 - **Write out every import**, including enums (`BarcodeFormat`, `ScanMode`, …) and Filament classes (`Filament\Schemas\Schema`). Nothing is global.
-- **Set `->preset(ScannerPreset::...)` or `->formats([...])`** whenever you know the symbology. Presets (`Retail`, `Warehouse`, `Inventory`, `Ticketing`, `Gs1`) bundle `formats`, `fps`, `scanRegion`, `preferRearCamera`, and `cameraControls`; explicit setters always win.
+- **Set `->preset(ScannerPreset::...)` or `->formats([...])`** whenever you know the symbology. Presets (`Retail`, `Warehouse`, `Inventory`, `Ticketing`, `Gs1`) bundle `formats`, `fps`, `scanRegion`, `preferRearCamera`, and `cameraControls`, and they replace the matching `camera.*` config keys. Explicit setters always win. `ScannerPreset::Gs1` does not parse labels; keep using `->gs1()` for that.
 - **Check on the server** with `lookup()`, `lookupUsing()`, `validateUsing()`, `rejectWhen()` or `pipe()`. Live scans write straight into the Livewire state, and the server checks are what reject bad codes.
 - **Scan GS1 labels with `->gs1()`**, not a hand-written `rejectWhen()` around `Gs1::parse()`. The field stores the bracketed string, `fill` keys are AIs as strings (`'01'`, `'17'`; PHP's int keys work too), mapped fields a label lacks are emptied unless `keepMissing: true`, a rejection lands in the field's error bag (no `addError()` needed), typed values are checked like scans, and checks after it (`lookupUsing()`, `rejectWhen()`) receive the bracketed string. Uncompressed Digital Link URIs are accepted the same way. Use `QrCollector::gs1(require: [...])` for a list of labels (no `fill`) and `ScanStep::gs1(...)` or `QrScanSequence::gs1(...)` in a sequence; a step-level `gs1()` wins over the sequence default.
 - **Normalize live scans** with `normalizeWith()` / `normalizeUsing()` (or `normalizeStepUsing()` on a sequence). `QrCollector` supports `normalizeWith()`, opt-in `->quantity()` (`list<array{code: string, qty: int}>` state), `->maxItems()`, and `->csv()` / `->csvImport()` / `->csvExport()`.

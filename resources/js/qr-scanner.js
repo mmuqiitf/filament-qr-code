@@ -131,7 +131,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
 
             this.stopObservingOptions = observeOptions(this.fieldElement(), (rendered) => {
                 if (this.options.syncOptions !== 'refresh') {
-                    this.setOptions(rendered);
+                    this.replaceRenderedOptions(rendered);
                 }
             });
 
@@ -222,11 +222,17 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
         },
 
         refreshOptions() {
-            const rendered = readOptionsAttribute(this.fieldElement());
+            this.replaceRenderedOptions(readOptionsAttribute(this.fieldElement()));
+        },
 
-            if (rendered) {
-                this.setOptions({ scanRegion: null, ...rendered });
+        // scanRegion is omitted from the payload when empty, so a full replace must clear it.
+        // setOptions merges, and a missing key would otherwise keep the previous box.
+        replaceRenderedOptions(rendered) {
+            if (!rendered) {
+                return;
             }
+
+            this.setOptions({ scanRegion: null, ...rendered });
         },
 
         // New options wait for a running check; camera options apply on the next camera start.

@@ -115,7 +115,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             this.stopObservingOptions = observeOptions(this.$root ?? this.$el, (rendered) => {
                 if (this.options.syncOptions !== 'refresh') {
-                    this.setOptions(rendered);
+                    this.replaceRenderedOptions(rendered);
                 }
             });
 
@@ -231,9 +231,16 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
         },
 
         refreshOptions() {
-            const rendered = readOptionsAttribute(this.$root ?? this.$el);
+            this.replaceRenderedOptions(readOptionsAttribute(this.$root ?? this.$el));
+        },
 
-            if (rendered) this.setOptions({ scanRegion: null, ...rendered });
+        // scanRegion is omitted from the payload when empty, so a full replace must clear it.
+        replaceRenderedOptions(rendered) {
+            if (!rendered) {
+                return;
+            }
+
+            this.setOptions({ scanRegion: null, ...rendered });
         },
 
         // Options wait for a running check; the step list waits for the round to end.

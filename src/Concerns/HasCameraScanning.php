@@ -10,6 +10,7 @@ use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
+use Mmuqiitf\FilamentQrCode\Support\ScanRegion;
 
 trait HasCameraScanning
 {
@@ -114,7 +115,7 @@ trait HasCameraScanning
     public function scanRegion(int|float|Closure|null $width = null, int|float|Closure|null $height = null): static
     {
         if (! $width instanceof Closure && ! $height instanceof Closure) {
-            $this->validateScanRegionValues($width, $height);
+            ScanRegion::pair($width, $height);
         }
 
         $this->scanRegionWidth = $width;
@@ -130,10 +131,10 @@ trait HasCameraScanning
     public function getScanRegion(): ?array
     {
         if ($this->scanRegionCustomized) {
-            $width = $this->evaluate($this->scanRegionWidth);
-            $height = $this->evaluate($this->scanRegionHeight);
-
-            return $this->validateScanRegionValues($width, $height);
+            return ScanRegion::pair(
+                $this->evaluate($this->scanRegionWidth),
+                $this->evaluate($this->scanRegionHeight),
+            );
         }
 
         if ($this->qrboxCustomized) {
@@ -304,60 +305,12 @@ trait HasCameraScanning
     /**
      * @return array{width: int|float, height: int|float}|null
      */
-    private function validateScanRegionValues(mixed $width, mixed $height): ?array
-    {
-        if ($width === null && $height === null) {
-            return null;
-        }
-
-        if ($width === null || $height === null) {
-            throw new InvalidArgumentException('Both width and height must be provided when configuring scanRegion().');
-        }
-
-        return [
-            'width' => $this->validateScanRegionAxis($width, 'width'),
-            'height' => $this->validateScanRegionAxis($height, 'height'),
-        ];
-    }
-
-    private function validateScanRegionAxis(mixed $value, string $axis): int|float
-    {
-        if (! is_int($value) && ! is_float($value)) {
-            throw new InvalidArgumentException("Scan region {$axis} must be a positive integer (px) or float ratio (<= 1.0).");
-        }
-
-        if (is_float($value) && (! is_finite($value) || $value > 1.0)) {
-            throw new InvalidArgumentException("Scan region {$axis} ratio cannot exceed 1.0.");
-        }
-
-        if ($value <= 0) {
-            throw new InvalidArgumentException("Scan region {$axis} must be greater than zero.");
-        }
-
-        return $value;
-    }
-
-    /**
-     * @return array{width: int|float, height: int|float}|null
-     */
     private function readConfiguredScanRegion(): ?array
     {
         if (! function_exists('config')) {
             return null;
         }
 
-        $configured = config('qr-code.camera.scan_region');
-        if (! is_array($configured)) {
-            return null;
-        }
-
-        $width = $configured['width'] ?? $configured[0] ?? null;
-        $height = $configured['height'] ?? $configured[1] ?? null;
-
-        try {
-            return $this->validateScanRegionValues($width, $height);
-        } catch (InvalidArgumentException) {
-            return null;
-        }
+        return ScanRegion::tryFromConfig(config('qr-code.camera.scan_region'));
     }
 }

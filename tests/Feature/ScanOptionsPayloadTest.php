@@ -222,6 +222,34 @@ it('reads preset and scanRegion defaults from config and accepts closures', func
         ->and($fromClosure['scanRegion'])->toBe(['width' => 280, 'height' => 120]);
 });
 
+it('lets a configured preset replace the other camera defaults', function () {
+    config()->set('qr-code.camera.preset', 'warehouse');
+    config()->set('qr-code.camera.fps', 10);
+    config()->set('qr-code.camera.scan_region', ['width' => 0.5, 'height' => 0.5]);
+    config()->set('qr-code.camera.prefer_rear_camera', false);
+    config()->set('qr-code.camera.controls', false);
+
+    $payload = QrScanner::make('sku')->getScanPayload();
+
+    expect($payload['fps'])->toBe(20)
+        ->and($payload['scanRegion'])->toBe(['width' => 0.80, 'height' => 0.55])
+        ->and($payload['preferRearCamera'])->toBeTrue()
+        ->and($payload['cameraControls'])->toBeTrue()
+        ->and($payload['formats'])->toBe(['CODE_128', 'CODE_39', 'ITF', 'QR_CODE', 'DATA_MATRIX']);
+
+    $overridden = QrScanner::make('sku')
+        ->fps(12)
+        ->scanRegion(0.4, 0.2)
+        ->preferRearCamera(false)
+        ->cameraControls(false)
+        ->getScanPayload();
+
+    expect($overridden['fps'])->toBe(12)
+        ->and($overridden['scanRegion'])->toBe(['width' => 0.4, 'height' => 0.2])
+        ->and($overridden['preferRearCamera'])->toBeFalse()
+        ->and($overridden['cameraControls'])->toBeFalse();
+});
+
 it('rejects invalid scanRegion bounds', function (mixed $width, mixed $height) {
     expect(fn () => QrScanner::make('sku')->scanRegion($width, $height)->getScanPayload())
         ->toThrow(InvalidArgumentException::class);
