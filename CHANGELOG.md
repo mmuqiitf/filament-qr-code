@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-26
+
+### Dark mode & collector quantity/CSV
+
 ### Added
 
-- Batch collector quantity, CSV import/export, and item cap (`QrCollector`): opt-in `->quantity()` tracks `[code => string, qty => int]` items so rescans increment counts instead of rejecting duplicates and operators can edit quantities inline (off by default, keeping plain `list<string>` state); `->maxItems(?int $max)` caps collected items in both the browser and submit-time validation; `->csvImport()`, `->csvExport()`, and `->csv()` add CSV upload/download respecting `normalizeWith()`, `gs1()`, `itemRules()`, and `maxItems()` with a per-row rejection report.
+- Batch collector quantity, CSV import/export, and item cap (`QrCollector`): opt-in `->quantity()` tracks `array{code: string, qty: int}` items so rescans increment counts instead of rejecting duplicates and operators can edit quantities inline (off by default, keeping plain `list<string>` state); `->maxItems(?int $max)` caps collected items in both the browser and submit-time validation; `->csvImport()`, `->csvExport()`, and `->csv()` add CSV upload/download respecting `normalizeWith()`, `gs1()`, `itemRules()`, and `maxItems()` with a per-row rejection report.
 
 ### Fixed
 
@@ -542,7 +546,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.1...v1.1.2
