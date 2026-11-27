@@ -538,6 +538,18 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             }
         },
 
+        rejectOffline(currentField, code, message) {
+            this.stepError = message;
+            this.rejectionReasons = rememberRejection(this.rejectionReasons, message);
+            this.announceScan(this.options, {
+                code,
+                accepted: false,
+                reason: message,
+                field: currentField?.key ?? null,
+                fallback: formatMessage(this.options.rejectedAnnouncement, { reason: message }),
+            });
+        },
+
         processScan(decodedText, source = 'camera') {
             const currentField = this.getCurrentField();
             if (!currentField) return;
@@ -547,8 +559,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             const blocked = offlineBlockResult(this, trimmed, source);
             if (blocked) {
-                this.stepError = blocked.message;
-                this.rejectionReasons = rememberRejection(this.rejectionReasons, blocked.message);
+                this.rejectOffline(currentField, trimmed, blocked.message);
 
                 return blocked;
             }
@@ -718,8 +729,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             const blocked = offlineBlockResult(this, code, source);
             if (blocked && method === 'handleStepScan') {
-                this.stepError = blocked.message;
-                this.rejectionReasons = rememberRejection(this.rejectionReasons, blocked.message);
+                this.rejectOffline(currentField, code, blocked.message);
 
                 return blocked;
             }

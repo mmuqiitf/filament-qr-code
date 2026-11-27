@@ -23,6 +23,14 @@ it('blocks while offline when asked, and can turn the banner off', function (): 
         ->and(QrScanner::make('sku')->offline('block')->getOfflineMode())->toBe(OfflineMode::Block);
 });
 
+it('lets blockWhenOffline win after offline(), and treats offline(null) as the config', function (): void {
+    config(['qr-code.scan.offline' => 'off']);
+
+    expect(QrScanner::make('sku')->offline(OfflineMode::Banner)->blockWhenOffline()->getOfflineMode())->toBe(OfflineMode::Block)
+        ->and(QrScanner::make('sku')->offline(null)->getOfflineMode())->toBe(OfflineMode::Off)
+        ->and(QrScanner::make('sku')->offline(OfflineMode::Off)->blockWhenOffline(false)->getOfflineMode())->toBe(OfflineMode::Off);
+});
+
 it('reads qr-code.scan.offline and ignores an unknown value', function (): void {
     config(['qr-code.scan.offline' => 'block']);
 

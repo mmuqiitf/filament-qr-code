@@ -54,7 +54,7 @@ Artisan commands: `php artisan qr-code:doctor` (environment checks), `php artisa
 | `normalizeScannedCode(string $code): string` | The code every check sees: the normalizeWith() presets (or a trim), then the normalizeUsing() closure. |
 | `normalizeUsing(Closure $normalizer): static` | Live-scan normalizer (runs on every Livewire state update, including camera and hardware scans). Shorthand for afterStateUpdated() so the live hook is discoverable next to the programmatic-only scanFormat(). |
 | `normalizeWith(bool $trim = true, bool $uppercase = false, array\|string\|null $stripPrefix = null): static` | Clean every scanned code in the browser (before duplicate detection and step matching) and again on the server. |
-| `offline(OfflineMode\|Closure\|string\|null $mode): static` | What this surface does when the browser is offline: banner, block, or off. An explicit call wins over `qr-code.scan.offline`. |
+| `offline(OfflineMode\|Closure\|string\|null $mode): static` | What this surface does when the browser is offline: banner, block, or off. Null clears an explicit choice and uses `qr-code.scan.offline`. `blockWhenOffline(true)` still forces block. |
 | `onRejected(?Closure $callback): static` | Callback run on a rejected server-checked scan (injects $code, $record, $source, $result). |
 | `onScan(?Closure $callback): static` | Programmatic-only callback. Invoke via triggerOnScan() in custom flows — live scans dispatch the `qr-scanned` window event and update Livewire state directly instead. |
 | `onScanned(?Closure $callback): static` | Callback run on an accepted server-checked scan (injects $code, $record, $source, $result). |
@@ -141,7 +141,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `normalizeStepUsing(?Closure $normalizer): static` | Live-step normalizer, applied by getSequenceState() and mergeSequenceState() (e.g. strtoupper(trim($value))). This is the live-scan counterpart to the programmatic-only scanFormat(). |
 | `normalizeWith(bool $trim = true, bool $uppercase = false, array\|string\|null $stripPrefix = null): static` | Clean every scanned code in the browser (before duplicate detection and step matching) and again on the server. |
-| `offline(OfflineMode\|Closure\|string\|null $mode): static` | What this surface does when the browser is offline: banner, block, or off. An explicit call wins over `qr-code.scan.offline`. |
+| `offline(OfflineMode\|Closure\|string\|null $mode): static` | What this surface does when the browser is offline: banner, block, or off. Null clears an explicit choice and uses `qr-code.scan.offline`. `blockWhenOffline(true)` still forces block. |
 | `onCompleted(?Closure $callback): static` | Callback run with every step value once the whole sequence is complete. |
 | `onInvalidSequence(InvalidSequenceBehavior\|Closure\|null $behavior): static` | What a failed validateAllUsing() check does: jump back to the failing step or restart. |
 | `onStepAccepted(?Closure $callback): static` | Side effect after a step accepts a live scan (log, notify). Receives $step, $result, $code, $record, $values; its return value is ignored. |
@@ -222,7 +222,7 @@ Getters (read the resolved option; used by the views): `allowsDuplicates()`, `ge
 | `maxItems(Closure\|int\|null $max): static` | Cap how many items the collector can hold, enforced in the browser and on submit. |
 | `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
 | `normalizeWith(bool $trim = true, bool $uppercase = false, array\|string\|null $stripPrefix = null): static` | Clean every scanned code in the browser (before duplicate detection and step matching) and again on the server. |
-| `offline(OfflineMode\|Closure\|string\|null $mode): static` | What this surface does when the browser is offline: banner, block, or off. An explicit call wins over `qr-code.scan.offline`. |
+| `offline(OfflineMode\|Closure\|string\|null $mode): static` | What this surface does when the browser is offline: banner, block, or off. Null clears an explicit choice and uses `qr-code.scan.offline`. `blockWhenOffline(true)` still forces block. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `preset(ScannerPreset\|Closure\|string\|null $preset): static` | Bundle camera defaults (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`) for a common workflow; explicit setters always win regardless of call order. |
 | `qrbox(Closure\|int $qrbox): static` | Maximum decode-box edge in pixels; the real box scales to the viewfinder (config `camera.qrbox`). |
@@ -253,7 +253,7 @@ Getters (read the resolved option; used by the views): `getBeepDurationMs()`, `g
 | `handleScan(string $code, mixed $livewire = null): mixed` | Invoke the registered onScan callback for a collected code. |
 | `hardwareScanner(Closure\|bool $enabled = true, Closure\|int $burstThresholdMs = 50, Closure\|bool $preventFormSubmit = true, Closure\|array $terminators = ['Enter', 'Tab'], Closure\|int $minBarcodeLength = 2, Closure\|int $scanTimeoutMs = 150, Closure\|int\|null $minFastKeys = null): static` | Tune the keyboard-wedge interceptor in one call (config `hardware_scanner.*`). |
 | `minFastKeys(Closure\|int $count): static` | Keystroke gaps (averaging the burst threshold or less) required before a terminator counts as a scan (config `hardware_scanner.min_fast_keys`). |
-| `offline(OfflineMode\|Closure\|string\|null $mode): static` | What this surface does when the browser is offline: banner, block, or off. An explicit call wins over `qr-code.scan.offline`. |
+| `offline(OfflineMode\|Closure\|string\|null $mode): static` | What this surface does when the browser is offline: banner, block, or off. Null clears an explicit choice and uses `qr-code.scan.offline`. `blockWhenOffline(true)` still forces block. |
 | `onScan(?Closure $callback): static` | Callback run for each collected code. |
 | `preferRearCamera(Closure\|bool $condition = true): static` | Pick the rear camera first when no choice is remembered (config `camera.prefer_rear_camera`). |
 | `preset(ScannerPreset\|Closure\|string\|null $preset): static` | Bundle camera defaults (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`) for a common workflow; explicit setters always win regardless of call order. |

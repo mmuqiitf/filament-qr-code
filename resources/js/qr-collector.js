@@ -153,9 +153,7 @@ export default function qrCollectorComponent({
                     kind: 'collector',
                     scope: 'page',
                     detection: { burstThresholdMs, minFastKeys, minBarcodeLength, terminators, scanTimeoutMs },
-                    deliver: (scannedValue) => {
-                        this.handleDetectedCode(scannedValue);
-                    },
+                    deliver: (scannedValue) => this.handleDetectedCode(scannedValue, 'hardware'),
                 });
             }
 
@@ -171,6 +169,7 @@ export default function qrCollectorComponent({
         },
 
         destroy() {
+            this.unbindOnlineState?.();
             this.stopWatchingVisibility?.();
             this.stopWatchingVisibility = null;
             this.unregisterTarget?.();
@@ -328,15 +327,15 @@ export default function qrCollectorComponent({
             await stopCameraFeed(this, 'collector');
         },
 
-        handleDetectedCode(code) {
+        handleDetectedCode(code, source = 'camera') {
             const trimmed = normalizeCode(sanitizeScannedValue(code), normalize);
             if (!trimmed || this.isProcessing) return;
 
-            const blocked = offlineBlockResult(this, trimmed, 'camera');
+            const blocked = offlineBlockResult(this, trimmed, source);
             if (blocked) {
                 this.rejectCode(trimmed, blocked.message);
 
-                return;
+                return blocked;
             }
 
             if (!quantity && !allowDuplicates && this.scannedSet.has(trimmed)) {

@@ -289,10 +289,10 @@ trait HasCameraScanning
         return $result;
     }
 
-    /** @return array<string, mixed> */
     /**
      * What this surface does when the browser is offline: banner, block, or off.
-     * An explicit call wins over `qr-code.scan.offline`.
+     * Null clears an explicit choice and uses `qr-code.scan.offline`.
+     * `blockWhenOffline(true)` still forces block.
      */
     public function offline(OfflineMode|string|Closure|null $mode): static
     {
@@ -312,12 +312,16 @@ trait HasCameraScanning
 
     public function getOfflineMode(): OfflineMode
     {
-        if ($this->offlineCustomized) {
-            return self::parseOfflineMode($this->evaluate($this->offline));
-        }
-
         if ($this->blockWhenOffline !== null && (bool) $this->evaluate($this->blockWhenOffline)) {
             return OfflineMode::Block;
+        }
+
+        if ($this->offlineCustomized) {
+            $mode = $this->evaluate($this->offline);
+
+            if ($mode !== null) {
+                return self::parseOfflineMode($mode);
+            }
         }
 
         $configured = function_exists('config') ? config('qr-code.scan.offline', OfflineMode::Banner->value) : OfflineMode::Banner->value;
