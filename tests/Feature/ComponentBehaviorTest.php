@@ -87,19 +87,18 @@ it('exposes a signed lazy modal URL for table columns', function () {
     expect($column->lazyModal(false)->isLazyModal())->toBeFalse();
 });
 
-it('registers package assets exactly once across provider and plugin', function () {
-    FilamentQrCodeServiceProvider::resetAssetsRegistration();
+it('registers package assets exactly once per application container', function () {
+    $countScripts = fn (): int => count(array_filter(
+        FilamentAsset::getScripts(['mmuqiitf/filament-qr-code']),
+        fn ($script): bool => $script->getId() === 'filament-qr-code-scripts',
+    ));
+
+    $before = $countScripts();
 
     FilamentQrCodeServiceProvider::registerAssetsOnce();
     FilamentQrCodeServiceProvider::registerAssetsOnce();
 
-    $scripts = FilamentAsset::getScripts(['mmuqiitf/filament-qr-code']);
-    $ids = array_map(fn ($s) => $s->getId(), $scripts);
-
-    expect(array_count_values($ids)['filament-qr-code-scripts'] ?? 0)->toBeLessThanOrEqual(2);
-
-    FilamentQrCodeServiceProvider::resetAssetsRegistration();
-    FilamentQrCodeServiceProvider::registerAssetsOnce();
+    expect($countScripts())->toBe($before);
 });
 
 it('explains the secure-context requirement for cameras', function () {

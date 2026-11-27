@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Support;
 
 use Closure;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
@@ -79,9 +80,11 @@ final readonly class ScanCheckPipeline
         } catch (ValidationException $exception) {
             return ScanResult::reject($code, $source, $exception->validator->errors()->first());
         } catch (Throwable $exception) {
-            report($exception);
+            if (function_exists('app') && app()->bound(ExceptionHandler::class)) {
+                report($exception);
+            }
 
-            return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_failed'));
+            return ScanResult::reject($code, $source, $this->message('filament-qr-code::ui.scan_failed', 'The scan could not be checked. Please try again.'));
         }
     }
 
@@ -89,7 +92,7 @@ final readonly class ScanCheckPipeline
     private function runChecks(string $code, ?ScanInput $source, Closure $evaluate, string $attributeLabel, array $context): ScanResult
     {
         if ($code === '') {
-            return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_empty'));
+            return ScanResult::reject($code, $source, $this->message('filament-qr-code::ui.scan_empty', 'The scanned code is empty.'));
         }
 
         if ($rejection = $this->checkRules($code, $source, $attributeLabel)) {
@@ -128,7 +131,7 @@ final readonly class ScanCheckPipeline
             $outcome = $instance->check($stageContext);
 
             if ($outcome === false) {
-                return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_rejected'));
+                return ScanResult::reject($code, $source, $this->message('filament-qr-code::ui.scan_rejected', 'This code was rejected.'));
             }
 
             if (is_string($outcome) && $outcome !== '') {
@@ -175,7 +178,7 @@ final readonly class ScanCheckPipeline
             $record = $resolved === false ? null : $resolved;
         }
 
-        return $record ?? ScanResult::reject($code, $source, __('filament-qr-code::ui.record_not_found', ['code' => $code]));
+        return $record ?? ScanResult::reject($code, $source, $this->message('filament-qr-code::ui.record_not_found', 'No record found for "'.$code.'".', ['code' => $code]));
     }
 
     private function lookUpModel(string $code, Closure $evaluate): ?Model
@@ -195,6 +198,14 @@ final readonly class ScanCheckPipeline
         return $record instanceof Model ? $record : null;
     }
 
+    /** @param  array<string, int|string>  $replace */
+    private function message(string $key, string $fallback, array $replace = []): string
+    {
+        return function_exists('app') && app()->bound('translator')
+            ? (string) __($key, $replace)
+            : $fallback;
+    }
+
     /** @param  array<string, mixed>  $context */
     private function runClosures(string $code, ?ScanInput $source, mixed $record, Closure $evaluate, array $context): ?ScanResult
     {
@@ -209,7 +220,7 @@ final readonly class ScanCheckPipeline
             ]);
 
             if ($outcome === false) {
-                return ScanResult::reject($code, $source, __('filament-qr-code::ui.scan_rejected'));
+                return ScanResult::reject($code, $source, $this->message('filament-qr-code::ui.scan_rejected', 'This code was rejected.'));
             }
 
             if (is_string($outcome) && $outcome !== '') {

@@ -25,7 +25,7 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
 {
     public static string $name = 'filament-qr-code';
 
-    protected static bool $assetsRegistered = false;
+    private const ASSETS_REGISTERED_KEY = 'filament-qr-code.assets_registered';
 
     public function configurePackage(Package $package): void
     {
@@ -41,11 +41,11 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
 
     public static function registerAssetsOnce(): void
     {
-        if (static::$assetsRegistered) {
+        if (app()->bound(self::ASSETS_REGISTERED_KEY)) {
             return;
         }
 
-        static::$assetsRegistered = true;
+        app()->instance(self::ASSETS_REGISTERED_KEY, true);
 
         FilamentAsset::register(static::assets(), package: 'mmuqiitf/filament-qr-code');
     }
@@ -70,18 +70,11 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
         ];
     }
 
-    public static function resetAssetsRegistration(): void
-    {
-        static::$assetsRegistered = false;
-    }
-
     public function packageRegistered(): void
     {
-        // The once-guard is process-static, but providers reboot for every
-        // app instance (feature suites, Octane): reset it here so each boot
-        // registers assets onto its own fresh AssetManager instead of
-        // silently serving later boots without the package bundle.
-        static::$assetsRegistered = false;
+        // Re-registering the provider on an existing container clears the
+        // container-scoped guard so FilamentAsset receives the bundle again.
+        $this->app->forgetInstance(self::ASSETS_REGISTERED_KEY);
 
         $this->app->bind(QrCodeService::class, function () {
             return new QrCodeService;

@@ -381,13 +381,7 @@ class QrScanSequence extends Component implements HasValidationRules
      */
     public function mergeSequenceState(array $formState): array
     {
-        foreach ($this->getSequenceState() as $key => $value) {
-            if (! array_key_exists($key, $formState) || blank($formState[$key])) {
-                $formState[$key] = $value;
-            }
-        }
-
-        return $formState;
+        return $this->sequenceEngine()->mergeState($formState, $this->getSequenceState());
     }
 
     /**
@@ -399,20 +393,8 @@ class QrScanSequence extends Component implements HasValidationRules
     public function getMissingSequenceKeys(?array $mergedState = null): array
     {
         $state = $mergedState ?? $this->mergeSequenceState([]);
-        $missing = [];
 
-        foreach ($this->getScanSteps() as $step) {
-            if (! $this->isStepActive($step, $state)) {
-                continue;
-            }
-
-            // A counted repeat step re-reads its live count, as the browser's k / n does.
-            if (blank($state[$step->getKey()] ?? null) || ($step->isRepeating() && ! $this->isStepFilled($step, $state))) {
-                $missing[] = $step->getKey();
-            }
-        }
-
-        return $missing;
+        return $this->sequenceEngine()->missingKeys($state);
     }
 
     /**
