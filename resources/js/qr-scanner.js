@@ -372,6 +372,10 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 return;
             }
 
+            if (currentCameraRun(this) !== run) {
+                return;
+            }
+
             await loadCameraDevices(this, {
                 Html5QrcodeClass: decoder.Html5Qrcode,
                 preferRearCamera: this.options.preferRearCamera,
@@ -382,7 +386,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 insecureMessage: this.options.insecureMessage,
             });
 
-            if (!this.hasError) {
+            if (!this.hasError && currentCameraRun(this) === run) {
                 await this.startScan(run);
             }
         },
@@ -848,9 +852,23 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             }
 
             // html5-qrcode refuses a file scan on an instance that is
-            // streaming the camera, so pause the feed for the decode.
-            const resumeCamera = this.isScanning;
+            // streaming the camera, so pause the feed and let any in-flight
+            // camera start finish cancelling before decoding the file.
+            const resumeCamera = this.isScanning || Boolean(this.cameraStartPromise);
             await this.stopScan();
+            if (this.cameraStartPromise) {
+                await this.cameraStartPromise;
+            }
+
+            if (!this.html5Qrcode) {
+                ensureScannerInstance(
+                    this,
+                    this.scannerElementId,
+                    this.options.formats,
+                    decoder.Html5Qrcode,
+                    decoder.Html5QrcodeSupportedFormats
+                );
+            }
 
             let decodedText;
             try {

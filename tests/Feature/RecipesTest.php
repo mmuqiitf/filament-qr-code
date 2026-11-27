@@ -14,6 +14,8 @@ use Filament\Support\View\ViewManager;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use PhpParser\Error;
+use PhpParser\ParserFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Finder\Finder;
 
@@ -39,12 +41,16 @@ function recipeBlocks(): array
 
 function lintsAsPhp(string $code): bool
 {
-    $file = tempnam(sys_get_temp_dir(), 'recipe');
-    file_put_contents($file, $code);
-    exec(PHP_BINARY.' -l '.escapeshellarg($file).' 2>&1', $output, $exit);
-    unlink($file);
+    static $parser = null;
+    $parser ??= (new ParserFactory)->createForNewestSupportedVersion();
 
-    return $exit === 0;
+    try {
+        $parser->parse($code);
+
+        return true;
+    } catch (Error) {
+        return false;
+    }
 }
 
 /** @return array<string, true> lower-cased method names */

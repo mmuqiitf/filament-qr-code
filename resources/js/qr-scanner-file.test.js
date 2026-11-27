@@ -15,11 +15,24 @@ vi.mock('html5-qrcode', () => {
         }
 
         static getCameras() {
+            if (FakeHtml5Qrcode.deferGetCameras) {
+                return new Promise((resolve) => {
+                    FakeHtml5Qrcode.resolveGetCameras = () => resolve([{ id: 'cam-1', label: 'Fake camera' }]);
+                });
+            }
+
             return Promise.resolve([{ id: 'cam-1', label: 'Fake camera' }]);
         }
 
         start() {
             this.calls.push('start');
+            if (FakeHtml5Qrcode.deferStart) {
+                this.cameraRunning = true;
+
+                return new Promise((resolve) => {
+                    FakeHtml5Qrcode.resolveStart = resolve;
+                });
+            }
             this.cameraRunning = true;
 
             return Promise.resolve();
@@ -27,6 +40,9 @@ vi.mock('html5-qrcode', () => {
 
         stop() {
             this.calls.push('stop');
+            if (FakeHtml5Qrcode.failStop) {
+                return Promise.reject(new TypeError("Failed to execute 'removeChild' on 'Node': parameter 1 is not of type 'Node'."));
+            }
             this.cameraRunning = false;
 
             return Promise.resolve();
@@ -80,6 +96,11 @@ function pick(fileInput, name) {
 beforeEach(() => {
     decodeResults.clear();
     Html5Qrcode.instances.length = 0;
+    Html5Qrcode.deferStart = false;
+    Html5Qrcode.resolveStart = null;
+    Html5Qrcode.deferGetCameras = false;
+    Html5Qrcode.resolveGetCameras = null;
+    Html5Qrcode.failStop = false;
     vi.spyOn(console, 'debug').mockImplementation(() => {});
 });
 
@@ -117,5 +138,76 @@ describe('qrScanner scan from image file', () => {
         await scanner.scanFile(pick(fileInput, 'blank.png'));
 
         expect(fileInput.value).toBe('');
+    });
+
+    it('waits for an in-flight camera start to settle before decoding an uploaded file', async () => {
+        decodeResults.set('prd-2002.png', 'PRD-2002');
+        Html5Qrcode.deferStart = true;
+
+        document.body.innerHTML = '<div data-field-name="sku"><input type="text" wire:model="data.sku"><input type="file"></div>';
+        const element = document.querySelector('[data-field-name="sku"]');
+        const wire = createWireSpy();
+        const scanner = mountComponent(
+            qrScannerComponent({ statePath: 'data.sku', sound: false, vibrate: false, hardwareScanner: false }),
+            { element, wire },
+        );
+
+        scanner.isModalOpen = true;
+        const startPromise = scanner.loadCamerasAndStart();
+        await vi.waitFor(() => expect(Html5Qrcode.resolveStart).toBeTypeOf('function'));
+
+        const fileInput = element.querySelector('input[type="file"]');
+        const fileScanPromise = scanner.scanFile(pick(fileInput, 'prd-2002.png'));
+
+        // Keep start() in flight past scanFile()'s initial microtasks, just like a slow getUserMedia().
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        Html5Qrcode.resolveStart?.();
+        await startPromise;
+        await fileScanPromise;
+
+        expect(scanner.hasError).toBe(false);
+        expect(wire.calls).toEqual([['data.sku', 'PRD-2002']]);
+    });
+
+    it('cancels a pending device enumeration when a file is picked before startScan runs', async () => {
+        decodeResults.set('prd-3003.png', 'PRD-3003');
+        Html5Qrcode.deferGetCameras = true;
+
+        document.body.innerHTML = '<div data-field-name="sku"><input type="text" wire:model="data.sku"><input type="file"></div>';
+        const element = document.querySelector('[data-field-name="sku"]');
+        const wire = createWireSpy();
+        const scanner = mountComponent(
+            qrScannerComponent({ statePath: 'data.sku', sound: false, vibrate: false, hardwareScanner: false }),
+            { element, wire },
+        );
+
+        scanner.isModalOpen = true;
+        const startPromise = scanner.loadCamerasAndStart();
+        await vi.waitFor(() => expect(Html5Qrcode.resolveGetCameras).toBeTypeOf('function'));
+
+        const fileInput = element.querySelector('input[type="file"]');
+        const fileScanPromise = scanner.scanFile(pick(fileInput, 'prd-3003.png'));
+
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        Html5Qrcode.resolveGetCameras?.();
+        await startPromise;
+        await fileScanPromise;
+
+        expect(scanner.hasError).toBe(false);
+        expect(scanner.isScanning).toBe(false);
+        expect(wire.calls).toEqual([['data.sku', 'PRD-3003']]);
+        expect(Html5Qrcode.instances[0].calls).toEqual(['scanFile']);
+    });
+
+    it('discards a wedged decoder instance if stop() throws before scanning an uploaded file', async () => {
+        decodeResults.set('prd-4004.png', 'PRD-4004');
+        const { scanner, wire, fileInput } = await openScannerWithCamera();
+        Html5Qrcode.failStop = true;
+
+        await scanner.scanFile(pick(fileInput, 'prd-4004.png'));
+
+        expect(scanner.hasError).toBe(false);
+        expect(wire.calls).toEqual([['data.sku', 'PRD-4004']]);
+        expect(Html5Qrcode.instances).toHaveLength(2);
     });
 });

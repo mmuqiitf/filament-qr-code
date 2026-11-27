@@ -32,9 +32,12 @@ it('keeps 1.0.0 behaviour when no hardening is configured', function () {
 
     expect($url)->not->toContain('expires=');
 
-    $this->get($url)->assertOk()->assertHeader('Cache-Control', 'immutable, max-age=86400, private');
+    $this->get($url)
+        ->assertOk()
+        ->assertHeader('Cache-Control', 'immutable, max-age=86400, private')
+        ->assertHeaderMissing('X-RateLimit-Limit');
 
-    foreach (range(1, 70) as $_) {
+    foreach (range(1, 3) as $_) {
         $this->get($url)->assertOk();
     }
 
@@ -62,10 +65,10 @@ it('never raises max-age above a day for long ttls', function () {
 });
 
 it('throttles the image route when configured', function () {
-    config()->set('qr-code.image_route.throttle', '60,1');
+    config()->set('qr-code.image_route.throttle', '2,1');
     $url = URL::signedRoute('filamentQrCode.image', ['data' => 'THROTTLE']);
 
-    foreach (range(1, 60) as $_) {
+    foreach (range(1, 2) as $_) {
         $this->get($url)->assertOk();
     }
 

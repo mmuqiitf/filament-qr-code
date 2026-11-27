@@ -73,6 +73,7 @@ test.describe('QrScanner', () => {
         const wrapper = field(page, 'camera');
 
         await wrapper.locator('[data-qr-part="scanner.camera-button"]').click();
+        await expect(wrapper.locator('[data-qr-part="scanner.modal"]')).toBeVisible();
         await wrapper.locator('[data-qr-part="scanner.modal-actions"] input[type="file"]').setInputFiles(qrSvgPath);
 
         await expect(wrapper.locator('[data-qr-part="scanner.input"]')).toHaveValue('CAM-SMOKE-42', { timeout: 15_000 });
@@ -84,12 +85,16 @@ test.describe('QrCollector announcements', () => {
     test('announces each added code and a rejected duplicate', async ({ page }) => {
         await page.goto('/workbench/collector-smoke');
         const collector = page.locator('[x-data^="qrCollector"]');
+        await page.waitForFunction(() => document.querySelector('[x-data^="qrCollector"]')?._x_dataStack !== undefined);
         const announcer = collector.locator('[data-qr-part="announcer"]');
         await expect(announcer).toHaveAttribute('aria-live', 'polite');
 
         const handled = page.getByTestId('handled');
-        // The collector ignores scans for delayBetweenScans (1200 ms by default) after each accepted one.
-        const pastScanDelay = () => page.waitForTimeout(1300);
+        // The collector sets isProcessing = true for delayBetweenScans (1200 ms by default) after each accepted scan.
+        const pastScanDelay = () => expect.poll(
+            () => collector.evaluate((el) => el._x_dataStack?.[0]?.isProcessing),
+            { timeout: 5_000 },
+        ).toBe(false);
 
         await wedge(page, 'BOX-1');
         await expect(announcer).toHaveText('Added BOX-1 (1 items)');

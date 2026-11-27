@@ -598,6 +598,7 @@ export async function stopCameraFeed(component, logLabel = 'scanner') {
             await component.html5Qrcode.stop();
         } catch (e) {
             console.debug(`Error stopping ${logLabel}:`, e);
+            component.html5Qrcode = null;
         } finally {
             component.isScanning = false;
         }
@@ -654,27 +655,41 @@ export async function startCameraFeed(component, start, run = currentCameraRun(c
         return false;
     }
 
-    component.cameraStarting = true;
+    let settleStart;
+    const pendingStart = new Promise((resolve) => {
+        settleStart = resolve;
+    });
+    component.cameraStartPromise = pendingStart;
 
     try {
-        await start();
-    } finally {
-        component.cameraStarting = false;
-    }
+        component.cameraStarting = true;
 
-    if (currentCameraRun(component) !== run) {
         try {
-            await component.html5Qrcode?.stop();
-        } catch (e) {
-            console.debug('Error stopping a cancelled camera start:', e);
+            await start();
+        } finally {
+            component.cameraStarting = false;
         }
 
-        return false;
+        if (currentCameraRun(component) !== run) {
+            try {
+                await component.html5Qrcode?.stop();
+            } catch (e) {
+                console.debug('Error stopping a cancelled camera start:', e);
+                component.html5Qrcode = null;
+            }
+
+            return false;
+        }
+
+        component.isScanning = true;
+
+        return true;
+    } finally {
+        if (component.cameraStartPromise === pendingStart) {
+            component.cameraStartPromise = null;
+        }
+        settleStart();
     }
-
-    component.isScanning = true;
-
-    return true;
 }
 
 /**
