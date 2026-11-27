@@ -24,7 +24,9 @@
         wire:ignore
     >
         {{ \Filament\Support\Facades\FilamentView::renderHook(\Mmuqiitf\FilamentQrCode\View\QrCodeRenderHook::COLLECTOR_START, scopes: $renderHookScopes) }}
+        @include('filament-qr-code::components.offline-banner')
         @include('filament-qr-code::components.collector.header')
+        @include('filament-qr-code::components.rejection-reasons')
         @include('filament-qr-code::components.announcer')
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">

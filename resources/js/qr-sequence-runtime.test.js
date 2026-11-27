@@ -264,4 +264,20 @@ describe('QrScanSequence control API', () => {
 
         expect(sequence.getCurrentField().key).toBe('po');
     });
+
+    it('announces an offline block to the screen reader', () => {
+        const { sequence } = mountSequence({
+            payload: basePayload({
+                offline: 'block',
+                offlineBlockedMessage: 'Scanning is blocked while this page is offline.',
+            }),
+        });
+        sequence.isOnline = false;
+        sequence.offlineMode = 'block';
+
+        sequence.processScan('PO-1', 'camera');
+
+        expect(sequence.announcement).toContain('Scanning is blocked while this page is offline.');
+        expect(sequence.rejectionReasons).toContain('Scanning is blocked while this page is offline.');
+    });
 });

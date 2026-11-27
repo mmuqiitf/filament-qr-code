@@ -99,4 +99,8 @@ return [
     'increase_quantity' => 'Tambah jumlah',
     'decrease_quantity' => 'Kurangi jumlah',
     'dismiss' => 'Tutup',
+    'offline_banner' => 'Halaman ini sedang offline. Pemeriksaan server tidak berjalan sampai koneksi kembali.',
+    'offline_blocked' => 'Pemindaian diblokir selagi halaman ini offline.',
+    'rejection_reasons' => 'Penolakan terbaru',
+    'fake_scan_accepted' => 'Diterima: :code',
 ];

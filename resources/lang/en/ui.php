@@ -99,4 +99,8 @@ return [
     'increase_quantity' => 'Increase quantity',
     'decrease_quantity' => 'Decrease quantity',
     'dismiss' => 'Dismiss',
+    'offline_banner' => 'This page is offline. Server checks will not run until the connection returns.',
+    'offline_blocked' => 'Scanning is blocked while this page is offline.',
+    'rejection_reasons' => 'Recent rejections',
+    'fake_scan_accepted' => 'Accepted: :code',
 ];

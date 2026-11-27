@@ -248,4 +248,29 @@ describe('QrScanner control API', () => {
         expect(scanner.isPaused).toBe(false);
         expect(host.qrScanner).toBeUndefined();
     });
+
+    it('keeps the latest rejection reasons', async () => {
+        const { scanner, wire } = track(mountScanner({
+            respond: () => Promise.resolve({ passes: false, code: 'NOPE', source: 'camera', message: 'Unknown AI (23)', record_key: null }),
+        }));
+
+        await scanner.handleScanResult('NOPE', 'camera');
+        await scanner.handleScanResult('NOPE-2', 'camera');
+
+        expect(scanner.rejectionReasons[0]).toBe('Unknown AI (23)');
+        expect(scanner.rejectionReasons).toHaveLength(2);
+        expect(wire.methodCalls).toHaveLength(2);
+    });
+
+    it('blocks a server check while offline when offline mode is block', async () => {
+        const { scanner, wire } = track(mountScanner({ offline: 'block', offlineBlockedMessage: 'Scanning is blocked while this page is offline.' }));
+        scanner.isOnline = false;
+
+        const result = await scanner.handleScanResult('SKU-1', 'camera');
+
+        expect(result.passes).toBe(false);
+        expect(result.message).toBe('Scanning is blocked while this page is offline.');
+        expect(scanner.rejectionReasons).toContain('Scanning is blocked while this page is offline.');
+        expect(wire.methodCalls).toEqual([]);
+    });
 });

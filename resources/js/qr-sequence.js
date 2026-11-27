@@ -5,6 +5,7 @@ import { inputRouter } from './input-router.js';
 import { announcerMixin, formatMessage } from './announcer.js';
 import { fallbackMessages } from './messages.js';
 import { changedKeys, feedSource, listenForControlEvents, observeOptions, readOptionsAttribute } from './runtime-control.js';
+import { bindOnlineState, offlineBlockResult, rememberRejection } from './online-state.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -47,6 +48,7 @@ const DEFAULT_OPTIONS = {
     componentKey: null,
     ...fallbackMessages,
     syncOptions: 'morph',
+    offline: 'banner',
 };
 
 const ROUTER_OPTIONS = ['hardwareScanner', 'burstThresholdMs', 'minFastKeys', 'minBarcodeLength', 'terminators', 'scanTimeoutMs'];
@@ -88,6 +90,9 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
         queuedScan: null,
         isChecking: false,
         isPaused: false,
+        isOnline: true,
+        offlineMode: 'banner',
+        rejectionReasons: [],
         // Every step is done: no step is highlighted as the one to scan next.
         isCompleted: false,
         stepError: null,
@@ -99,6 +104,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
         stopListeningForControls: null,
 
         init() {
+            bindOnlineState(this);
             this.elementId = `qr-sequence-${this.$id('qr-seq')}`;
 
             if (this.options.serverCheck && values !== undefined) {
@@ -139,6 +145,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
         },
 
         destroy() {
+            this.unbindOnlineState?.();
             this.stopWatchingVisibility?.();
             this.stopWatchingVisibility = null;
             this.stopObservingOptions?.();
@@ -260,6 +267,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             const { fields: nextFields, values: nextValues, editable: nextEditable, ...rest } = changes;
             const changed = changedKeys(this.options, rest);
             this.options = { ...this.options, ...rest };
+            if (changed.includes('offline')) this.offlineMode = this.options.offline ?? 'banner';
 
             if (changed.includes('formats')) this.markDecoderStale();
             if (changed.some((key) => ROUTER_OPTIONS.includes(key))) this.registerWithRouter();
@@ -530,12 +538,31 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
             }
         },
 
+        rejectOffline(currentField, code, message) {
+            this.stepError = message;
+            this.rejectionReasons = rememberRejection(this.rejectionReasons, message);
+            this.announceScan(this.options, {
+                code,
+                accepted: false,
+                reason: message,
+                field: currentField?.key ?? null,
+                fallback: formatMessage(this.options.rejectedAnnouncement, { reason: message }),
+            });
+        },
+
         processScan(decodedText, source = 'camera') {
             const currentField = this.getCurrentField();
             if (!currentField) return;
 
             const trimmed = normalizeCode(sanitizeScannedValue(decodedText), this.options.normalize);
             if (!trimmed || this.isPaused) return;
+
+            const blocked = offlineBlockResult(this, trimmed, source);
+            if (blocked) {
+                this.rejectOffline(currentField, trimmed, blocked.message);
+
+                return blocked;
+            }
 
             const { serverCheck, componentKey, componentStatePath } = this.options;
 
@@ -700,6 +727,13 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
         async processServerScan(currentField, code, source, { keepStep = false, method = 'handleStepScan', args = null, quiet = false } = {}) {
             if (this.isChecking) return;
 
+            const blocked = offlineBlockResult(this, code, source);
+            if (blocked && method === 'handleStepScan') {
+                this.rejectOffline(currentField, code, blocked.message);
+
+                return blocked;
+            }
+
             const { componentKey, scanFailedMessage } = this.options;
             this.isChecking = true;
             let result;
@@ -748,6 +782,7 @@ export default function qrScanSequenceComponent({ fields = [], editable = true, 
 
             if (!result.passes) {
                 this.stepError = result.message || scanFailedMessage;
+                this.rejectionReasons = rememberRejection(this.rejectionReasons, this.stepError);
                 this.announceScan(this.options, {
                     code,
                     accepted: false,

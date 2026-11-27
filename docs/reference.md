@@ -121,6 +121,7 @@ A preset is a whole camera profile. The four keys it replaces apply only when `p
 | `continuous.keep_camera_open`  | `false`   | `false` closes the camera after each scan (`keepCameraOpen()`) |
 | `continuous.cooldown_ms`       | `300`     | repeat window for continuous fields (`cooldown()` wins) |
 | `sync_options`                 | `'morph'` | when the browser picks up server option changes: `'morph'` (every re-render) or `'refresh'` (only on a `qr-scanner-refresh` / `qr-sequence-refresh` event); `syncOptions()` per field |
+| `offline`                      | `'banner'` | `banner` shows an offline notice, `block` also rejects new scans, `off` does neither (`offline()` / `blockWhenOffline()`) |
 
 ### `sequence`
 

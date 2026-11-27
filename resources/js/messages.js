@@ -11,6 +11,7 @@ export const fallbackMessages = Object.freeze({
     cameraUnavailableMessage: 'Camera access denied or unavailable.',
     noCamerasMessage: 'No camera devices detected on this system.',
     cameraStartFailedMessage: 'Failed to start the camera.',
+    offlineBlockedMessage: 'Scanning is blocked while this page is offline.',
     duplicateMessage: 'Duplicate codes are not allowed.',
     addedAnnouncement: 'Added :code (:count items)',
     stepAddedAnnouncement: 'Added :code to :step',

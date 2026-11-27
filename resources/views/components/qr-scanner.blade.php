@@ -28,7 +28,9 @@
             @include('filament-qr-code::components.scanner.camera-button')
         </div>
 
+        @include('filament-qr-code::components.offline-banner')
         @include('filament-qr-code::components.scanner.status')
+        @include('filament-qr-code::components.rejection-reasons')
         @include('filament-qr-code::components.announcer')
 
         @include('filament-qr-code::components.scanner.modal')
