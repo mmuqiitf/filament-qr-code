@@ -4504,6 +4504,8 @@ Run `php artisan filament:assets`. The scanner JavaScript now sizes the reticle 
 
 - **Presets and scan region are opt-in.** `->preset()` and `->scanRegion()` change nothing until you set them. A published `config/qr-code.php` that omits `camera.preset` and `camera.scan_region` keeps the previous camera defaults. Copy those two keys in if you want to set them.
 - **`ScannerPreset::Gs1` does not parse labels.** It only tunes the camera (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`). Keep `->gs1()` for parsing.
+- **Offline banner is on by default.** While the browser is offline, camera surfaces show a notice. Scans are not blocked unless you call `->blockWhenOffline()` or set `qr-code.scan.offline` to `block`. `off` hides the banner. If you published `config/qr-code.php`, copy `scan.offline`.
+- **New translations.** German, French, Spanish, Dutch, and Malay sit beside English and Indonesian. If you published `lang/vendor/filament-qr-code`, copy the new locale files and the new `offline_banner`, `offline_blocked`, `rejection_reasons`, and `fake_scan_accepted` keys.
 
 ## From 1.2.0 to 1.3.0
 
