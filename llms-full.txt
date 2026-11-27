@@ -2350,7 +2350,7 @@ Every browser event the package fires, every control event a page can send, and 
 
 ## Translations
 
-All UI strings live under the `filament-qr-code::ui` translation namespace (`resources/lang/en/ui.php`, plus Indonesian in `resources/lang/id/ui.php`). Publish with:
+All UI strings live under the `filament-qr-code::ui` translation namespace. Locales: English (`en`), Indonesian (`id`), German (`de`), French (`fr`), Spanish (`es`), Dutch (`nl`), and Malay (`ms`). Publish with:
 
 ```bash
 php artisan vendor:publish --tag="filament-qr-code-translations"

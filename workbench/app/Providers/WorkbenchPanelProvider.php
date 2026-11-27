@@ -48,7 +48,7 @@ class WorkbenchPanelProvider extends PanelProvider
             ->path('workbench')
             ->topbar(false)
             ->plugin(FilamentQrCodePlugin::make())
-            ->pages([AnnounceSmoke::class, BarcodeSmoke::class, Gs1Smoke::class, ScanSmoke::class, CollectSmoke::class, CollectorSmoke::class, CollectorQtyCsvSmoke::class, ModalSmoke::class, RapidCollectorSmoke::class, CollectorQtyCsvSmoke::class, SequenceSmoke::class, TableSmoke::class, ProductEdit::class])
+            ->pages([AnnounceSmoke::class, BarcodeSmoke::class, Gs1Smoke::class, ScanSmoke::class, CollectSmoke::class, CollectorSmoke::class, CollectorQtyCsvSmoke::class, ModalSmoke::class, RapidCollectorSmoke::class, SequenceSmoke::class, TableSmoke::class, ProductEdit::class])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
