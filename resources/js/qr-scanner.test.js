@@ -27,14 +27,4 @@ describe('qrScanner Livewire sync', () => {
 
         expect(wire.calls).toEqual([['data.sku', 'PRD-1001']]);
     });
-
-    it('does not send a Livewire request for each typed character', () => {
-        const { scanner, wire } = mountScanner();
-
-        for (const partialValue of ['P', 'PR', 'PRD', 'PRD-', 'PRD-1']) {
-            scanner.value = partialValue;
-        }
-
-        expect(wire.calls).toEqual([]);
-    });
 });

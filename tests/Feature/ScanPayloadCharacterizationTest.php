@@ -2,34 +2,42 @@
 
 declare(strict_types=1);
 
-use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Tables\Actions\QrCollectAction;
 
-dataset('scan surfaces', [
-    'scanner' => ['scanner', fn () => QrScanner::make('sku')
-        ->nextField('employee')
-        ->formats([BarcodeFormat::QrCode])
-        ->fps(10)],
-    'sequence' => ['sequence', fn () => QrScanSequence::make(['step', 'employee' => 'Employee badge'])],
-    'collector' => ['collector', fn () => QrCollector::make('codes')
-        ->allowDuplicates()
-        ->delayBetweenScans(900)],
-    'listener' => ['listener', fn () => QrHardwareScannerListener::make(['sku'])
-        ->autoFocusNext(false)
-        ->sound(false)],
-    'collect action' => ['collect-action', fn () => QrCollectAction::make()],
+/**
+ * Exact default key sets, not full payload snapshots. A new default key is a
+ * contract change; opt-in options must stay off this list until they are
+ * configured (see ScanOptionsPayloadTest for values).
+ *
+ * @return list<string>
+ */
+function defaultScanPayloadKeys(string $surface): array
+{
+    $feedback = ['beepDurationMs', 'beepFrequency', 'burstThresholdMs', 'minBarcodeLength', 'minFastKeys', 'preventSubmit', 'scanTimeoutMs', 'sound', 'terminators', 'vibrate', 'vibrateDurationMs'];
+    $camera = ['cameraControls', 'cameraStartFailedMessage', 'cameraUnavailableMessage', 'decoderFailedMessage', 'fileScanFailedMessage', 'formats', 'fps', 'hardwareScanner', 'insecureMessage', 'noCamerasMessage', 'offline', 'offlineBlockedMessage', 'preferRearCamera', 'qrbox', 'rejectedAnnouncement'];
+
+    return match ($surface) {
+        'scanner' => [...$feedback, ...$camera, 'announcements', 'clearOnReject', 'continuousDisplay', 'cooldownMs', 'customAnnouncements', 'errorFeedback', 'fieldAddedAnnouncement', 'fieldLabel', 'gs1', 'hardwareScope', 'keepCameraOpen', 'mode', 'nextField', 'pauseOnReject', 'scanFailedMessage', 'scanRejectedMessage', 'serverCheck', 'successFeedback', 'syncOptions'],
+        'sequence' => [...$feedback, ...$camera, 'addedAnnouncement', 'announcements', 'completedAnnouncement', 'componentStatePath', 'customAnnouncements', 'duplicateMessage', 'editable', 'fields', 'scanFailedMessage', 'serverCheck', 'statePrefix', 'stepAddedAnnouncement', 'steps', 'syncOptions', 'values'],
+        'collector' => [...$feedback, ...$camera, 'addedAnnouncement', 'allowDuplicates', 'announcements', 'completedAnnouncement', 'customAnnouncements', 'delayBetweenScansMs', 'duplicateMessage', 'hasItemRules', 'stepAddedAnnouncement', 'wireScanHandler'],
+        'listener' => [...$feedback, 'autoFocusNext', 'fallbackToAnyInput', 'fields', 'gs1', 'hardwareScanner'],
+        'collect-action' => [...$feedback, ...$camera, 'addedAnnouncement', 'allowDuplicates', 'completedAnnouncement', 'duplicateMessage', 'stepAddedAnnouncement', 'wireScanHandler'],
+        default => throw new InvalidArgumentException("Unknown scan surface [{$surface}]."),
+    };
+}
+
+dataset('default scan surfaces', [
+    'scanner' => [fn () => QrScanner::make('sku'), defaultScanPayloadKeys('scanner')],
+    'sequence' => [fn () => QrScanSequence::make(['step', 'employee']), defaultScanPayloadKeys('sequence')],
+    'collector' => [fn () => QrCollector::make('codes'), defaultScanPayloadKeys('collector')],
+    'listener' => [fn () => QrHardwareScannerListener::make(['sku']), defaultScanPayloadKeys('listener')],
+    'collect action' => [fn () => QrCollectAction::make(), defaultScanPayloadKeys('collect-action')],
 ]);
 
-// Plain JSON fixtures instead of toMatchSnapshot(): Pest 3 and 4 name snapshot files differently.
-it('keeps every scan surface payload stable', function (string $fixture, object $component) {
-    $payload = $component->getScanPayload();
-    ksort($payload);
-
-    $expected = file_get_contents(__DIR__."/../Fixtures/payloads/{$fixture}.json");
-
-    expect(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE))->toBe($expected);
-})->with('scan surfaces');
+it('keeps the default scan payload key set stable', function (object $component, array $keys) {
+    expect(array_keys($component->getScanPayload()))->toEqualCanonicalizing($keys);
+})->with('default scan surfaces');

@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
+use BaconQrCode\Common\ErrorCorrectionLevel;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
+use Mmuqiitf\FilamentQrCode\Enums\QrFormat;
 use Mmuqiitf\FilamentQrCode\Rendering\QrRenderCache;
+use Mmuqiitf\FilamentQrCode\Rendering\QrRenderOptions;
 use Mmuqiitf\FilamentQrCode\Services\QrCodeService;
 
 beforeEach(function (): void {
@@ -80,6 +83,23 @@ it('clears the in-process cache when an Octane operation starts', function (stri
     'task' => 'Laravel\\Octane\\Events\\TaskReceived',
     'tick' => 'Laravel\\Octane\\Events\\TickReceived',
 ]);
+
+it('builds delimiter-safe render cache keys so pipe-separated values cannot collide', function (): void {
+    $shared = [
+        'data' => 'AB|10',
+        'size' => 2,
+        'margin' => 0,
+        'format' => QrFormat::Svg,
+        'foregroundColor' => '#000000',
+        'backgroundColor' => '#ffffff',
+        'errorCorrectionLevel' => ErrorCorrectionLevel::M(),
+    ];
+
+    $withPipe = new QrRenderOptions(...$shared, overlayText: 'Cap|20', fontSize: 14, fontColor: '#111111');
+    $shifted = new QrRenderOptions(...$shared, overlayText: 'Cap', fontSize: 20, fontColor: '14|#111111');
+
+    expect($withPipe->cacheKey())->not->toBe($shifted->cacheKey());
+});
 
 /** @return array{string, Closure(): void} */
 function isolatedRenderStore(string $driver): array

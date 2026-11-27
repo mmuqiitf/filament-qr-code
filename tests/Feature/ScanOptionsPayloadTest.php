@@ -43,11 +43,15 @@ it('exposes sequence fields and collector options through the same payload', fun
         ->and($sequence['editable'])->toBeTrue()
         ->and($sequence['sound'])->toBeTrue();
 
+    expect(QrScanSequence::make(['step'])->editable(false)->getScanPayload()['editable'])->toBeFalse();
+
     $collector = QrCollector::make('codes')->getScanPayload();
 
     expect($collector['allowDuplicates'])->toBeFalse()
         ->and($collector['delayBetweenScansMs'])->toBe(1200)
         ->and($collector['burstThresholdMs'])->toBe(50);
+
+    expect(QrCollector::make('codes')->delayBetweenScans(1500)->getScanPayload()['delayBetweenScansMs'])->toBe(1500);
 
     $listener = QrHardwareScannerListener::make(['sku'])->getScanPayload();
 
@@ -94,12 +98,22 @@ it('prefers explicit setters over config for scan defaults', function () {
     config()->set('qr-code.camera.fps', 30);
     config()->set('qr-code.feedback.sound', false);
 
-    $field = QrScanner::make('sku')->fps(15)->sound(true);
+    $field = QrScanner::make('sku')
+        ->fps(15)
+        ->sound(true)
+        ->beepFrequency(660)
+        ->beepDuration(120)
+        ->vibrateDuration(200);
 
     expect($field->getFps())->toBe(15)
         ->and($field->hasSound())->toBeTrue()
-        ->and($field->getScanPayload()['fps'])->toBe(15)
-        ->and($field->getScanPayload()['sound'])->toBeTrue();
+        ->and($field->getScanPayload())->toMatchArray([
+            'fps' => 15,
+            'sound' => true,
+            'beepFrequency' => 660,
+            'beepDurationMs' => 120,
+            'vibrateDurationMs' => 200,
+        ]);
 });
 
 it('exposes min fast keys from config with a default of three', function () {

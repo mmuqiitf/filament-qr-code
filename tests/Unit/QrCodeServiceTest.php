@@ -102,10 +102,10 @@ it('keeps PNG output when format is set after logo', function () {
 
 it('rejects invalid hex colors instead of silently rendering black', function () {
     expect(fn () => QrCodeService::make()->color('not-a-color')->generate('X'))
-        ->toThrow(InvalidArgumentException::class);
+        ->toThrow(InvalidArgumentException::class, "Invalid hex color [not-a-color]. Expected 3 or 6 hex digits, e.g. '#0f172a'.");
 
     expect(fn () => QrCodeService::make()->backgroundColor('#zzz')->generate('X'))
-        ->toThrow(InvalidArgumentException::class);
+        ->toThrow(InvalidArgumentException::class, "Invalid hex color [zzzzzz]. Expected 3 or 6 hex digits, e.g. '#0f172a'.");
 });
 
 it('shares renders for identical payloads through the render cache', function () {
