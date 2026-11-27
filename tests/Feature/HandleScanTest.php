@@ -5,29 +5,21 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class HandleScanTestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     public bool $scannerDisabled = false;
 
     /** @var list<string> */
     public array $normalized = [];
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
 
     public function form(Schema $form): Schema
     {
@@ -39,16 +31,6 @@ class HandleScanTestComponent extends Component implements HasForms
                 TextInput::make('note'),
             ])
             ->statePath('data');
-    }
-
-    public function keyOf(string $name): string
-    {
-        return $this->form->getComponent(fn ($component): bool => method_exists($component, 'getName') && $component->getName() === $name)->getKey();
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

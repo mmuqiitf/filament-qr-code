@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Schemas\Schema;
@@ -12,16 +11,15 @@ use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class ScanRulesLivewireComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
+    use InteractsWithTestForm;
 
     /**
      * @var array<string, mixed>|null
      */
-    public ?array $data = [];
-
     public function form(Form|Schema $form): Form|Schema
     {
         return $form
@@ -37,16 +35,6 @@ class ScanRulesLivewireComponent extends Component implements HasForms
             ->statePath('data');
     }
 
-    public function keyOf(string $name): string
-    {
-        return $this->form->getComponent(fn ($component): bool => method_exists($component, 'getName') && $component->getName() === $name)->getKey();
-    }
-
-    public function submit(): void
-    {
-        $this->form->getState();
-    }
-
     public function render(): string
     {
         return <<<'BLADE'
@@ -57,13 +45,11 @@ class ScanRulesLivewireComponent extends Component implements HasForms
 
 class RejectWhenOrderLivewireComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
+    use InteractsWithTestForm;
 
     /**
      * @var array<string, mixed>|null
      */
-    public ?array $data = [];
-
     /**
      * @var list<mixed>
      */

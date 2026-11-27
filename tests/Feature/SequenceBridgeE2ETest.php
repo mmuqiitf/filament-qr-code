@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Schemas\Schema;
@@ -13,16 +12,15 @@ use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class SequenceBridgeLivewireComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
+    use InteractsWithTestForm;
 
     /**
      * @var array<string, mixed>|null
      */
-    public ?array $data = [];
-
     public function form(Form|Schema $form): Form|Schema
     {
         return $form
@@ -96,7 +94,7 @@ it('serves lazy modal QR images through the signed route', function () {
 
 class OrderStateSequenceComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
+    use InteractsWithTestForm;
 
     /**
      * @var array<string, mixed>|null

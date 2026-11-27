@@ -2,23 +2,16 @@
 
 declare(strict_types=1);
 
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class ItemRulesFormComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    public ?array $data = [];
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
+    use InteractsWithTestForm;
 
     public function form(Schema $schema): Schema
     {
@@ -28,16 +21,6 @@ class ItemRulesFormComponent extends Component implements HasForms
                     ->itemRules(['regex:/^PRD-\d+$/']),
             ])
             ->statePath('data');
-    }
-
-    public function submit(): void
-    {
-        $this->form->getState();
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

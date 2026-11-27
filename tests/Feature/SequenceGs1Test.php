@@ -6,7 +6,6 @@ namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use InvalidArgumentException;
@@ -14,13 +13,11 @@ use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class SequenceGs1TestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     public bool $keepMissing = false;
 
@@ -28,11 +25,6 @@ class SequenceGs1TestComponent extends Component implements HasForms
 
     /** @var list<string> */
     public array $saw = [];
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
 
     public function form(Schema $form): Schema
     {
@@ -73,29 +65,11 @@ class SequenceGs1TestComponent extends Component implements HasForms
             ])
             ->statePath('data');
     }
-
-    public function submit(): void
-    {
-        $this->form->getState();
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
-    }
 }
 
 class SequenceGs1DefaultTestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
+    use InteractsWithTestForm;
 
     public function form(Schema $form): Schema
     {
@@ -111,11 +85,6 @@ class SequenceGs1DefaultTestComponent extends Component implements HasForms
                 TextInput::make('gtin'),
             ])
             ->statePath('data');
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

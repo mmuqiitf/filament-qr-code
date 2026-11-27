@@ -6,24 +6,19 @@ namespace Mmuqiitf\FilamentQrCode\Tests\Fixtures;
 
 use Closure;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Livewire\Component;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class ScanChecksTestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
+    use InteractsWithTestForm;
 
     public static ?Closure $configureScanner = null;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
-
-    public bool $submitted = false;
 
     public static function test(Closure $configure): Testable
     {
@@ -35,11 +30,6 @@ class ScanChecksTestComponent extends Component implements HasForms
     public static function scan(Testable $test, string $code, string $source = 'camera'): Testable
     {
         return $test->call('callSchemaComponentMethod', 'form.sku', 'handleScan', ['code' => $code, 'source' => $source]);
-    }
-
-    public function mount(): void
-    {
-        $this->form->fill();
     }
 
     public function form(Schema $form): Schema
@@ -56,16 +46,5 @@ class ScanChecksTestComponent extends Component implements HasForms
                 TextInput::make('note'),
             ])
             ->statePath('data');
-    }
-
-    public function submit(): void
-    {
-        $this->form->getState();
-        $this->submitted = true;
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }

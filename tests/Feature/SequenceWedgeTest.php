@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Closure;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Log;
@@ -17,13 +16,11 @@ use Mmuqiitf\FilamentQrCode\Enums\RepeatComplete;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Support\ScanCheckContext;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class SequenceWedgeTestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     public int $submissions = 0;
 
@@ -33,11 +30,6 @@ class SequenceWedgeTestComponent extends Component implements HasForms
     public static ?Closure $steps = null;
 
     public static ?Closure $configure = null;
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
 
     public function form(Schema $form): Schema
     {
@@ -69,11 +61,6 @@ class SequenceWedgeTestComponent extends Component implements HasForms
     public function validateForm(): void
     {
         $this->form->getState();
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

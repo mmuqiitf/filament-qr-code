@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { qrHardwareScannerListenerComponent } from './qr-hardware-scanner.js';
 import { inputRouter } from './input-router.js';
-import { createWireSpy, mountComponent } from './alpine-test-harness.js';
+import { clearDocument, createWireSpy, mountComponent } from './alpine-test-harness.js';
 
 function mountListener(options = {}, parent = document.body) {
     const element = document.createElement('div');
@@ -23,7 +23,7 @@ function captureUnrouted() {
 
 afterEach(() => {
     inputRouter().destroy();
-    document.body.innerHTML = '';
+    clearDocument();
 });
 
 describe('qrHardwareScannerListener routing (P0.3)', () => {

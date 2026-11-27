@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import qrScannerComponent from './qr-scanner.js';
 import { inputRouter } from './input-router.js';
-import { createWireSpy, mountComponent } from './alpine-test-harness.js';
+import { clearDocument, mountOnMarkup } from './alpine-test-harness.js';
 
 const accepted = (code) => ({ passes: true, code, source: 'hardware', message: null, record_key: null });
 const rejected = (code, message) => ({ passes: false, code, source: 'hardware', message, record_key: null });
@@ -17,21 +17,23 @@ function deferred() {
 }
 
 function mountContinuous({ respond = (key, method, { code }) => Promise.resolve(accepted(code)), ...options } = {}) {
-    document.body.innerHTML = '<div data-field-name="sku"><input type="text" wire:model="data.sku"><div data-qr-scanner-panel></div></div>';
-    const wire = createWireSpy({ respond });
-    const scanner = mountComponent(qrScannerComponent({
-        statePath: 'data.sku',
-        sound: false,
-        vibrate: false,
-        hardwareScanner: false,
-        serverCheck: true,
-        componentKey: 'form.sku',
-        cooldownMs: 0,
-        mode: 'continuous',
-        successFeedback: { sound: false, vibrate: [], flash: false },
-        errorFeedback: { sound: false, vibrate: [], flash: false },
-        ...options,
-    }), { element: document.querySelector('[data-field-name="sku"]'), wire });
+    const { component: scanner, wire } = mountOnMarkup(
+        '<div data-field-name="sku"><input type="text" wire:model="data.sku"><div data-qr-scanner-panel></div></div>',
+        qrScannerComponent({
+            statePath: 'data.sku',
+            sound: false,
+            vibrate: false,
+            hardwareScanner: false,
+            serverCheck: true,
+            componentKey: 'form.sku',
+            cooldownMs: 0,
+            mode: 'continuous',
+            successFeedback: { sound: false, vibrate: [], flash: false },
+            errorFeedback: { sound: false, vibrate: [], flash: false },
+            ...options,
+        }),
+        { selector: '[data-field-name="sku"]', respond },
+    );
 
     return { scanner, wire };
 }
@@ -52,7 +54,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 afterEach(() => {
     cleanups.splice(0).forEach((cleanup) => cleanup());
     inputRouter().destroy();
-    document.body.innerHTML = '';
+    clearDocument();
 });
 
 describe('QrScanner continuous mode', () => {

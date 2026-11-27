@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Mmuqiitf\FilamentQrCode\Tests\Fixtures;
 
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Schemas\Schema;
@@ -15,6 +14,7 @@ use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 /**
  * Shared Livewire form fixture. It lives in its own PSR-4 file so it
@@ -22,20 +22,11 @@ use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
  */
 class TestLivewireFormComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
+    use InteractsWithTestForm;
 
     /**
      * @var array<string, mixed>|null
      */
-    public ?array $data = [];
-
-    public bool $submitted = false;
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
-
     public function form(Form|Schema $form): Form|Schema
     {
         return $form
@@ -57,12 +48,6 @@ class TestLivewireFormComponent extends Component implements HasForms
                     ->caption('PREVIEW-QR-123'),
             ])
             ->statePath('data');
-    }
-
-    public function submit(): void
-    {
-        $data = $this->form->getState();
-        $this->submitted = true;
     }
 
     public function render(): string

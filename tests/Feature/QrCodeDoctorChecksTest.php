@@ -172,3 +172,24 @@ it('describes itself with the product name', function () {
     expect(Artisan::all()['qr-code:doctor']->getDescription())
         ->toBe('Check the Filament QR & Barcode install: image backends, fonts, assets, config, and routes.');
 });
+
+it('warns when the configured offline mode cannot be used', function (mixed $mode) {
+    publishDoctorAssets();
+    config()->set('qr-code.scan.offline', $mode);
+
+    $this->artisan('qr-code:doctor')
+        ->assertSuccessful()
+        ->expectsOutputToContain('[WARN] qr-code.scan.offline must be banner, block, or off.');
+})->with([
+    'unknown string' => ['airplane'],
+    'boolean' => [true],
+]);
+
+it('stays quiet about a usable offline mode', function () {
+    publishDoctorAssets();
+    config()->set('qr-code.scan.offline', 'block');
+
+    $this->artisan('qr-code:doctor')
+        ->assertSuccessful()
+        ->doesntExpectOutputToContain('[WARN] qr-code.scan.offline');
+});

@@ -22,7 +22,10 @@ use Workbench\App\Filament\Pages\CollectorQtyCsvSmoke;
 use Workbench\App\Filament\Pages\CollectorSmoke;
 use Workbench\App\Filament\Pages\CollectSmoke;
 use Workbench\App\Filament\Pages\Gs1Smoke;
+use Workbench\App\Filament\Pages\LabelsSmoke;
+use Workbench\App\Filament\Pages\ListenerSmoke;
 use Workbench\App\Filament\Pages\ModalSmoke;
+use Workbench\App\Filament\Pages\OfflineSmoke;
 use Workbench\App\Filament\Pages\ProductEdit;
 use Workbench\App\Filament\Pages\RapidCollectorSmoke;
 use Workbench\App\Filament\Pages\ScanSmoke;
@@ -38,6 +41,14 @@ class WorkbenchPanelProvider extends PanelProvider
     public function boot(): void
     {
         View::addNamespace('workbench', __DIR__.'/../../resources/views');
+
+        // testbench.yaml uses the array cache so Pest tests stay isolated.
+        // The built-in PHP server boots a new application per request, so a
+        // print-sheet token stored by PrintLabelsAction would 404 in the popup
+        // unless the cache outlives that request.
+        if (filter_var(env('FILAMENT_QR_CODE_SMOKE'), FILTER_VALIDATE_BOOL)) {
+            config(['cache.default' => 'file']);
+        }
     }
 
     public function panel(Panel $panel): Panel
@@ -48,7 +59,7 @@ class WorkbenchPanelProvider extends PanelProvider
             ->path('workbench')
             ->topbar(false)
             ->plugin(FilamentQrCodePlugin::make())
-            ->pages([AnnounceSmoke::class, BarcodeSmoke::class, Gs1Smoke::class, ScanSmoke::class, CollectSmoke::class, CollectorSmoke::class, CollectorQtyCsvSmoke::class, ModalSmoke::class, RapidCollectorSmoke::class, SequenceSmoke::class, TableSmoke::class, ProductEdit::class])
+            ->pages([AnnounceSmoke::class, BarcodeSmoke::class, Gs1Smoke::class, ScanSmoke::class, CollectSmoke::class, CollectorSmoke::class, CollectorQtyCsvSmoke::class, ModalSmoke::class, RapidCollectorSmoke::class, SequenceSmoke::class, TableSmoke::class, ProductEdit::class, OfflineSmoke::class, ListenerSmoke::class, LabelsSmoke::class])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

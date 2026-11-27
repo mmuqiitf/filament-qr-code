@@ -6,7 +6,6 @@ namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Event;
@@ -14,18 +13,11 @@ use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class ListenerGs1TestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
+    use InteractsWithTestForm;
 
     public function form(Schema $form): Schema
     {
@@ -44,11 +36,6 @@ class ListenerGs1TestComponent extends Component implements HasForms
     public function listenerKey(): string
     {
         return $this->form->getComponent(fn ($component): bool => $component instanceof QrHardwareScannerListener)->getKey();
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 
