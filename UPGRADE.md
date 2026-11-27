@@ -1,5 +1,12 @@
 # Upgrade guide
 
+## From 1.3.1 to 1.3.2
+
+Run `php artisan filament:assets`. The scanner JavaScript now sizes the reticle from a scan region, and a re-render that drops `scanRegion` clears the previous box.
+
+- **Presets and scan region are opt-in.** `->preset()` and `->scanRegion()` change nothing until you set them. A published `config/qr-code.php` that omits `camera.preset` and `camera.scan_region` keeps the previous camera defaults. Copy those two keys in if you want to set them.
+- **`ScannerPreset::Gs1` does not parse labels.** It only tunes the camera (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`). Keep `->gs1()` for parsing.
+
 ## From 1.2.0 to 1.3.0
 
 - **Print stylesheet.** Run `php artisan filament:assets` so the Avery-style label sheet CSS is published. If you published the `ui` translations, copy the new `print_labels`, `print_labels_bulk`, `print_sheet`, `no_labels`, `print_qr_alt` and `print_barcode_alt` keys. Existing `.filament-qr-label-sheet` / `.filament-qr-label` / `.filament-qr-no-print` markup still works.
