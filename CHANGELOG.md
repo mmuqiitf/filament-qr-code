@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-11-27
+
+### Scanner presets & scan region
+
 ### Added
 
 - Scanner presets and scan region across every camera surface (`QrScanner`, `QrCollector`, `QrScanSequence`, `QrCollectAction`): `->preset(ScannerPreset::...)` (`Retail`, `Warehouse`, `Inventory`, `Ticketing`, `Gs1`) bundles camera defaults (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`), and `->scanRegion(width, height)` sets explicit viewfinder ratios (`<= 1.0`) or pixel maxima (`> 1`) with matching reticle sizing and `qr-code.camera.preset` / `qr-code.camera.scan_region` config defaults. A preset replaces those camera config keys; explicit setters always override it regardless of call order. A re-render that drops `scanRegion` clears the previous box. `qr-code:doctor` warns when `camera.scan_region` cannot be used. `ScannerPreset::Gs1` tunes the camera only; `->gs1()` still parses labels.
@@ -550,7 +554,8 @@ tagged or published; version history starts here.
   and Octane workers previously served pages without the package bundle).
 - Missing font files fall back to GD bitmap fonts instead of throwing.
 
-[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/mmuqiitf/filament-qr-code/compare/v1.1.2...v1.2.0
