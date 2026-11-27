@@ -94,6 +94,9 @@ return [
         'sync_options' => 'morph',
         'cooldown_ms' => 1500,
         'clear_on_reject' => true,
+        // banner: show an offline notice. block: also reject new scans until
+        // the browser is online. off: neither. Per field: offline() / blockWhenOffline().
+        'offline' => 'banner',
         'continuous' => [
             'display' => 'empty',
             'pause_on_reject' => false,

@@ -20,6 +20,7 @@ final class ScanMessages
         'cameraUnavailableMessage' => 'filament-qr-code::ui.camera_unavailable',
         'noCamerasMessage' => 'filament-qr-code::ui.camera_none_found',
         'cameraStartFailedMessage' => 'filament-qr-code::ui.camera_start_failed',
+        'offlineBlockedMessage' => 'filament-qr-code::ui.offline_blocked',
     ];
 
     private const Announcements = [

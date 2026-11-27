@@ -50,6 +50,7 @@ Option reference:
 - `preset(ScannerPreset::Warehouse)` — bundles `formats`, `fps`, `scanRegion`, `preferRearCamera`, and `cameraControls` for `Retail`, `Warehouse`, `Inventory`, `Ticketing`, or `Gs1`. The method or `camera.preset` replaces those camera config keys (`fps`, `scan_region`, `prefer_rear_camera`, `controls`). Explicit setters still win, in either call order. `ScannerPreset::Gs1` only tunes the camera; call `gs1()` as well to parse GS1 labels.
 - `fps()` / `qrbox()` / `scanRegion()` — defaults 25 / 250 / `null`. `qrbox` is a _maximum_ square/band edge, used when no region is active. `scanRegion(width, height)` replaces that box and syncs the reticle (`<= 1.0` = viewfinder ratio such as `0.85, 0.35`; integers `> 1` = pixel maxima such as `320, 140`). `scanRegion()` or `scanRegion(null, null)` clears a preset or config region. `->qrbox()` does the same when `scanRegion()` was not called.
 - `preferRearCamera()` — rear heuristic, but the operator's last camera choice (stored in `localStorage`) always wins.
+- `offline(OfflineMode::Banner)` — default. While `navigator.onLine` is false, the surface shows an offline banner. `offline(OfflineMode::Block)` or `blockWhenOffline()` also rejects new scans until the connection returns. `offline(OfflineMode::Off)` hides the banner. Config: `qr-code.scan.offline` (`banner`, `block`, `off`). Recent rejection reasons stay listed under the field.
 - `allowUpload(false)` — hides the image-file fallback.
 - `beepFrequency()` / `beepDuration()` / `vibrateDuration()` — feedback tuning.
 

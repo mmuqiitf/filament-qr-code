@@ -19,11 +19,13 @@
     {{ \Filament\Support\Facades\FilamentView::renderHook(\Mmuqiitf\FilamentQrCode\View\QrCodeRenderHook::SEQUENCE_START, scopes: $renderHookScopes) }}
     {{-- Left: Scanner Viewfinder & Controls --}}
     <div class="lg:col-span-5 space-y-4">
+        @include('filament-qr-code::components.offline-banner')
         @include('filament-qr-code::components.sequence.header')
 
         @include('filament-qr-code::components.sequence.camera-select')
 
         @include('filament-qr-code::components.sequence.status')
+        @include('filament-qr-code::components.rejection-reasons')
         @include('filament-qr-code::components.announcer')
 
         @include('filament-qr-code::components.sequence.camera')

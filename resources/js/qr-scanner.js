@@ -23,6 +23,7 @@ import {
 import { createScanDeduper, normalizeCode, requestScanCheck } from './scan-pipeline.js';
 import { FLASH_CLASSES, flashElement, playOutcomeFeedback } from './feedback.js';
 import { changedKeys, feedSource, listenForControlEvents, observeOptions, readOptionsAttribute } from './runtime-control.js';
+import { bindOnlineState, offlineBlockResult, rememberRejection } from './online-state.js';
 
 const DEFAULT_OPTIONS = {
     nextField: null,
@@ -57,6 +58,7 @@ const DEFAULT_OPTIONS = {
     keepCameraOpen: false,
     syncOptions: 'morph',
     gs1: false,
+    offline: 'banner',
 };
 
 const ROUTER_OPTIONS = ['hardwareScanner', 'hardwareScope', 'burstThresholdMs', 'minFastKeys', 'minBarcodeLength', 'terminators', 'scanTimeoutMs', 'preventSubmit'];
@@ -93,7 +95,10 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
         unregisterTarget: null,
         isChecking: false,
         isPaused: false,
+        isOnline: true,
+        offlineMode: 'banner',
         rejectionMessage: '',
+        rejectionReasons: [],
         queuedScan: null,
         boundDeliverHandler: null,
         options: { ...DEFAULT_OPTIONS, ...definedOnly(options) },
@@ -108,6 +113,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             const { statePath: renderedStatePath = null, cameraStorageKey = null, ...rendered } = readOptionsAttribute(this.fieldElement()) ?? {};
             this.options = { ...this.options, ...definedOnly(rendered) };
             this.statePath = this.statePath ?? renderedStatePath;
+            bindOnlineState(this);
             storageKey = cameraStorageKey || this.options.cameraStorageKey || storageKey;
 
             this.scannerElementId = `qr-reader-${this.$id('qr-reader')}`;
@@ -155,6 +161,7 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
                 this.boundDeliverHandler = null;
             }
 
+            this.unbindOnlineState?.();
             this.stopObservingOptions?.();
             this.stopObservingOptions = null;
             this.stopListeningForControls?.();
@@ -254,6 +261,9 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
 
             const changed = changedKeys(this.options, changes);
             this.options = { ...this.options, ...changes };
+            if (changed.includes('offline')) {
+                this.offlineMode = this.options.offline ?? 'banner';
+            }
 
             if (changed.includes('formats')) {
                 this.markDecoderStale();
@@ -464,6 +474,14 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             }
 
             const field = this.fieldElement().getAttribute('data-field-name') || null;
+            const blocked = offlineBlockResult(this, code, source);
+
+            if (blocked) {
+                this.applyRejected(blocked, field);
+
+                return blocked;
+            }
+
             const { serverCheck, componentKey, cooldownMs, mode, scanFailedMessage } = this.options;
 
             if (deduper.isDuplicate(code, cooldownMs)) {
@@ -762,7 +780,9 @@ export default function qrScannerComponent({ state = null, statePath = null, ...
             // Continuous mode keeps a status line. In single mode the server puts a
             // rejection in the field's error bag, so GS1 fields only need the line
             // when the check itself failed.
-            if (this.isContinuous() || (this.options.gs1 && checked === false)) {
+            this.rejectionReasons = rememberRejection(this.rejectionReasons, message);
+
+            if (this.isContinuous() || (this.options.gs1 && checked === false) || this.offlineMode === 'block') {
                 this.rejectionMessage = message ?? '';
             }
 

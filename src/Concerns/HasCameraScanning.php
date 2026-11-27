@@ -7,6 +7,7 @@ namespace Mmuqiitf\FilamentQrCode\Concerns;
 use Closure;
 use InvalidArgumentException;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeFormat;
+use Mmuqiitf\FilamentQrCode\Enums\OfflineMode;
 use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Support\ConfigValue;
 use Mmuqiitf\FilamentQrCode\Support\ScanMessages;
@@ -35,6 +36,12 @@ trait HasCameraScanning
     protected bool|Closure|null $preferRearCamera = null;
 
     protected bool|Closure|null $cameraControls = null;
+
+    protected OfflineMode|string|Closure|null $offline = null;
+
+    protected bool $offlineCustomized = false;
+
+    protected bool|Closure|null $blockWhenOffline = null;
 
     /**
      * @var array<int, BarcodeFormat|string>|Closure
@@ -283,6 +290,41 @@ trait HasCameraScanning
     }
 
     /** @return array<string, mixed> */
+    /**
+     * What this surface does when the browser is offline: banner, block, or off.
+     * An explicit call wins over `qr-code.scan.offline`.
+     */
+    public function offline(OfflineMode|string|Closure|null $mode): static
+    {
+        $this->offline = $mode;
+        $this->offlineCustomized = true;
+
+        return $this;
+    }
+
+    /** Reject new scans while the browser is offline, and show the offline banner. */
+    public function blockWhenOffline(bool|Closure $condition = true): static
+    {
+        $this->blockWhenOffline = $condition;
+
+        return $this;
+    }
+
+    public function getOfflineMode(): OfflineMode
+    {
+        if ($this->offlineCustomized) {
+            return self::parseOfflineMode($this->evaluate($this->offline));
+        }
+
+        if ($this->blockWhenOffline !== null && (bool) $this->evaluate($this->blockWhenOffline)) {
+            return OfflineMode::Block;
+        }
+
+        $configured = function_exists('config') ? config('qr-code.scan.offline', OfflineMode::Banner->value) : OfflineMode::Banner->value;
+
+        return self::parseOfflineMode($configured);
+    }
+
     public function getCameraScanPayload(): array
     {
         $payload = [
@@ -291,6 +333,7 @@ trait HasCameraScanning
             'preferRearCamera' => $this->isPreferRearCamera(),
             'cameraControls' => $this->hasCameraControls(),
             'formats' => $this->getSupportedFormats(),
+            'offline' => $this->getOfflineMode()->value,
             ...ScanMessages::forCamera(),
         ];
 
@@ -300,6 +343,19 @@ trait HasCameraScanning
         }
 
         return $payload;
+    }
+
+    private static function parseOfflineMode(mixed $mode): OfflineMode
+    {
+        if ($mode instanceof OfflineMode) {
+            return $mode;
+        }
+
+        if (is_string($mode)) {
+            return OfflineMode::tryFrom($mode) ?? OfflineMode::Banner;
+        }
+
+        return OfflineMode::Banner;
     }
 
     /**

@@ -35,7 +35,8 @@ class FilamentQrCodeServiceProvider extends PackageServiceProvider
             ->hasTranslations()
             ->hasViews(static::$name)
             ->hasCommand(Commands\QrCodeDoctorCommand::class)
-            ->hasCommand(Commands\MakeQrScanFieldCommand::class);
+            ->hasCommand(Commands\MakeQrScanFieldCommand::class)
+            ->hasCommand(Commands\FakeScanCommand::class);
     }
 
     public static function registerAssetsOnce(): void

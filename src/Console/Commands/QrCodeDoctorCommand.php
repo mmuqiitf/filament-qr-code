@@ -8,6 +8,7 @@ use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
+use Mmuqiitf\FilamentQrCode\Enums\OfflineMode;
 use Mmuqiitf\FilamentQrCode\Enums\ScannerPreset;
 use Mmuqiitf\FilamentQrCode\Support\LogoPathGuard;
 use Mmuqiitf\FilamentQrCode\Support\ScanRegion;
@@ -180,6 +181,12 @@ class QrCodeDoctorCommand extends Command
         $fps = $this->intConfig('qr-code.camera.fps', 25);
         if ($fps < 1 || $fps > 120) {
             $this->warn('  [WARN] qr-code.camera.fps should be between 1 and 120.');
+            $problems++;
+        }
+
+        $offline = config('qr-code.scan.offline', OfflineMode::Banner->value);
+        if (! $offline instanceof OfflineMode && (! is_string($offline) || OfflineMode::tryFrom($offline) === null)) {
+            $this->warn('  [WARN] qr-code.scan.offline must be banner, block, or off.');
             $problems++;
         }
 

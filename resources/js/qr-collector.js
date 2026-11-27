@@ -4,6 +4,7 @@ import { normalizeCode } from './scan-pipeline.js';
 import { inputRouter } from './input-router.js';
 import { announcerMixin, formatMessage } from './announcer.js';
 import { messagesFrom } from './messages.js';
+import { bindOnlineState, offlineBlockResult, rememberRejection } from './online-state.js';
 import {
     emitScanFeedback,
     ensureScannerInstance,
@@ -96,6 +97,8 @@ export default function qrCollectorComponent({
     announcements = true,
     customAnnouncements = false,
     componentKey = null,
+    offline = 'banner',
+    offlineBlockedMessage = null,
     ...messageOptions
 } = {}) {
     const messages = messagesFrom(messageOptions);
@@ -118,6 +121,10 @@ export default function qrCollectorComponent({
         isLoading: false,
         hasError: false,
         errorMessage: '',
+        isOnline: true,
+        offlineMode: offline,
+        offlineBlockedMessage: offlineBlockedMessage || messages.offlineBlockedMessage,
+        rejectionReasons: [],
         devices: [],
         selectedDeviceId: null,
         html5Qrcode: null,
@@ -125,6 +132,7 @@ export default function qrCollectorComponent({
         unregisterTarget: null,
 
         init() {
+            bindOnlineState(this);
             if (this.items.length === 0 && Array.isArray(this.state) && this.state.length > 0) {
                 this.items = normalizeInitialItems(this.state, quantity);
                 this.scannedSet = new Set(this.items.map(i => i.code));
@@ -324,6 +332,13 @@ export default function qrCollectorComponent({
             const trimmed = normalizeCode(sanitizeScannedValue(code), normalize);
             if (!trimmed || this.isProcessing) return;
 
+            const blocked = offlineBlockResult(this, trimmed, 'camera');
+            if (blocked) {
+                this.rejectCode(trimmed, blocked.message);
+
+                return;
+            }
+
             if (!quantity && !allowDuplicates && this.scannedSet.has(trimmed)) {
                 // The code just added is usually still in view: not a new rejection.
                 if (trimmed !== this.lastAddedCode) {
@@ -472,6 +487,7 @@ export default function qrCollectorComponent({
         },
 
         rejectCode(trimmed, reason) {
+            this.rejectionReasons = rememberRejection(this.rejectionReasons, reason);
             this.announceScan(announceOptions, {
                 code: trimmed,
                 accepted: false,

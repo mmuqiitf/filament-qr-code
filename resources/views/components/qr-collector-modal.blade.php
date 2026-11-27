@@ -8,6 +8,8 @@
     class="fi-qr-collector-modal space-y-4"
     wire:ignore
 >
+    @include('filament-qr-code::components.offline-banner')
+    @include('filament-qr-code::components.rejection-reasons')
     @include('filament-qr-code::components.announcer')
 
     <div x-show="devices.length > 1" class="flex items-center gap-2 text-xs">
