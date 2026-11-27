@@ -7,8 +7,7 @@
     aria-labelledby="{{ $id }}-scanner-title"
     class="fi-qr-scanner-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/70 backdrop-blur-sm"
     x-trap.noscroll="isModalOpen"
-    @keydown.escape.stop="closeScannerModal()"
-    @keydown.escape.window="isModalOpen && closeScannerModal()"
+    @keydown.escape.window.capture="if (isModalOpen) { $event.stopImmediatePropagation(); $event.stopPropagation(); closeScannerModal(); }"
 >
     <div
         @click.outside="closeScannerModal()"

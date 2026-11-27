@@ -59,7 +59,7 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/pest",
+        "test": "@php -d memory_limit=512M vendor/bin/pest --parallel",
         "serve": [
             "@php vendor/bin/testbench workbench:build --ansi",
             "@php vendor/bin/testbench serve --ansi"

@@ -127,4 +127,7 @@ test('Escape in a scanner opened inside an action modal closes only the scanner'
     await expect(scanner).toBeHidden();
     await expect(actionModal).toBeVisible();
     await expect(actionModal.locator('[data-qr-part="scanner.camera-button"]')).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(actionModal).toBeHidden();
 });

@@ -7,16 +7,27 @@ const svg = readFileSync(new URL('./fixtures/camera-qr.svg', import.meta.url), '
 // Real cameras take a second or two to open; the instant fake hides the race.
 const slowCameraAndTrackStreams = () => {
     window.__streams = [];
+    window.__cameraRequests = 0;
+    window.__pendingCameraRequests = 0;
     const getUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
     navigator.mediaDevices.getUserMedia = async (constraints) => {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        const stream = await getUserMedia(constraints);
-        window.__streams.push(stream);
+        window.__cameraRequests++;
+        window.__pendingCameraRequests++;
+        try {
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            const stream = await getUserMedia(constraints);
+            window.__streams.push(stream);
 
-        return stream;
+            return stream;
+        } finally {
+            window.__pendingCameraRequests--;
+        }
     };
 };
 
+const cameraRequests = (page) => page.evaluate(() => window.__cameraRequests);
+const pendingCameraRequests = (page) => page.evaluate(() => window.__pendingCameraRequests);
+const streamCount = (page) => page.evaluate(() => window.__streams.length);
 const liveTracks = (page) => page.evaluate(
     () => window.__streams.flatMap((stream) => stream.getTracks()).filter((track) => track.readyState === 'live').length,
 );
@@ -26,29 +37,39 @@ const prepare = async (page) => {
     await page.addInitScript(slowCameraAndTrackStreams);
 };
 
-for (const closeAfterMs of [300, 2000]) {
-    test(`scanner modal closed ${closeAfterMs} ms into camera start releases the camera`, async ({ page }) => {
-        await prepare(page);
-        await page.goto('/workbench/scan-smoke');
-        await page.locator('[data-field-name="camera"] [data-qr-part="scanner.camera-button"]').click();
-        await page.waitForTimeout(closeAfterMs);
-        await page.keyboard.press('Escape');
+test('scanner modal closed before camera stream resolves releases the camera', async ({ page }) => {
+    await prepare(page);
+    await page.goto('/workbench/scan-smoke');
+    await page.locator('[data-field-name="camera"] [data-qr-part="scanner.camera-button"]').click();
+    await expect.poll(() => cameraRequests(page)).toBeGreaterThan(0);
+    await page.keyboard.press('Escape');
 
-        await page.waitForTimeout(5000);
-        expect(await liveTracks(page)).toBe(0);
-    });
-}
+    await expect.poll(() => pendingCameraRequests(page), { timeout: 6_000 }).toBe(0);
+    await expect.poll(() => streamCount(page), { timeout: 6_000 }).toBeGreaterThan(0);
+    await expect.poll(() => liveTracks(page), { timeout: 6_000 }).toBe(0);
+});
+
+test('scanner modal closed right as camera stream resolves releases the camera', async ({ page }) => {
+    await prepare(page);
+    await page.goto('/workbench/scan-smoke');
+    await page.locator('[data-field-name="camera"] [data-qr-part="scanner.camera-button"]').click();
+    await expect.poll(() => streamCount(page), { timeout: 6_000 }).toBeGreaterThan(0);
+    await page.keyboard.press('Escape');
+
+    await expect.poll(() => liveTracks(page), { timeout: 6_000 }).toBe(0);
+});
 
 test('collect action modal closed mid camera start releases the camera', async ({ page }) => {
     await prepare(page);
     await page.goto('/workbench/collect-smoke');
     await page.getByRole('button', { name: /batch scan/i }).click();
     await page.locator('.fi-modal-window .filament-qr-viewfinder').waitFor();
-    await page.waitForTimeout(2000);
+    await expect.poll(() => cameraRequests(page)).toBeGreaterThan(0);
     await page.keyboard.press('Escape');
 
-    await page.waitForTimeout(5000);
-    expect(await liveTracks(page)).toBe(0);
+    await expect.poll(() => pendingCameraRequests(page), { timeout: 6_000 }).toBe(0);
+    await expect.poll(() => streamCount(page), { timeout: 6_000 }).toBeGreaterThan(0);
+    await expect.poll(() => liveTracks(page), { timeout: 6_000 }).toBe(0);
 });
 
 for (const path of ['sequence-smoke', 'collector-smoke']) {

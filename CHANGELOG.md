@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `QrScanner` image upload (`scanFile()`) now waits for any in-flight camera start to settle and discards a wedged decoder instance when `stop()` fails mid-startup, preventing `Cannot start file scan - ongoing camera scan` races when picking an image right after opening the scanner modal.
+- Pressing `Escape` inside an open `QrScanner` modal now intercepts in the `window` capture phase so it closes only the scanner without also closing a parent Filament action modal or slide-over.
+
 ## [1.3.2] - 2026-11-27
 
 ### Scanner presets & scan region

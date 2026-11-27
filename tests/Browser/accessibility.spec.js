@@ -60,6 +60,10 @@ test('collect action modal with a collected code has no axe violations', async (
     await page.getByRole('button', { name: /batch scan/i }).click();
     const modal = page.locator('.fi-modal-window').filter({ has: page.locator('.filament-qr-viewfinder') });
     await expect(modal.locator('[data-qr-part="announcer"]')).toHaveText(/CAM-SMOKE-42/, { timeout: 15_000 });
+    await expect.poll(() => modal.evaluate((el) => (
+        getComputedStyle(el).opacity === '1'
+        && el.getAnimations().every((animation) => animation.playState === 'finished')
+    ))).toBe(true);
 
     expect(violations(await axe(page, '.fi-modal-window'))).toEqual([]);
 });

@@ -100,7 +100,7 @@ function b(e) {
 function x(e, t, n) {
 	return e > n ? n : e < t ? t : e;
 }
-// node_modules/html5-qrcode/esm/strings.js
+// ../filament-qr-code/node_modules/html5-qrcode/esm/strings.js
 var S = function() {
 	function e() {}
 	return e.codeParseError = function(e) {
