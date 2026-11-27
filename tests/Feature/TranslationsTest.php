@@ -77,6 +77,24 @@ it('keeps every lang file on the same keys, all of them used', function () {
     expect(array_values(array_diff($reference, usedUiKeys())))->toBe([]);
 });
 
+it('keeps the same placeholders in every locale', function () {
+    $files = packageLangFiles();
+    $reference = require $files[0];
+
+    foreach ($files as $file) {
+        $strings = require $file;
+
+        foreach ($reference as $key => $english) {
+            preg_match_all('/:[a-z]+/', $english, $expected);
+            preg_match_all('/:[a-z]+/', $strings[$key], $actual);
+            sort($expected[0]);
+            sort($actual[0]);
+
+            expect($actual[0])->toBe($expected[0], "{$key} in {$file}");
+        }
+    }
+});
+
 it('has no duplicate keys in a lang file', function () {
     foreach (packageLangFiles() as $file) {
         preg_match_all("/^\s*'([a-z0-9_]+)'\s*=>/m", (string) file_get_contents($file), $matches);

@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- UI translations for German, French, Spanish, Dutch, and Malay (`de`, `fr`, `es`, `nl`, `ms`), with the same keys and placeholders as English.
+- [Components](docs/components.md) maps each surface to its guide and screenshot. Boost skills `filament-qr-code-scanning`, `filament-qr-code-collecting`, `filament-qr-code-generating`, and `filament-qr-code-printing` sit beside the umbrella skill.
+- Weekly Infection report (`.github/workflows/mutation.yml`). It does not gate pull requests. The workbench `product-edit` page shows a live barcode of the SKU being typed.
 - `qr-code:fake-scan {code} {--gs1} {--require=*}` prints the same accept or reject reason a GS1 scan would show, without a camera.
 - Camera surfaces keep the latest rejection reasons (`data-qr-part="scanner.reasons"`) and show an offline banner. `->offline(OfflineMode::Block)` or `->blockWhenOffline()` rejects new scans until the browser is online. `qr-code.scan.offline` defaults to `banner` (`block` or `off` are the other modes).
 - Scanner presets and scan region across every camera surface (`QrScanner`, `QrCollector`, `QrScanSequence`, `QrCollectAction`): `->preset(ScannerPreset::...)` (`Retail`, `Warehouse`, `Inventory`, `Ticketing`, `Gs1`) bundles camera defaults (`formats`, `fps`, `scanRegion`, `preferRearCamera`, `cameraControls`), and `->scanRegion(width, height)` sets explicit viewfinder ratios (`<= 1.0`) or pixel maxima (`> 1`) with matching reticle sizing and `qr-code.camera.preset` / `qr-code.camera.scan_region` config defaults. A preset replaces those camera config keys; explicit setters always override it regardless of call order. A re-render that drops `scanRegion` clears the previous box. `qr-code:doctor` warns when `camera.scan_region` cannot be used. `ScannerPreset::Gs1` tunes the camera only; `->gs1()` still parses labels.
