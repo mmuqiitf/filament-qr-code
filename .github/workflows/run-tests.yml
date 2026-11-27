@@ -68,7 +68,7 @@ jobs:
         run: composer show filament/schemas | grep -E '^versions'
 
       - name: Execute tests
-        run: vendor/bin/pest
+        run: vendor/bin/pest --parallel
 
   gd-only:
     # Imagick is optional: PNG rendering, logos and captions fall back to GD.
@@ -104,4 +104,68 @@ jobs:
           composer update --prefer-stable --prefer-dist --no-interaction
 
       - name: Execute tests
-        run: vendor/bin/pest
+        run: vendor/bin/pest --parallel
+
+  coverage:
+    runs-on: ubuntu-latest
+    name: P8.4 - L13.* - prefer-stable - Coverage
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install system font dependencies
+        run: |
+          sudo grep -l 'packages.microsoft.com' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null | xargs -r sudo rm -f || true
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-dejavu-core
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick
+          coverage: pcov
+
+      - name: Install dependencies
+        run: |
+          composer config --unset platform.php
+          composer require "laravel/framework:13.*" "orchestra/testbench:11.*" --dev --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction
+
+      - name: Execute tests with coverage
+        run: |
+          mkdir -p build
+          vendor/bin/pest --parallel --coverage --coverage-clover=build/clover.xml --coverage-text=build/coverage.txt
+          {
+            echo "## PHP 8.4 / Laravel 13 Coverage (pcov)"
+            echo ""
+            php -r '
+              $xml = @simplexml_load_file("build/clover.xml");
+              if ($xml && isset($xml->project->metrics)) {
+                $m = $xml->project->metrics;
+                $stmts = (int) $m["statements"];
+                $cov = (int) $m["coveredstatements"];
+                $methods = (int) $m["methods"];
+                $covMethods = (int) $m["coveredmethods"];
+                $elements = (int) $m["elements"];
+                $covElements = (int) $m["coveredelements"];
+                $pct = $stmts > 0 ? round(($cov / $stmts) * 100, 2) : 0;
+                $mpct = $methods > 0 ? round(($covMethods / $methods) * 100, 2) : 0;
+                $epct = $elements > 0 ? round(($covElements / $elements) * 100, 2) : 0;
+                echo "- **Statements:** {$cov} / {$stmts} ({$pct}%)
+";
+                echo "- **Methods:** {$covMethods} / {$methods} ({$mpct}%)
+";
+                echo "- **Elements:** {$covElements} / {$elements} ({$epct}%)
+
+";
+              }
+            '
+            echo "<details><summary>Coverage report by file</summary>"
+            echo ""
+            echo '```text'
+            cat build/coverage.txt
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"

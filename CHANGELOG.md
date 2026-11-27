@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Internal: extracted pure `StepEvaluator` and `SequenceEngine` (`src/Support/`) from `HasSequenceSteps` with no Filament or Livewire dependency, while keeping the public API, payloads, and events unchanged.
+- Internal: scoped package asset registration to the Laravel application container instead of a process-static flag, removing `FilamentQrCodeServiceProvider::resetAssetsRegistration()`.
+- CI: enabled `pest --parallel` in `run-tests.yml` and added a reporting-only PHP 8.4 / Laravel 13 `pcov` coverage job writing results to the GitHub job summary.
+
 ## [1.3.2] - 2026-11-27
 
 ### Scanner presets & scan region
