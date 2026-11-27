@@ -153,13 +153,9 @@ jobs:
                 $pct = $stmts > 0 ? round(($cov / $stmts) * 100, 2) : 0;
                 $mpct = $methods > 0 ? round(($covMethods / $methods) * 100, 2) : 0;
                 $epct = $elements > 0 ? round(($covElements / $elements) * 100, 2) : 0;
-                echo "- **Statements:** {$cov} / {$stmts} ({$pct}%)
-";
-                echo "- **Methods:** {$covMethods} / {$methods} ({$mpct}%)
-";
-                echo "- **Elements:** {$covElements} / {$elements} ({$epct}%)
-
-";
+                echo "- **Statements:** {$cov} / {$stmts} ({$pct}%)" . PHP_EOL;
+                echo "- **Methods:** {$covMethods} / {$methods} ({$mpct}%)" . PHP_EOL;
+                echo "- **Elements:** {$covElements} / {$elements} ({$epct}%)" . PHP_EOL . PHP_EOL;
               }
             '
             echo "<details><summary>Coverage report by file</summary>"
