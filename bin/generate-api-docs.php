@@ -123,6 +123,7 @@ function llmsFullFiles(): array
         'docs/reference.md',
         'docs/faq.md',
         'docs/ai.md',
+        'docs/components.md',
     ];
 
     $recipes = glob(packageRoot().'/docs/recipes/*.md') ?: [];

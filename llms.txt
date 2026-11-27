@@ -21,6 +21,7 @@ Scanned values write straight into the Livewire form state. Lookups and validati
 - [Events](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/events.md): browser and Laravel events with their payloads
 - [Reference](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/reference.md): config keys, hardware routing, translations, the `@internal` policy
 - [FAQ](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/faq.md): iOS torch, secure context, offline use, guns, multiple panels
+- [Components](https://github.com/mmuqiitf/filament-qr-code/blob/main/docs/components.md): each surface, its guide, and a screenshot
 
 ## Recipes
 
