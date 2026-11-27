@@ -17,8 +17,8 @@ use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 
 /**
- * Shared by LivewireFormE2ETest and ScanPayloadRenderTest. It lives in its own
- * PSR-4 file so it autoloads whichever test file runs first.
+ * Shared Livewire form fixture. It lives in its own PSR-4 file so it
+ * autoloads whichever test file runs first.
  */
 class TestLivewireFormComponent extends Component implements HasForms
 {

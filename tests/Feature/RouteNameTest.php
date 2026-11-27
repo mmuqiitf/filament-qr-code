@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
+use Mmuqiitf\FilamentQrCode\FilamentQrCodeServiceProvider;
 use Mmuqiitf\FilamentQrCode\Http\Middleware\ThrottleQrImage;
 
 it('registers the camelCase image route names', function () {
@@ -25,4 +27,19 @@ it('signs and throttles both image routes and adds no extra middleware by defaul
 it('serves signed urls generated from the route name', function () {
     $this->get(URL::signedRoute('filamentQrCode.image', ['data' => 'x']))->assertOk();
     $this->get(URL::signedRoute('filamentQrCode.barcode', ['data' => 'x']))->assertOk();
+});
+
+it('keeps only non-empty string middleware from the image route config', function () {
+    config()->set('qr-code.image_route.middleware', [SubstituteBindings::class, 5, '']);
+
+    $provider = new class(app()) extends FilamentQrCodeServiceProvider
+    {
+        /** @return list<string> */
+        public function extraImageRouteMiddleware(): array
+        {
+            return $this->imageRouteMiddleware();
+        }
+    };
+
+    expect($provider->extraImageRouteMiddleware())->toBe([SubstituteBindings::class]);
 });

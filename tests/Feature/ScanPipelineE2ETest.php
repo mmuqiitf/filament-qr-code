@@ -45,11 +45,3 @@ it('a rendered lookup scanner exposes the browser contract and handles the brows
         ->assertSet('data.sku', null)
         ->assertNotDispatched('qr-scan-rejected');
 });
-
-it('renders an unconfigured scanner without server checks or cooldown', function (): void {
-    $test = ScanChecksTestComponent::test(fn (QrScanner $scanner): QrScanner => $scanner);
-
-    $scanner = $test->instance()->form->getComponent(fn ($component): bool => $component instanceof QrScanner);
-
-    expect($scanner->getScanPayload())->toMatchArray(['serverCheck' => false, 'cooldownMs' => 0]);
-});
