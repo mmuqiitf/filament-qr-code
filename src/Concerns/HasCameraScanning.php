@@ -325,6 +325,7 @@ trait HasCameraScanning
         return self::parseOfflineMode($configured);
     }
 
+    /** @return array<string, mixed> */
     public function getCameraScanPayload(): array
     {
         $payload = [

@@ -22,6 +22,8 @@
     "minBarcodeLength": 2,
     "minFastKeys": 3,
     "noCamerasMessage": "No camera devices detected on this system.",
+    "offline": "banner",
+    "offlineBlockedMessage": "Scanning is blocked while this page is offline.",
     "preferRearCamera": true,
     "preventSubmit": true,
     "qrbox": 250,
