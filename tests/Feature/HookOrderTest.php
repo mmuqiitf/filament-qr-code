@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 /*
  * Filament 5.12 keys afterStateUpdated() hooks with its own counter instead
@@ -19,21 +19,13 @@ use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
  */
 class HookOrderComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     /** @var list<mixed> */
     public array $labelSeen = [];
 
     /** @var list<mixed> */
     public array $skuSeen = [];
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
 
     public function form(Schema $form): Schema
     {
@@ -54,11 +46,6 @@ class HookOrderComponent extends Component implements HasForms
                     ->normalizeUsing(fn (string $code): string => strtoupper($code)),
             ])
             ->statePath('data');
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

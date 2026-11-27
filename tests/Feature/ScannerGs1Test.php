@@ -6,7 +6,6 @@ namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Schema;
@@ -18,13 +17,11 @@ use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
 use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Gs1\Gs1;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class ScannerGs1TestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     /** @var list<string> */
     public array $rejectWhenSaw = [];
@@ -33,11 +30,6 @@ class ScannerGs1TestComponent extends Component implements HasForms
 
     /** @var list<string> */
     public array $require = [];
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
 
     public function form(Schema $form): Schema
     {
@@ -63,39 +55,16 @@ class ScannerGs1TestComponent extends Component implements HasForms
             ->statePath('data');
     }
 
-    public function keyOf(string $name): string
-    {
-        return $this->form->getComponent(fn ($component): bool => method_exists($component, 'getName') && $component->getName() === $name)->getKey();
-    }
-
-    public function submit(): void
-    {
-        $this->form->getState();
-    }
-
     /** Write state the way a tampered request would: no hooks, no scan checks. */
     public function forceLabel(string $label): void
     {
         $this->data['label'] = $label;
     }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
-    }
 }
 
 class NestedScannerGs1TestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
+    use InteractsWithTestForm;
 
     public function form(Schema $form): Schema
     {
@@ -108,16 +77,6 @@ class NestedScannerGs1TestComponent extends Component implements HasForms
                 ])->statePath('line'),
             ])
             ->statePath('data');
-    }
-
-    public function keyOf(string $name): string
-    {
-        return $this->form->getComponent(fn ($component): bool => method_exists($component, 'getName') && $component->getName() === $name)->getKey();
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

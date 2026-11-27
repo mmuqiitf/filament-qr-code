@@ -28,7 +28,7 @@ test.beforeEach(async ({ page }) => {
     await forceDark(page);
 });
 
-for (const path of ['scan-smoke', 'collector-smoke', 'collector-qty-csv-smoke', 'collect-smoke', 'modal-smoke', 'table-smoke', 'barcode-smoke', 'sequence-smoke']) {
+for (const path of ['scan-smoke', 'collector-smoke', 'collector-qty-csv-smoke', 'collect-smoke', 'modal-smoke', 'table-smoke', 'barcode-smoke', 'sequence-smoke', 'product-edit']) {
     test(`/workbench/${path} has no axe violations in dark mode`, async ({ page }) => {
         await page.addInitScript(installFakeCamera, { svg: blank });
         await page.goto(`/workbench/${path}`);

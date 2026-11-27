@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from 'vitest';
 import qrScannerComponent from './qr-scanner.js';
-import { createWireSpy, mountComponent } from './alpine-test-harness.js';
+import { clearDocument, mountSkuField } from './alpine-test-harness.js';
 
 function accepted(code, extra = {}) {
     return { passes: true, code, source: 'camera', message: null, record_key: null, ...extra };
@@ -12,24 +12,16 @@ function rejected(code, message) {
 }
 
 function mountChecked({ respond = (key, method, { code }) => Promise.resolve(accepted(code)), ...options } = {}) {
-    document.body.innerHTML = '<div data-field-name="sku"><input type="text" wire:model="data.sku"></div>';
-    const element = document.querySelector('[data-field-name="sku"]');
-    const wire = createWireSpy({ respond });
-    const scanner = mountComponent(
-        qrScannerComponent({
-            statePath: 'data.sku',
-            sound: false,
-            vibrate: false,
-            hardwareScanner: false,
-            serverCheck: true,
-            componentKey: 'form.sku',
-            cooldownMs: 1500,
-            ...options,
-        }),
-        { element, wire },
-    );
-
-    return { scanner, wire };
+    return mountSkuField(qrScannerComponent({
+        statePath: 'data.sku',
+        sound: false,
+        vibrate: false,
+        hardwareScanner: false,
+        serverCheck: true,
+        componentKey: 'form.sku',
+        cooldownMs: 1500,
+        ...options,
+    }), { respond });
 }
 
 function captureWindowEvent(name) {
@@ -44,7 +36,7 @@ function captureWindowEvent(name) {
 const seenListeners = [];
 
 afterEach(() => {
-    document.body.innerHTML = '';
+    clearDocument();
     seenListeners.splice(0).forEach(([name, listener]) => window.removeEventListener(name, listener));
 });
 

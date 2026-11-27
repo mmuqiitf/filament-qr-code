@@ -2,19 +2,16 @@
 
 declare(strict_types=1);
 
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrCollector;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class CollectorQtyCsvMaxLivewireComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     public bool $useQuantity = false;
 
@@ -26,11 +23,6 @@ class CollectorQtyCsvMaxLivewireComponent extends Component implements HasForms
 
     /** @var array<int, mixed> */
     public array $itemRules = [];
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
 
     public function form(Schema $form): Schema
     {
@@ -53,21 +45,6 @@ class CollectorQtyCsvMaxLivewireComponent extends Component implements HasForms
         return $form
             ->schema([$collector])
             ->statePath('data');
-    }
-
-    public function keyOf(string $name): string
-    {
-        return $this->form->getComponent(fn ($component): bool => method_exists($component, 'getName') && $component->getName() === $name)->getKey();
-    }
-
-    public function submit(): void
-    {
-        $this->form->getState();
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

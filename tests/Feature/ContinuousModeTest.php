@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Closure;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Event;
@@ -17,13 +16,11 @@ use Mmuqiitf\FilamentQrCode\Enums\ScanMode;
 use Mmuqiitf\FilamentQrCode\Events\QrCodeScanned;
 use Mmuqiitf\FilamentQrCode\Events\ScanAccepted;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class ContinuousModeTestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     /** @var list<string> */
     public array $scanned = [];
@@ -32,11 +29,6 @@ class ContinuousModeTestComponent extends Component implements HasForms
     public array $updates = [];
 
     public static ?Closure $configure = null;
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
 
     public function form(Schema $form): Schema
     {
@@ -59,11 +51,6 @@ class ContinuousModeTestComponent extends Component implements HasForms
     public function keyOfScanner(): string
     {
         return $this->form->getComponent(fn ($component): bool => $component instanceof QrScanner)->getKey();
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

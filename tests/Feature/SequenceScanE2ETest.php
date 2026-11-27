@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Closure;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Event;
@@ -20,14 +19,12 @@ use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
 use Mmuqiitf\FilamentQrCode\Events\ScanSequenceCompleted;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 use Mmuqiitf\FilamentQrCode\Tests\Fixtures\ScanCheckProduct;
 
 class SequenceScanTestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     public int $submissions = 0;
 
@@ -41,11 +38,6 @@ class SequenceScanTestComponent extends Component implements HasForms
     public static bool $keyless = false;
 
     public int $saves = 0;
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
 
     public function form(Schema $form): Schema
     {
@@ -87,11 +79,6 @@ class SequenceScanTestComponent extends Component implements HasForms
     {
         $this->form->getState();
         $this->saves++;
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

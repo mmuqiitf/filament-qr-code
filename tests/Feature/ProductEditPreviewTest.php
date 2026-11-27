@@ -2,19 +2,16 @@
 
 declare(strict_types=1);
 
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 use Workbench\App\Filament\Pages\ProductEdit;
 
 class ProductEditPreviewComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     public function mount(): void
     {
@@ -27,11 +24,6 @@ class ProductEditPreviewComponent extends Component implements HasForms
     public function form(Schema $form): Schema
     {
         return (new ProductEdit)->form($form);
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

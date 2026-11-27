@@ -6,7 +6,6 @@ namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Event;
@@ -19,13 +18,11 @@ use Mmuqiitf\FilamentQrCode\Events\ScanRejected;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrHardwareScannerListener;
 use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanner;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 class Gs1PolishScannerComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     public bool $keepMissing = false;
 
@@ -36,11 +33,6 @@ class Gs1PolishScannerComponent extends Component implements HasForms
     public array $rejected = [];
 
     public int $checks = 0;
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
 
     public function form(Schema $form): Schema
     {
@@ -79,26 +71,13 @@ class Gs1PolishScannerComponent extends Component implements HasForms
     {
         return $this->form->getComponent(fn ($component): bool => $component instanceof QrScanner && $component->getName() === $name)->getKey();
     }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
-    }
 }
 
 class Gs1PolishListenerComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     public bool $keepMissing = false;
-
-    public function mount(): void
-    {
-        $this->form->fill();
-    }
 
     public function form(Schema $form): Schema
     {
@@ -122,11 +101,6 @@ class Gs1PolishListenerComponent extends Component implements HasForms
     public function listenerKey(): string
     {
         return $this->form->getComponent(fn ($component): bool => $component instanceof QrHardwareScannerListener)->getKey();
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

@@ -1,21 +1,13 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import qrScannerComponent from './qr-scanner.js';
-import { createWireSpy, mountComponent } from './alpine-test-harness.js';
+import { clearDocument, createWireSpy, mountSkuField } from './alpine-test-harness.js';
 
 function mountScanner(options = {}, wire = createWireSpy()) {
-    document.body.innerHTML = '<div data-field-name="sku"><input type="text" wire:model="data.sku"></div>';
-    const element = document.querySelector('[data-field-name="sku"]');
-
-    return mountComponent(
-        qrScannerComponent({ statePath: 'data.sku', sound: false, vibrate: false, hardwareScanner: false, fieldLabel: 'SKU', ...options }),
-        { element, wire },
-    );
+    return mountSkuField(qrScannerComponent({ statePath: 'data.sku', sound: false, vibrate: false, hardwareScanner: false, fieldLabel: 'SKU', ...options }), { wire }).scanner;
 }
 
-afterEach(() => {
-    document.body.innerHTML = '';
-});
+afterEach(clearDocument);
 
 describe('qrScanner announcements', () => {
     it('announces a locally accepted scan with the field label', () => {

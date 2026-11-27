@@ -13,7 +13,7 @@ export default defineConfig({
     },
     projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
     webServer: {
-        command: `php vendor/bin/testbench workbench:build && php vendor/bin/testbench serve --host=127.0.0.1 --port=${port}`,
+        command: `FILAMENT_QR_CODE_SMOKE=1 php vendor/bin/testbench workbench:build && FILAMENT_QR_CODE_SMOKE=1 php vendor/bin/testbench serve --host=127.0.0.1 --port=${port}`,
         url: `http://127.0.0.1:${port}/workbench/scan-smoke`,
         reuseExistingServer: !process.env.CI,
         timeout: 60_000,

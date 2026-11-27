@@ -5,21 +5,18 @@ declare(strict_types=1);
 namespace Mmuqiitf\FilamentQrCode\Tests\Fixtures;
 
 use Closure;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Schema;
 use Livewire\Component;
 use Mmuqiitf\FilamentQrCode\Enums\BarcodeType;
 use Mmuqiitf\FilamentQrCode\Forms\Components\BarcodeDisplay;
 use Mmuqiitf\FilamentQrCode\Infolists\Components\BarcodeEntry;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 
 /** Renders the barcode form field and infolist entry for view tests. */
 class BarcodeRenderComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     public static ?Closure $configure = null;
 
@@ -42,10 +39,5 @@ class BarcodeRenderComponent extends Component implements HasForms
         }
 
         return $form->statePath('data')->components($components);
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }

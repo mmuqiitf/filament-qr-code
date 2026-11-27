@@ -6,7 +6,6 @@ namespace Mmuqiitf\FilamentQrCode\Tests\Feature;
 
 use Closure;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -22,14 +21,12 @@ use Mmuqiitf\FilamentQrCode\Forms\Components\QrScanSequence;
 use Mmuqiitf\FilamentQrCode\Support\ScanCheckContext;
 use Mmuqiitf\FilamentQrCode\Support\ScanResult;
 use Mmuqiitf\FilamentQrCode\Support\ScanStep;
+use Mmuqiitf\FilamentQrCode\Tests\Fixtures\Concerns\InteractsWithTestForm;
 use RuntimeException;
 
 class SequenceExtensionTestComponent extends Component implements HasForms
 {
-    use InteractsWithForms;
-
-    /** @var array<string, mixed>|null */
-    public ?array $data = [];
+    use InteractsWithTestForm;
 
     public static ?Closure $steps = null;
 
@@ -56,11 +53,6 @@ class SequenceExtensionTestComponent extends Component implements HasForms
     {
         /** @var QrScanSequence */
         return $this->form->getComponent(fn ($component): bool => $component instanceof QrScanSequence);
-    }
-
-    public function render(): string
-    {
-        return '<div>{{ $this->form }}</div>';
     }
 }
 

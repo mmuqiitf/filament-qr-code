@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import qrScannerComponent from './qr-scanner.js';
 import { qrFeedback } from './audio-feedback.js';
 import { ERROR_TONES, FLASH_CLASSES, FLASH_MS, flashElement, playOutcomeFeedback } from './feedback.js';
-import { createWireSpy, mountComponent } from './alpine-test-harness.js';
+import { clearDocument, createWireSpy, mountComponent, mountSkuField } from './alpine-test-harness.js';
 
 const successFeedback = { sound: true, vibrate: [100], flash: true };
 const errorFeedback = { sound: true, vibrate: [80, 60, 80], flash: true };
@@ -18,24 +18,18 @@ function recordFeedback() {
 }
 
 function mountScanner({ respond, ...options } = {}) {
-    document.body.innerHTML = '<div data-field-name="sku"><input type="text" wire:model="data.sku"></div>';
-    const element = document.querySelector('[data-field-name="sku"]');
-    const wire = createWireSpy({ respond });
-    const scanner = mountComponent(
-        qrScannerComponent({
-            statePath: 'data.sku',
-            hardwareScanner: false,
-            serverCheck: true,
-            componentKey: 'form.sku',
-            cooldownMs: 1500,
-            beepFrequency: 880,
-            beepDurationMs: 80,
-            successFeedback,
-            errorFeedback,
-            ...options,
-        }),
-        { element, wire },
-    );
+    const { scanner, element } = mountSkuField(qrScannerComponent({
+        statePath: 'data.sku',
+        hardwareScanner: false,
+        serverCheck: true,
+        componentKey: 'form.sku',
+        cooldownMs: 1500,
+        beepFrequency: 880,
+        beepDurationMs: 80,
+        successFeedback,
+        errorFeedback,
+        ...options,
+    }), { respond });
 
     return { scanner, element };
 }
@@ -47,7 +41,7 @@ beforeEach(() => {
 afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
-    document.body.innerHTML = '';
+    clearDocument();
 });
 
 describe('scanner outcome feedback', () => {
